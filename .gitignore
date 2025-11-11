@@ -1,1 +1,61 @@
+## .NET ##
+*.swp
+*.*~
+project.lock.json
 .DS_Store
+*.pyc
+nupkg/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Visual Studio Code
+.vscode/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Bb]uild/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Visual Studio
+.vs/
+
+# ASP.NET
+appsettings.Development.json
+
+# NuGet
+packages/
+.nuget/
+nuget.exe
+NuGet.Config
+
+# Entity Framework
+Migrations/
+
+# OS
+Thumbs.db
+
