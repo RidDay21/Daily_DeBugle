@@ -1,0 +1,56 @@
+﻿@page "/issues"
+@inject DailyDeBugle.Services.IIssueService IssueService
+@using DailyDeBugle.Models
+
+<h3>Issues</h3>
+
+<a class="btn btn-success mb-3" href="/issues/create">+ New Issue</a>
+
+@if (issues == null)
+{
+    <p>Loading...</p>
+}
+else if (issues.Count == 0)
+{
+    <p>No issues yet.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Publication</th>
+            <th>Number</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Cover</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var issue in issues)
+        {
+            <tr>
+                <td>@issue.Publication.Name</td>
+                <td>@issue.IssueNumber</td>
+                <td>@issue.IssueDate.ToShortDateString()</td>
+                <td>@issue.Status</td>
+                <td>
+                    @if (!string.IsNullOrEmpty(issue.CoverImagePath))
+                    {
+                        <img src="@issue.CoverImagePath" width="100" />
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Issue>? issues;
+
+    protected override async Task OnInitializedAsync()
+    {
+        issues = await IssueService.GetAllAsync();
+    }
+}
