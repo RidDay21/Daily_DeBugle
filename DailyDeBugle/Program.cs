@@ -1,5 +1,6 @@
 using DailyDeBugle.Components;
 using DailyDeBugle.Data;
+using DailyDebugle.Services;
 using DailyDeBugle.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
+builder.Services.AddSingleton<StyleService>();
 // builder.Services.AddScoped<IIssueService, IssueService>();
 // builder.Services.AddScoped<ILayoutService, LayoutService>();
 // Добавь остальные сервисы
