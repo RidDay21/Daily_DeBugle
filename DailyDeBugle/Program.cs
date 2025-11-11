@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -15,9 +15,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
-// builder.Services.AddScoped<IIssueService, IssueService>();
+builder.Services.AddScoped<IIssueService, IssueService>();
 // builder.Services.AddScoped<ILayoutService, LayoutService>();
-// Добавь остальные сервисы
+// остальные сервисы
 
 var app = builder.Build();
 
