@@ -17,8 +17,9 @@ namespace DailyDeBugle.Services
         public async Task<List<Publication>> GetPublicationsAsync()
         {
             return await _context.Publications
-                .Include(p => p.Issues)
+                .AsNoTracking()
                 .Where(p => p.IsActive)
+                .OrderByDescending(p => p.CreatedDate)
                 .ToListAsync();
         }
 
@@ -31,6 +32,16 @@ namespace DailyDeBugle.Services
 
         public async Task<Publication> CreatePublicationAsync(Publication publication)
         {
+            // проверка на наличие публикации с таким именем
+            bool exists = await _context.Publications
+                .AnyAsync(p => p.Name == publication.Name && p.IsActive);
+
+            if (exists)
+                throw new InvalidOperationException("A publication with this name already exists.");
+
+            publication.IsActive = true;
+            publication.CreatedDate = DateTime.UtcNow;
+
             _context.Publications.Add(publication);
             await _context.SaveChangesAsync();
             return publication;
