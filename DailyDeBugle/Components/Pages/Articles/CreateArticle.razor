@@ -41,7 +41,7 @@ else
                     <option value="@i.IssueId">@i.IssueNumber</option>
                 }
             </InputSelect>
-            <ValidationMessage For="@(() => newArticle.IssueId)" /> @* Добавлено для видимости ошибки *@
+            <ValidationMessage For="@(() => newArticle.IssueId)" />
         </div>
         
         <div class="mb-3">
@@ -53,7 +53,7 @@ else
                     <option value="@user.UserId">@user.Username</option>
                 }
             </InputSelect>
-            <ValidationMessage For="@(() => newArticle.AuthorId)" /> @* Добавлено для видимости ошибки *@
+            <ValidationMessage For="@(() => newArticle.AuthorId)" />
         </div>
 
         <button type="submit" class="btn btn-primary">Create</button>
@@ -64,10 +64,6 @@ else
     private Article newArticle = new();
     private List<Issue>? issues;
     private List<User>? users;
-    
-    // УДАЛИТЬ: IssueIdString и AuthorIdString больше не нужны
-    // private string IssueIdString { get; set; } = string.Empty;
-    // private string AuthorIdString { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -82,9 +78,6 @@ else
     
     private async Task HandleValidSubmit()
     {
-        // Вся логика конвертации УДАЛЕНА. Поля newArticle.IssueId и newArticle.AuthorId
-        // уже заполнены Blazor'ом. Если выбрана <option value="">, они будут равны null.
-        
         // Проверка перед сохранением
         Console.WriteLine($"[DEBUG] Creating article: AuthorId={newArticle.AuthorId}, IssueId={newArticle.IssueId}, Headline={newArticle.Headline}");
 
