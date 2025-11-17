@@ -5,15 +5,17 @@ namespace DailyDeBugle.Models
         public string PrimaryFont { get; set; } = "Times New Roman";
         public string HeadingFont { get; set; } = "Times New Roman";
         
-        public int H1Size { get; set; } = 24;
-        public int H2Size { get; set; } = 18;
-        public int BodySize { get; set; } = 12;
+        // Размеры текста - для комфортного чтения
+        public int H1Size { get; set; } = 24;      // Крупный заголовок
+        public int H2Size { get; set; } = 20;      // Подзаголовок  
+        public int BodySize { get; set; } = 14;    // Увеличенный для читаемости
         
-        public double BodyLineSpacing { get; set; } = 1.2;
-        public double HeadingLineSpacing { get; set; } = 1.1;
+        // Интервалы - от плотного до воздушного
+        public double BodyLineSpacing { get; set; } = 1.4;      // Комфортное чтение
+        public double HeadingLineSpacing { get; set; } = 1.2;   // Плотнее для заголовков
         
-        public int ColumnCount { get; set; } = 3;
-        public double ColumnGap { get; set; } = 0.5;
-        public double ColumnWidth { get; set; } = 8;
+        // Колонки - стандартные газетные варианты
+        public int ColumnCount { get; set; } = 2;      // Классическая газетная верстка
+        public double ColumnGap { get; set; } = 1.0;   // Достаточное расстояние
     }
 }

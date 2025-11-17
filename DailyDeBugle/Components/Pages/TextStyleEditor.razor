@@ -17,23 +17,27 @@
             
             <div class="form-field">
                 <label>Основной шрифт:</label>
-                <select @bind="currentStyle.PrimaryFont" class="form-select">
+                <select value="@currentStyle.PrimaryFont" @onchange="@(e => { currentStyle.PrimaryFont = e.Value?.ToString() ?? "Times New Roman"; StateHasChanged(); })" class="form-select">
                     <option value="Times New Roman">Times New Roman</option>
                     <option value="Arial">Arial</option>
                     <option value="Georgia">Georgia</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Courier New">Courier New</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Garamond">Garamond</option>
                 </select>
             </div>
             
             <div class="form-field">
                 <label>Заголовки:</label>
-                <select @bind="currentStyle.HeadingFont" class="form-select">
+                <select value="@currentStyle.HeadingFont" @onchange="@(e => { currentStyle.HeadingFont = e.Value?.ToString() ?? "Times New Roman"; StateHasChanged(); })" class="form-select">
                     <option value="Times New Roman">Times New Roman</option>
                     <option value="Arial">Arial</option>
                     <option value="Georgia">Georgia</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Courier New">Courier New</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Garamond">Garamond</option>
                 </select>
             </div>
         </div>
@@ -43,18 +47,24 @@
             <h5>Размеры текста (pt):</h5>
             
             <div class="form-field">
-                <label>Заголовок H1:</label>
-                <input type="number" @bind="currentStyle.H1Size" class="form-control" min="8" max="72" />
+                <label>Заголовок H1 (18-48pt):</label>
+                <input type="number" value="@currentStyle.H1Size" 
+                       @oninput="@(e => { if (int.TryParse(e.Value?.ToString(), out var val)) { currentStyle.H1Size = Clamp(val, 18, 48); StateHasChanged(); } })" 
+                       class="form-control" />
             </div>
             
             <div class="form-field">
-                <label>Заголовок H2:</label>
-                <input type="number" @bind="currentStyle.H2Size" class="form-control" min="8" max="72" />
+                <label>Заголовок H2 (16-36pt):</label>
+                <input type="number" value="@currentStyle.H2Size" 
+                       @oninput="@(e => { if (int.TryParse(e.Value?.ToString(), out var val)) { currentStyle.H2Size = Clamp(val, 16, 36); StateHasChanged(); } })" 
+                       class="form-control" />
             </div>
             
             <div class="form-field">
-                <label>Основной текст:</label>
-                <input type="number" @bind="currentStyle.BodySize" class="form-control" min="8" max="72" />
+                <label>Основной текст (12-18pt):</label>
+                <input type="number" value="@currentStyle.BodySize" 
+                       @oninput="@(e => { if (int.TryParse(e.Value?.ToString(), out var val)) { currentStyle.BodySize = Clamp(val, 12, 18); StateHasChanged(); } })" 
+                       class="form-control" />
             </div>
         </div>
 
@@ -63,13 +73,17 @@
             <h5>Междустрочные интервалы:</h5>
             
             <div class="form-field">
-                <label>Основной текст:</label>
-                <input type="number" @bind="currentStyle.BodyLineSpacing" step="0.1" class="form-control" min="1.0" max="3.0" />
+                <label>Основной текст (1.2-2.0):</label>
+                <input type="number" value="@GetRoundedValue(currentStyle.BodyLineSpacing)" 
+                       @oninput="@(e => HandleDecimalInput(e, false))" 
+                       class="form-control" step="0.1" />
             </div>
             
             <div class="form-field">
-                <label>Заголовки:</label>
-                <input type="number" @bind="currentStyle.HeadingLineSpacing" step="0.1" class="form-control" min="1.0" max="3.0" />
+                <label>Заголовки (1.0-1.8):</label>
+                <input type="number" value="@GetRoundedValue(currentStyle.HeadingLineSpacing)" 
+                       @oninput="@(e => HandleDecimalInput(e, true))" 
+                       class="form-control" step="0.1" />
             </div>
         </div>
 
@@ -83,7 +97,7 @@
                     @foreach (var col in new[] { 1, 2, 3, 4 })
                     {
                         <button class="column-btn @(currentStyle.ColumnCount == col ? "active" : "")"
-                                @onclick="() => currentStyle.ColumnCount = col">
+                                @onclick="() => ChangeColumnCount(col)">
                             @col
                         </button>
                     }
@@ -91,23 +105,20 @@
             </div>
             
             <div class="form-field">
-                <label>Расстояние между колонками (см):</label>
-                <input type="number" @bind="currentStyle.ColumnGap" step="0.1" class="form-control" min="0.1" max="5.0" />
-            </div>
-            
-            <div class="form-field">
-                <label>Ширина колонки (см):</label>
-                <input type="number" @bind="currentStyle.ColumnWidth" step="0.1" class="form-control" min="1.0" max="20.0" />
+                <label>Расстояние между колонками (0.5-3.0см):</label>
+                <input type="number" value="@GetRoundedValue(currentStyle.ColumnGap)" 
+                       @oninput="@(e => HandleColumnGapInput(e))" 
+                       class="form-control" step="0.1" />
             </div>
         </div>
 
         <!-- Кнопки управления -->
         <div class="action-buttons">
             <button class="btn btn-secondary" @onclick="ResetToDefault">
-                Сбросить
+                Сбросить настройки
             </button>
             <button class="btn btn-primary" @onclick="SaveSettings">
-                Сохранить
+                Сохранить стиль
             </button>
         </div>
     </div>
@@ -137,12 +148,15 @@
 
         <!-- Предпросмотр -->
         <div class="preview-section">
-            <h5>Предпросмотр:</h5>
+            <h5>Предпросмотр (изменения видны сразу):</h5>
             
             <div class="current-settings">
                 <small>Текущие настройки: 
                     Шрифт: @currentStyle.PrimaryFont, 
                     H1: @currentStyle.H1Size pt, 
+                    H2: @currentStyle.H2Size pt,
+                    Основной: @currentStyle.BodySize pt,
+                    Интервал: @GetRoundedValue(currentStyle.BodyLineSpacing),
                     Колонки: @currentStyle.ColumnCount
                 </small>
             </div>
@@ -191,6 +205,19 @@
         currentStyle = StyleService.CurrentStyle;
     }
 
+    // Простая функция ограничения значений
+    private int Clamp(int value, int min, int max)
+    {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    private string GetRoundedValue(double value)
+    {
+        return Math.Round(value, 1).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     private int WordCount => string.IsNullOrEmpty(articleText) 
         ? 0 
         : articleText.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
@@ -205,9 +232,9 @@
         return $@"
             font-family: {currentStyle.PrimaryFont};
             font-size: {currentStyle.BodySize}pt;
-            line-height: {currentStyle.BodyLineSpacing};
+            line-height: {GetRoundedValue(currentStyle.BodyLineSpacing)};
             column-count: {currentStyle.ColumnCount};
-            column-gap: {currentStyle.ColumnGap}cm;
+            column-gap: {GetRoundedValue(currentStyle.ColumnGap)}cm;
             background: white;
             padding: 30px;
             border-radius: 8px;
@@ -220,7 +247,7 @@
         return $@"
             font-family: {currentStyle.HeadingFont};
             font-size: {currentStyle.H1Size}pt;
-            line-height: {currentStyle.HeadingLineSpacing};
+            line-height: {GetRoundedValue(currentStyle.HeadingLineSpacing)};
             color: #2c3e50;
             margin: 30px 0 20px 0;
         ";
@@ -231,7 +258,7 @@
         return $@"
             font-family: {currentStyle.HeadingFont};
             font-size: {currentStyle.H2Size}pt;
-            line-height: {currentStyle.HeadingLineSpacing};
+            line-height: {GetRoundedValue(currentStyle.HeadingLineSpacing)};
             color: #34495e;
             margin: 25px 0 15px 0;
         ";
@@ -242,32 +269,69 @@
         return $@"
             font-family: {currentStyle.PrimaryFont};
             font-size: {currentStyle.BodySize}pt;
-            line-height: {currentStyle.BodyLineSpacing};
+            line-height: {GetRoundedValue(currentStyle.BodyLineSpacing)};
             color: #2c3e50;
             margin: 15px 0;
             text-align: justify;
         ";
     }
 
+    private void HandleDecimalInput(ChangeEventArgs e, bool isHeading)
+    {
+        var input = e.Value?.ToString();
+        if (double.TryParse(input, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+        {
+            val = Math.Round(val, 1);
+            
+            // Авто-ограничение значений
+            if (isHeading)
+                currentStyle.HeadingLineSpacing = Math.Max(1.0, Math.Min(1.8, val));
+            else
+                currentStyle.BodyLineSpacing = Math.Max(1.2, Math.Min(2.0, val));
+                
+            StateHasChanged();
+        }
+    }
+
+    private void HandleColumnGapInput(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString();
+        if (double.TryParse(input, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
+        {
+            val = Math.Round(val, 1);
+            // Авто-ограничение расстояния между колонками
+            currentStyle.ColumnGap = Math.Max(0.5, Math.Min(3.0, val));
+            StateHasChanged();
+        }
+    }
+
+    private void ChangeColumnCount(int count)
+    {
+        currentStyle.ColumnCount = count;
+        StateHasChanged();
+    }
+
     private void InsertHeading()
     {
         articleText += "\n# Новый заголовок\n";
+        StateHasChanged();
     }
 
     private void ClearText()
     {
         articleText = string.Empty;
+        StateHasChanged();
     }
 
     private void SaveSettings()
     {
         StyleService.UpdateStyle(currentStyle);
-        // Здесь можно добавить сохранение текста в базу данных
     }
 
     private void ResetToDefault()
     {
         currentStyle = new TextStyle();
         StyleService.ResetToDefault();
+        StateHasChanged();
     }
 }
