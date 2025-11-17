@@ -1,0 +1,121 @@
+@page "/create-publication"
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject IPublicationService PublicationService
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    <!-- Шапка во всю страницу -->
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">Создание издания</h1>
+        </div>
+    </div>
+
+    <EditForm Model="@newPublication" OnValidSubmit="HandleValidSubmit" class="card p-4">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <!-- Название -->
+        <div class="mb-3">
+            <label for="publicationName" class="form-label">Название:</label>
+            <InputText id="publicationName" @bind-Value="newPublication.Name" 
+                      class="form-control" placeholder="введите название" 
+                      maxlength="50" />
+            <ValidationMessage For="@(() => newPublication.Name)" />
+            <div class="form-text">Осталось символов: @(50 - (newPublication.Name?.Length ?? 0))</div>
+        </div>
+
+        <!-- Описание -->
+        <div class="mb-3">
+            <label for="publicationDescription" class="form-label">Описание:</label>
+            <InputTextArea id="publicationDescription" @bind-Value="newPublication.Description" 
+                          class="form-control" rows="5" 
+                          placeholder="Введите описание издания..." />
+            <ValidationMessage For="@(() => newPublication.Description)" />
+        </div>
+
+        <!-- Периодичность -->
+        <div class="mb-4">
+            <label for="publicationFrequency" class="form-label">Периодичность:</label>
+            <InputSelect id="publicationFrequency" @bind-Value="newPublication.Frequency" 
+                         class="form-select">
+                <option value="Daily">Ежедневно</option>
+                <option value="Weekly">Еженедельно</option>
+                <option value="Monthly">Ежемесячно</option>
+            </InputSelect>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Отменить</button>
+            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                Сохранить
+            </button>
+        </div>
+
+        <!-- Сообщения об ошибках/успехе -->
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3">
+                @message
+            </div>
+        }
+    </EditForm>
+</div>
+
+@code {
+    private Publication newPublication = new Publication();
+    private string message = string.Empty;
+    private bool isError = false;
+    private bool isLoading = false;
+
+    private async Task HandleValidSubmit()
+    {
+        isLoading = true;
+        message = string.Empty;
+        isError = false;
+        
+        try
+        {
+            // Вызываем сервис для создания публикации
+            await PublicationService.CreatePublicationAsync(newPublication);
+            
+            // Успех - показываем сообщение и очищаем форму
+            message = "Публикация успешно создана!";
+            isError = false;
+            newPublication = new Publication(); // Сбрасываем форму
+            
+            // Ждем 2 секунды и возвращаем на главную
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Ошибка валидации (неуникальное имя)
+            message = ex.Message;
+            isError = true;
+        }
+        catch (Exception ex)
+        {
+            // Другие ошибки
+            message = $"Ошибка при создании публикации: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/");
+    }
+}
