@@ -1,0 +1,87 @@
+﻿@page "/articles/create"
+@rendermode InteractiveServer 
+@inject DailyDeBugle.Services.IArticleService ArticleService
+@inject DailyDeBugle.Services.IIssueService IssueService
+@inject DailyDeBugle.Services.IUserService UserService
+@inject NavigationManager Nav
+@using DailyDeBugle.Models
+
+<h3>Create New Article</h3>
+
+@if (issues == null || users == null)
+{
+    <p>Loading data...</p>
+}
+else
+{
+
+    <EditForm Model="@newArticle" 
+              OnValidSubmit="HandleValidSubmit" 
+              OnInvalidSubmit="HandleInvalidSubmit" 
+              FormName="CreateArticleForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Headline:</label>
+            <InputText @bind-Value="newArticle.Headline" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Content:</label>
+            <InputTextArea @bind-Value="newArticle.Content" class="form-control" rows="5" />
+        </div>
+
+        <div class="mb-3">
+    		<label>Issue:</label>
+            <InputSelect @bind-Value="newArticle.IssueId" class="form-select">
+                <option value="">Select Issue</option>
+                @foreach (var i in issues)
+                {
+                    <option value="@i.IssueId">@i.IssueNumber</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => newArticle.IssueId)" />
+        </div>
+        
+        <div class="mb-3">
+            <label>Author:</label>
+            <InputSelect @bind-Value="newArticle.AuthorId" class="form-select">
+                <option value="">Select Author</option>
+                @foreach (var user in users)
+                {
+                    <option value="@user.UserId">@user.Username</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => newArticle.AuthorId)" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create</button>
+    </EditForm>
+}
+
+@code {
+    private Article newArticle = new();
+    private List<Issue>? issues;
+    private List<User>? users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        issues = await IssueService.GetAllAsync();
+        users = await UserService.GetAllAsync();
+    }
+
+    private void HandleInvalidSubmit()
+    {
+        Console.WriteLine("[DEBUG] Form is INVALID. Check ValidationSummary for errors.");
+    }
+    
+    private async Task HandleValidSubmit()
+    {
+        // Проверка перед сохранением
+        Console.WriteLine($"[DEBUG] Creating article: AuthorId={newArticle.AuthorId}, IssueId={newArticle.IssueId}, Headline={newArticle.Headline}");
+
+        await ArticleService.CreateArticleAsync(newArticle);
+        Nav.NavigateTo("/articles");
+    }
+}
