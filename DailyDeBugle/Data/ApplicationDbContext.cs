@@ -18,6 +18,7 @@ namespace DailyDeBugle.Data
         public DbSet<Comment> Comments { get; set; }
         public DbSet<HeaderFooterSettings> HeaderFooterSettings { get; set; }
         public DbSet<HeaderFooterTemplate> HeaderFooterTemplates { get; set; }
+        public DbSet<GlobalTextStyle> GlobalTextStyles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -113,7 +114,31 @@ namespace DailyDeBugle.Data
                     IsSystemTemplate = true
                 }
             );
-
+            
+            // Конфигурация для GlobalTextStyle
+            modelBuilder.Entity<GlobalTextStyle>(entity =>
+            {
+                entity.HasKey(g => g.Id);
+            
+                entity.HasOne(g => g.Issue)
+                    .WithOne()
+                    .HasForeignKey<GlobalTextStyle>(g => g.IssueId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            
+                entity.HasIndex(g => g.IssueId)
+                    .IsUnique();
+            
+                // Значения по умолчанию
+                entity.Property(g => g.PrimaryFont).HasDefaultValue("Times New Roman");
+                entity.Property(g => g.HeadingFont).HasDefaultValue("Times New Roman");
+                entity.Property(g => g.H1Size).HasDefaultValue(24);
+                entity.Property(g => g.H2Size).HasDefaultValue(20);
+                entity.Property(g => g.BodySize).HasDefaultValue(14);
+                entity.Property(g => g.BodyLineSpacing).HasDefaultValue(1.4);
+                entity.Property(g => g.HeadingLineSpacing).HasDefaultValue(1.2);
+                entity.Property(g => g.ColumnCount).HasDefaultValue(2);
+                entity.Property(g => g.ColumnGap).HasDefaultValue(1.0);
+            });
             // Добавь остальные конфигурации по аналогии
         }
     }

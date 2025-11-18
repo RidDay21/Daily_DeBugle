@@ -1,10 +1,11 @@
-@page "/text-style"
+@page "/issues/{issueId}/text-style"
+@using DailyDeBugle.Services
 @rendermode InteractiveServer
-@using DailyDeBugle.Models
-@using DailyDebugle.Services
-@inject StyleService StyleService
+@inject IGlobalTextStyleService TextStyleService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Daily Debugle - Редактор текста</PageTitle>
+<PageTitle>Daily Debugle - Типографика</PageTitle>
 
 <div class="text-style-container">
     <!-- Панель настроек -->
@@ -17,7 +18,7 @@
             
             <div class="form-field">
                 <label>Основной шрифт:</label>
-                <select value="@currentStyle.PrimaryFont" @onchange="@(e => { currentStyle.PrimaryFont = e.Value?.ToString() ?? "Times New Roman"; StateHasChanged(); })" class="form-select">
+                <select @bind="@styles.PrimaryFont" class="form-select">
                     <option value="Times New Roman">Times New Roman</option>
                     <option value="Arial">Arial</option>
                     <option value="Georgia">Georgia</option>
@@ -30,7 +31,7 @@
             
             <div class="form-field">
                 <label>Заголовки:</label>
-                <select value="@currentStyle.HeadingFont" @onchange="@(e => { currentStyle.HeadingFont = e.Value?.ToString() ?? "Times New Roman"; StateHasChanged(); })" class="form-select">
+                <select @bind="@styles.HeadingFont" class="form-select">
                     <option value="Times New Roman">Times New Roman</option>
                     <option value="Arial">Arial</option>
                     <option value="Georgia">Georgia</option>
@@ -48,22 +49,22 @@
             
             <div class="form-field">
                 <label>Заголовок H1 (18-48pt):</label>
-                <input type="number" value="@currentStyle.H1Size" 
-                       @oninput="@(e => { if (int.TryParse(e.Value?.ToString(), out var val)) { currentStyle.H1Size = Clamp(val, 18, 48); StateHasChanged(); } })" 
+                <input type="number" @bind="@styles.H1Size" 
+                       @oninput="@(e => { styles.H1Size = Clamp(Convert.ToInt32(e.Value), 18, 48); })" 
                        class="form-control" />
             </div>
             
             <div class="form-field">
                 <label>Заголовок H2 (16-36pt):</label>
-                <input type="number" value="@currentStyle.H2Size" 
-                       @oninput="@(e => { if (int.TryParse(e.Value?.ToString(), out var val)) { currentStyle.H2Size = Clamp(val, 16, 36); StateHasChanged(); } })" 
+                <input type="number" @bind="@styles.H2Size" 
+                       @oninput="@(e => { styles.H2Size = Clamp(Convert.ToInt32(e.Value), 16, 36); })" 
                        class="form-control" />
             </div>
             
             <div class="form-field">
                 <label>Основной текст (12-18pt):</label>
-                <input type="number" value="@currentStyle.BodySize" 
-                       @oninput="@(e => { if (int.TryParse(e.Value?.ToString(), out var val)) { currentStyle.BodySize = Clamp(val, 12, 18); StateHasChanged(); } })" 
+                <input type="number" @bind="@styles.BodySize" 
+                       @oninput="@(e => { styles.BodySize = Clamp(Convert.ToInt32(e.Value), 12, 18); })" 
                        class="form-control" />
             </div>
         </div>
@@ -74,15 +75,15 @@
             
             <div class="form-field">
                 <label>Основной текст (1.2-2.0):</label>
-                <input type="number" value="@GetRoundedValue(currentStyle.BodyLineSpacing)" 
-                       @oninput="@(e => HandleDecimalInput(e, false))" 
+                <input type="number" @bind="@styles.BodyLineSpacing" 
+                       @oninput="@(e => { styles.BodyLineSpacing = Clamp(Convert.ToDouble(e.Value), 1.2, 2.0); })" 
                        class="form-control" step="0.1" />
             </div>
             
             <div class="form-field">
                 <label>Заголовки (1.0-1.8):</label>
-                <input type="number" value="@GetRoundedValue(currentStyle.HeadingLineSpacing)" 
-                       @oninput="@(e => HandleDecimalInput(e, true))" 
+                <input type="number" @bind="@styles.HeadingLineSpacing" 
+                       @oninput="@(e => { styles.HeadingLineSpacing = Clamp(Convert.ToDouble(e.Value), 1.0, 1.8); })" 
                        class="form-control" step="0.1" />
             </div>
         </div>
@@ -96,7 +97,7 @@
                 <div class="column-buttons">
                     @foreach (var col in new[] { 1, 2, 3, 4 })
                     {
-                        <button class="column-btn @(currentStyle.ColumnCount == col ? "active" : "")"
+                        <button class="column-btn @(styles.ColumnCount == col ? "active" : "")"
                                 @onclick="() => ChangeColumnCount(col)">
                             @col
                         </button>
@@ -106,8 +107,8 @@
             
             <div class="form-field">
                 <label>Расстояние между колонками (0.5-3.0см):</label>
-                <input type="number" value="@GetRoundedValue(currentStyle.ColumnGap)" 
-                       @oninput="@(e => HandleColumnGapInput(e))" 
+                <input type="number" @bind="@styles.ColumnGap" 
+                       @oninput="@(e => { styles.ColumnGap = Clamp(Convert.ToDouble(e.Value), 0.5, 3.0); })" 
                        class="form-control" step="0.1" />
             </div>
         </div>
@@ -120,92 +121,57 @@
             <button class="btn btn-primary" @onclick="SaveSettings">
                 Сохранить стиль
             </button>
+            <button class="btn btn-outline-secondary" @onclick="NavigateBack">
+                Назад
+            </button>
         </div>
     </div>
 
-    <!-- Панель редактора и предпросмотра -->
-    <div class="editor-preview-panel">
-        <h4>Редактор текста</h4>
+    <!-- Панель предпросмотра -->
+    <div class="preview-panel">
+        <h4>Предпросмотр типографики</h4>
         
-        <!-- Редактор текста -->
-        <div class="text-editor">
-            <div class="editor-toolbar">
-                <button class="btn btn-sm btn-outline-secondary" @onclick="InsertHeading">
-                    Добавить заголовок
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="ClearText">
-                    Очистить
-                </button>
-            </div>
-            
-            <textarea @bind="articleText" class="form-control editor-textarea" 
-                     placeholder="Начните писать ваш текст здесь..."></textarea>
-            
-            <div class="editor-info">
-                <small>Символов: @articleText.Length | Слов: @WordCount</small>
-            </div>
+        <div class="current-settings">
+            <small>Текущие настройки: 
+                Шрифт: @styles.PrimaryFont, 
+                H1: @styles.H1Size pt, 
+                H2: @styles.H2Size pt,
+                Основной: @styles.BodySize pt,
+                Интервал: @Math.Round(styles.BodyLineSpacing, 1),
+                Колонки: @styles.ColumnCount
+            </small>
         </div>
-
-        <!-- Предпросмотр -->
-        <div class="preview-section">
-            <h5>Предпросмотр (изменения видны сразу):</h5>
-            
-            <div class="current-settings">
-                <small>Текущие настройки: 
-                    Шрифт: @currentStyle.PrimaryFont, 
-                    H1: @currentStyle.H1Size pt, 
-                    H2: @currentStyle.H2Size pt,
-                    Основной: @currentStyle.BodySize pt,
-                    Интервал: @GetRoundedValue(currentStyle.BodyLineSpacing),
-                    Колонки: @currentStyle.ColumnCount
-                </small>
-            </div>
-            
-            <div class="preview-content" style="@GetPreviewStyle()">
-                @if (string.IsNullOrEmpty(articleText))
-                {
-                    <p style="color: #999; font-style: italic;">Текст для предпросмотра появится здесь...</p>
-                }
-                else
-                {
-                    @foreach (var paragraph in GetFormattedText())
-                    {
-                        if (paragraph.StartsWith("# "))
-                        {
-                            <h1 style="@GetH1Style()">@paragraph.Substring(2)</h1>
-                        }
-                        else if (paragraph.StartsWith("## "))
-                        {
-                            <h2 style="@GetH2Style()">@paragraph.Substring(3)</h2>
-                        }
-                        else
-                        {
-                            <p style="@GetParagraphStyle()">@paragraph</p>
-                        }
-                    }
-                }
-            </div>
+        
+        <div class="preview-content" style="@GetPreviewStyle()">
+            <h1 style="@GetH1Style()">Заголовок статьи</h1>
+            <p style="@GetParagraphStyle()">
+                Это пример текста статьи с выбранными настройками стиля. 
+                Здесь вы можете видеть, как будет выглядеть текст после применения настроек типографики.
+                Обратите внимание на шрифт, размер текста, межстрочный интервал и количество колонок.
+            </p>
+            <h2 style="@GetH2Style()">Подзаголовок второго уровня</h2>
+            <p style="@GetParagraphStyle()">
+                Еще один абзац текста для демонстрации внешнего вида. 
+                Вы можете изменять настройки в левой панели и сразу видеть изменения в этом предпросмотре.
+            </p>
         </div>
     </div>
 </div>
 
 @code {
-    private TextStyle currentStyle = new TextStyle();
-    private string articleText = @"Это пример текста статьи. Вы можете редактировать этот текст в поле выше.
+    [Parameter]
+    public string issueId { get; set; }
 
-Просто начните печатать, и вы увидите как текст будет отображаться с выбранными настройками стиля.
+    private GlobalTextStyle styles = new GlobalTextStyle();
 
-# Это заголовок H1
-## Это заголовок H2
-
-Вы можете использовать символ # для создания заголовков.";
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        currentStyle = StyleService.CurrentStyle;
+        if (int.TryParse(issueId, out int id))
+        {
+            styles = await TextStyleService.GetStylesForIssueAsync(id);
+        }
     }
 
-    // Простая функция ограничения значений
     private int Clamp(int value, int min, int max)
     {
         if (value < min) return min;
@@ -213,28 +179,62 @@
         return value;
     }
 
-    private string GetRoundedValue(double value)
+    private double Clamp(double value, double min, double max)
     {
-        return Math.Round(value, 1).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
     }
 
-    private int WordCount => string.IsNullOrEmpty(articleText) 
-        ? 0 
-        : articleText.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-
-    private string[] GetFormattedText()
+    private void ChangeColumnCount(int count)
     {
-        return articleText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        styles.ColumnCount = count;
+        StateHasChanged();
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            styles = await TextStyleService.SaveStylesAsync(styles);
+            await TextStyleService.ApplyStylesToIssueAsync(styles.IssueId);
+            
+            await JSRuntime.InvokeVoidAsync("alert", "Настройки типографики успешно сохранены и применены!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка при сохранении: {ex.Message}");
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        styles.PrimaryFont = "Times New Roman";
+        styles.HeadingFont = "Times New Roman";
+        styles.H1Size = 24;
+        styles.H2Size = 20;
+        styles.BodySize = 14;
+        styles.BodyLineSpacing = 1.4;
+        styles.HeadingLineSpacing = 1.2;
+        styles.ColumnCount = 2;
+        styles.ColumnGap = 1.0;
+        
+        StateHasChanged();
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/layout");
     }
 
     private string GetPreviewStyle()
     {
         return $@"
-            font-family: {currentStyle.PrimaryFont};
-            font-size: {currentStyle.BodySize}pt;
-            line-height: {GetRoundedValue(currentStyle.BodyLineSpacing)};
-            column-count: {currentStyle.ColumnCount};
-            column-gap: {GetRoundedValue(currentStyle.ColumnGap)}cm;
+            font-family: {styles.PrimaryFont};
+            font-size: {styles.BodySize}pt;
+            line-height: {styles.BodyLineSpacing};
+            column-count: {styles.ColumnCount};
+            column-gap: {styles.ColumnGap}cm;
             background: white;
             padding: 30px;
             border-radius: 8px;
@@ -245,9 +245,9 @@
     private string GetH1Style()
     {
         return $@"
-            font-family: {currentStyle.HeadingFont};
-            font-size: {currentStyle.H1Size}pt;
-            line-height: {GetRoundedValue(currentStyle.HeadingLineSpacing)};
+            font-family: {styles.HeadingFont};
+            font-size: {styles.H1Size}pt;
+            line-height: {styles.HeadingLineSpacing};
             color: #2c3e50;
             margin: 30px 0 20px 0;
         ";
@@ -256,9 +256,9 @@
     private string GetH2Style()
     {
         return $@"
-            font-family: {currentStyle.HeadingFont};
-            font-size: {currentStyle.H2Size}pt;
-            line-height: {GetRoundedValue(currentStyle.HeadingLineSpacing)};
+            font-family: {styles.HeadingFont};
+            font-size: {styles.H2Size}pt;
+            line-height: {styles.HeadingLineSpacing};
             color: #34495e;
             margin: 25px 0 15px 0;
         ";
@@ -267,71 +267,12 @@
     private string GetParagraphStyle()
     {
         return $@"
-            font-family: {currentStyle.PrimaryFont};
-            font-size: {currentStyle.BodySize}pt;
-            line-height: {GetRoundedValue(currentStyle.BodyLineSpacing)};
+            font-family: {styles.PrimaryFont};
+            font-size: {styles.BodySize}pt;
+            line-height: {styles.BodyLineSpacing};
             color: #2c3e50;
             margin: 15px 0;
             text-align: justify;
         ";
-    }
-
-    private void HandleDecimalInput(ChangeEventArgs e, bool isHeading)
-    {
-        var input = e.Value?.ToString();
-        if (double.TryParse(input, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
-        {
-            val = Math.Round(val, 1);
-            
-            // Авто-ограничение значений
-            if (isHeading)
-                currentStyle.HeadingLineSpacing = Math.Max(1.0, Math.Min(1.8, val));
-            else
-                currentStyle.BodyLineSpacing = Math.Max(1.2, Math.Min(2.0, val));
-                
-            StateHasChanged();
-        }
-    }
-
-    private void HandleColumnGapInput(ChangeEventArgs e)
-    {
-        var input = e.Value?.ToString();
-        if (double.TryParse(input, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var val))
-        {
-            val = Math.Round(val, 1);
-            // Авто-ограничение расстояния между колонками
-            currentStyle.ColumnGap = Math.Max(0.5, Math.Min(3.0, val));
-            StateHasChanged();
-        }
-    }
-
-    private void ChangeColumnCount(int count)
-    {
-        currentStyle.ColumnCount = count;
-        StateHasChanged();
-    }
-
-    private void InsertHeading()
-    {
-        articleText += "\n# Новый заголовок\n";
-        StateHasChanged();
-    }
-
-    private void ClearText()
-    {
-        articleText = string.Empty;
-        StateHasChanged();
-    }
-
-    private void SaveSettings()
-    {
-        StyleService.UpdateStyle(currentStyle);
-    }
-
-    private void ResetToDefault()
-    {
-        currentStyle = new TextStyle();
-        StyleService.ResetToDefault();
-        StateHasChanged();
     }
 }
