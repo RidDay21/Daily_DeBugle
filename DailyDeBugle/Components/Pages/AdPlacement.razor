@@ -1,0 +1,574 @@
+@using DailyDeBugle.Models
+@using System.Text.Json
+@using DailyDeBugle.Services
+@rendermode InteractiveServer
+
+@page "/issues/{issueId:int}/ads"
+@inject DailyDeBugle.Services.IIssueService IssueService
+@inject DailyDeBugle.Services.IArticleService ArticleService
+@inject DailyDeBugle.Services.IAdvertisementService AdService
+@inject NavigationManager Navigation
+
+<h3>Advertisement Blocks for Issue: @issueId</h3>
+
+<!-- Отладочная информация -->
+<div class="alert alert-warning">
+    <strong>Debug Info:</strong><br>
+    Available Ads: @availableAds.Count<br>
+    Placed Ads: @placedAds.Count<br>
+    Last Action: @lastAction<br>
+    Component Rendered: @DateTime.Now.ToString("HH:mm:ss.fff")
+</div>
+
+<div class="header-buttons mb-3">
+    <button class="btn btn-success" @onclick="HandleRefreshAds">Refresh Ads</button>
+    <button class="btn btn-primary" @onclick="HandleSaveLayout">Save Layout</button>
+    <a class="btn btn-secondary" href="/issues">Back to Issues</a>
+    <a class="btn btn-outline-info" href="/issues/@issueId/layout">Back to Layout</a>
+</div>
+
+<hr />
+
+<div class="row">
+    <!-- Доступные рекламные блоки -->
+    <div class="col-md-4">
+        <div class="section">
+            <h4>Available Advertisement Blocks</h4>
+            
+            @if (!availableAds.Any())
+            {
+                <div class="alert alert-info">
+                    <p>No advertisement blocks available in the library.</p>
+                </div>
+            }
+            else
+            {
+                <div class="ads-library" style="max-height: 600px; overflow-y: auto;">
+                    @foreach (var ad in availableAds)
+                    {
+                        <div class="ad-item card mb-3 @GetAdCardClass(ad)">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h5 class="card-title">@ad.Advertiser</h5>
+                                    <span class="badge @GetDateBadgeClass(ad)">@GetAdStatus(ad)</span>
+                                </div>
+                                
+                                @if (IsImageAd(ad))
+                                {
+                                    <div class="ad-preview mb-2">
+                                        <img src="@ad.Content" alt="@ad.Advertiser" class="img-fluid" style="max-height: 80px;" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="card-text">@GetContentPreview(ad.Content)</p>
+                                }
+                                
+                                <div class="ad-meta">
+                                    <small class="text-muted">
+                                        Active: @ad.StartDate.ToShortDateString() - @ad.EndDate.ToShortDateString() |
+                                        Days left: @GetDaysLeft(ad)
+                                    </small>
+                                </div>
+                                
+                                <div class="ad-actions mt-2">
+                                    <button class="btn btn-sm btn-outline-success" @onclick="@(() => HandlePlaceAd(ad))">
+                                        Place on Page
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Размещенные рекламные блоки -->
+    <div class="col-md-4">
+        <div class="section">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4>Placed Advertisement Blocks</h4>
+                <button class="btn btn-sm btn-outline-danger" @onclick="HandleClearAllAds" disabled="@(!placedAds.Any())">
+                    Clear All
+                </button>
+            </div>
+            
+            @if (!placedAds.Any())
+            {
+                <div class="alert alert-warning">
+                    <p>No advertisement blocks placed yet.</p>
+                    <p><small>Click "Place on Page" to add ads from the left panel</small></p>
+                </div>
+            }
+            else
+            {
+                <div class="placed-ads" style="max-height: 600px; overflow-y: auto;">
+                    @foreach (var placedAd in placedAds)
+                    {
+                        <div class="placed-ad-item card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>@placedAd.AdvertisementBlock.Advertiser</span>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-warning" @onclick="@(() => HandleAdjustAd(placedAd))">
+                                        Adjust
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemoveAd(placedAd))">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="ad-position-info">
+                                    <strong>Position Settings:</strong>
+                                    <div class="row mt-2">
+                                        <div class="col">
+                                            <label>Page:</label>
+                                            <select class="form-select form-select-sm" @bind="placedAd.PageNumber" @bind:after="StateHasChanged">
+                                                <option value="1">1</option>
+                                                <option value="2">2</option>
+                                                <option value="3">3</option>
+                                                <option value="4">4</option>
+                                            </select>
+                                        </div>
+                                        <div class="col">
+                                            <label>Flow:</label>
+                                            <select class="form-select form-select-sm" @bind="placedAd.TextFlow" @bind:after="StateHasChanged">
+                                                <option value="Left">Left</option>
+                                                <option value="Right">Right</option>
+                                                <option value="None">None</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-2">
+                                        <div class="col">
+                                            <label>Width:</label>
+                                            <input type="range" class="form-range" min="50" max="300" 
+                                                   @bind="placedAd.Width" @bind:event="oninput" />
+                                            <small>@placedAd.Width mm</small>
+                                        </div>
+                                        <div class="col">
+                                            <label>Height:</label>
+                                            <input type="range" class="form-range" min="30" max="200" 
+                                                   @bind="placedAd.Height" @bind:event="oninput" />
+                                            <small>@placedAd.Height mm</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                @if (IsImageAd(placedAd.AdvertisementBlock))
+                                {
+                                    <div class="ad-preview mt-2">
+                                        <img src="@placedAd.AdvertisementBlock.Content" 
+                                             alt="@placedAd.AdvertisementBlock.Advertiser" 
+                                             class="img-fluid border rounded"
+                                             style="max-width: @(placedAd.Width * 0.5)px; max-height: @(placedAd.Height * 0.5)px;" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-ad-preview mt-2 p-2 border rounded">
+                                        <small>@GetContentPreview(placedAd.AdvertisementBlock.Content)</small>
+                                    </div>
+                                }
+                                
+                                <div class="ad-fit-status mt-2">
+                                    @if (IsAdOverflowing(placedAd))
+                                    {
+                                        <div class="alert alert-danger py-1 mb-0">
+                                            <small>⚠️ Block may not fit - adjust size</small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-success py-1 mb-0">
+                                            <small>✅ Block fits well</small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- ПРЕДПРОСМОТР СТРАНИЦЫ -->
+    <div class="col-md-4">
+        <div class="section">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4>Page Preview</h4>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="HandleRefreshPreview">
+                    Refresh
+                </button>
+            </div>
+            
+            <div class="page-preview-container">
+                <div class="page-preview card">
+                    <div class="card-header">
+                        <small>Page 1 Preview (A4 Format)</small>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="page-content" style="position: relative; width: 100%; height: 400px; border: 1px solid #ccc; background: white;">
+                            
+                            <!-- Статьи на странице -->
+                            @if (pageArticles.Any())
+                            {
+                                <div class="articles-content" style="padding: 10px;">
+                                    @foreach (var article in pageArticles)
+                                    {
+                                        <div class="article-preview mb-3 p-2 border-bottom">
+                                            <h6 style="font-size: 12px; margin: 0 0 5px 0;">@article.Headline</h6>
+                                            <p style="font-size: 10px; margin: 0; color: #666;">
+                                                @GetArticlePreview(article.Content, 80)
+                                            </p>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted" style="padding: 20px;">
+                                    <small>No articles on this page</small>
+                                </div>
+                            }
+                            
+                            <!-- Рекламные блоки на странице -->
+                            @foreach (var placedAd in placedAds.Where(pa => pa.PageNumber == 1))
+                            {
+                                <div class="advertisement-preview" 
+                                     style="position: absolute; 
+                                            border: 2px dashed @(IsAdOverflowing(placedAd) ? "red" : "blue");
+                                            background: rgba(173, 216, 230, 0.3);
+                                            padding: 5px;
+                                            @GetAdPositionStyle(placedAd)">
+                                    
+                                    <div style="font-size: 8px; font-weight: bold; text-align: center;">
+                                        @placedAd.AdvertisementBlock.Advertiser
+                                    </div>
+                                    
+                                    @if (IsImageAd(placedAd.AdvertisementBlock))
+                                    {
+                                        <div style="text-align: center; font-size: 6px; color: #666;">
+                                            [IMAGE]
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div style="font-size: 6px; text-align: center; color: #666;">
+                                            @GetContentPreview(placedAd.AdvertisementBlock.Content, 20)
+                                        </div>
+                                    }
+                                    
+                                    <div style="font-size: 6px; text-align: center; color: #999;">
+                                        @placedAd.Width x @placedAd.Height mm
+                                    </div>
+                                    
+                                    <!-- Индикатор обтекания -->
+                                    @if (placedAd.TextFlow != "None")
+                                    {
+                                        <div style="position: absolute; top: -15px; @(placedAd.TextFlow == "Left" ? "left: -10px;" : "right: -10px;") 
+                                                font-size: 8px; color: green;">
+                                            ↴
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            <!-- Сетка для ориентира -->
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; opacity: 0.1;">
+                                <div style="position: absolute; top: 50%; left: 0; right: 0; border-top: 1px dashed #ccc;"></div>
+                                <div style="position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1px dashed #ccc;"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Легенда -->
+                        <div class="preview-legend mt-2">
+                            <div class="row text-center">
+                                <div class="col">
+                                    <small>
+                                        <span style="color: blue;">⎯</span> Ads
+                                    </small>
+                                </div>
+                                <div class="col">
+                                    <small>
+                                        <span style="color: red;">⎯</span> Overflow
+                                    </small>
+                                </div>
+                                <div class="col">
+                                    <small>
+                                        <span style="color: green;">↴</span> Text Flow
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Информация о странице -->
+                        <div class="page-info mt-2 p-2 bg-light rounded">
+                            <small>
+                                <strong>Page 1 Statistics:</strong><br>
+                                Articles: @pageArticles.Count<br>
+                                Ads: @placedAds.Count(pa => pa.PageNumber == 1)<br>
+                                Total Elements: @(pageArticles.Count + placedAds.Count(pa => pa.PageNumber == 1))
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-info mt-3">@message</div>
+}
+
+@code {
+    [Parameter]
+    public int issueId { get; set; }
+
+    private Issue? currentIssue;
+    private List<AdvertisementBlock> availableAds = new List<AdvertisementBlock>();
+    private List<AdvertisementPlacement> placedAds = new List<AdvertisementPlacement>();
+    private List<Article> pageArticles = new List<Article>();
+    private string message = "";
+    private string lastAction = "None";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine($"=== ADVERTISEMENT COMPONENT INITIALIZED for issue {issueId} ===");
+        lastAction = "Component initialized";
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            currentIssue = await IssueService.GetIssueAsync(issueId);
+            
+            if (currentIssue != null)
+            {
+                // Загружаем доступные рекламные блоки
+                availableAds = await AdService.GetAvailableAdsAsync();
+                
+                // Загружаем статьи для предпросмотра
+                var allArticles = await ArticleService.GetArticlesByIssueAsync(issueId);
+                pageArticles = allArticles.Take(3).ToList(); // Берем первые 3 статьи для примера
+                
+                Console.WriteLine($"Loaded {availableAds.Count} available ads and {pageArticles.Count} articles for preview");
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error loading data: {ex.Message}";
+            Console.WriteLine($"ERROR: {ex.Message}");
+        }
+    }
+
+    // ОБРАБОТЧИКИ КНОПОК
+    private void HandleRefreshAds()
+    {
+        Console.WriteLine("=== REFRESH ADS BUTTON CLICKED ===");
+        lastAction = "Refreshing ads...";
+        _ = LoadData();
+        message = "Advertisement blocks refreshed!";
+        StateHasChanged();
+    }
+
+    private void HandleRefreshPreview()
+    {
+        lastAction = "Preview refreshed";
+        StateHasChanged();
+    }
+
+    private void HandlePlaceAd(AdvertisementBlock ad)
+    {
+        Console.WriteLine($"=== PLACE AD BUTTON CLICKED for: {ad.Advertiser} ===");
+        
+        if (placedAds.Any(pa => pa.AdvertisementBlock.AdvertisementBlockId == ad.AdvertisementBlockId))
+        {
+            message = $"Advertisement '{ad.Advertiser}' is already placed!";
+            lastAction = "Ad already placed";
+            StateHasChanged();
+            return;
+        }
+
+        var placedAd = new AdvertisementPlacement
+        {
+            AdvertisementBlock = ad,
+            PageNumber = 1,
+            TextFlow = "Right",
+            Width = GetDefaultWidth(ad),
+            Height = GetDefaultHeight(ad),
+            PositionX = GetRandomPosition(50, 200),
+            PositionY = GetRandomPosition(50, 300)
+        };
+
+        var newPlacedAds = new List<AdvertisementPlacement>(placedAds) { placedAd };
+        placedAds = newPlacedAds;
+        
+        message = $"Advertisement '{ad.Advertiser}' placed on page!";
+        lastAction = $"Placed ad: {ad.Advertiser}";
+        
+        Console.WriteLine($"Ad {ad.AdvertisementBlockId} placed. Total placed ads: {placedAds.Count}");
+        StateHasChanged();
+    }
+
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ПРЕДПРОСМОТРА
+    private string GetAdPositionStyle(AdvertisementPlacement placedAd)
+    {
+        var left = placedAd.PositionX;
+        var top = placedAd.PositionY;
+        var width = placedAd.Width * 0.5; // Масштабируем для превью
+        var height = placedAd.Height * 0.5;
+        
+        return $"left: {left}px; top: {top}px; width: {width}px; height: {height}px;";
+    }
+
+    private string GetArticlePreview(string content, int length = 100)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        return content.Length > length ? content.Substring(0, length) + "..." : content;
+    }
+
+    private int GetRandomPosition(int min, int max)
+    {
+        var random = new Random();
+        return random.Next(min, max);
+    }
+
+    // Остальные методы остаются без изменений...
+    private bool IsImageAd(AdvertisementBlock ad)
+    {
+        return !string.IsNullOrEmpty(ad.Content) && 
+               (ad.Content.StartsWith("http") || ad.Content.Contains("."));
+    }
+
+    private string GetContentPreview(string content, int length = 100)
+    {
+        if (string.IsNullOrEmpty(content)) return "No content";
+        return content.Length > length ? content.Substring(0, length) + "..." : content;
+    }
+
+    private string GetAdStatus(AdvertisementBlock ad)
+    {
+        var today = DateTime.Today;
+        if (today < ad.StartDate) return "Upcoming";
+        if (today > ad.EndDate) return "Expired";
+        return "Active";
+    }
+
+    private int GetDaysLeft(AdvertisementBlock ad)
+    {
+        var today = DateTime.Today;
+        if (today > ad.EndDate) return 0;
+        return (ad.EndDate - today).Days;
+    }
+
+    private string GetAdCardClass(AdvertisementBlock ad)
+    {
+        var status = GetAdStatus(ad);
+        return status switch
+        {
+            "Active" => "border-success",
+            "Upcoming" => "border-warning",
+            "Expired" => "border-secondary",
+            _ => "border-secondary"
+        };
+    }
+
+    private string GetDateBadgeClass(AdvertisementBlock ad)
+    {
+        var status = GetAdStatus(ad);
+        return status switch
+        {
+            "Active" => "bg-success",
+            "Upcoming" => "bg-warning",
+            "Expired" => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private int GetDefaultWidth(AdvertisementBlock ad)
+    {
+        return IsImageAd(ad) ? 150 : 200;
+    }
+
+    private int GetDefaultHeight(AdvertisementBlock ad)
+    {
+        return IsImageAd(ad) ? 100 : 120;
+    }
+
+    private bool IsAdOverflowing(AdvertisementPlacement placedAd)
+    {
+        var defaultWidth = GetDefaultWidth(placedAd.AdvertisementBlock);
+        var defaultHeight = GetDefaultHeight(placedAd.AdvertisementBlock);
+        
+        return placedAd.Width > defaultWidth * 1.2 || placedAd.Height > defaultHeight * 1.2;
+    }
+
+    // Остальные методы HandleRemoveAd, HandleAdjustAd, HandleClearAllAds, HandleSaveLayout...
+    private void HandleRemoveAd(AdvertisementPlacement placedAd)
+    {
+        placedAds = placedAds.Where(pa => pa != placedAd).ToList();
+        message = $"Advertisement '{placedAd.AdvertisementBlock.Advertiser}' removed!";
+        lastAction = $"Removed ad: {placedAd.AdvertisementBlock.Advertiser}";
+        StateHasChanged();
+    }
+
+    private void HandleAdjustAd(AdvertisementPlacement placedAd)
+    {
+        message = $"Adjusting advertisement '{placedAd.AdvertisementBlock.Advertiser}'...";
+        lastAction = $"Adjusting ad: {placedAd.AdvertisementBlock.Advertiser}";
+        StateHasChanged();
+    }
+
+    private void HandleClearAllAds()
+    {
+        placedAds = new List<AdvertisementPlacement>();
+        message = "All advertisement blocks removed!";
+        lastAction = "Cleared all ads";
+        StateHasChanged();
+    }
+
+    private async Task HandleSaveLayout()
+    {
+        if (!placedAds.Any())
+        {
+            message = "No advertisement blocks to save!";
+            lastAction = "Save failed: no ads";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            await AdService.SaveAdPlacementAsync(issueId, placedAds);
+            
+            var overflowingAds = placedAds.Where(IsAdOverflowing).ToList();
+            if (overflowingAds.Any())
+            {
+                message = $"Warning: {overflowingAds.Count} advertisement block(s) may not fit properly!";
+                lastAction = "Save with warnings";
+            }
+            else
+            {
+                message = $"Layout saved successfully with {placedAds.Count} advertisement block(s)!";
+                lastAction = $"Saved layout with {placedAds.Count} ads";
+            }
+
+            Console.WriteLine($"Saved layout with {placedAds.Count} advertisement blocks");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error saving layout: {ex.Message}";
+            lastAction = "Save failed";
+            StateHasChanged();
+        }
+    }
+}

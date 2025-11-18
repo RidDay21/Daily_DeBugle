@@ -18,7 +18,8 @@ builder.Services.AddScoped<IPublicationService, PublicationService>();
 builder.Services.AddScoped<IIssueService, IssueService>();
 builder.Services.AddScoped<ILayoutService, LayoutService>();
 builder.Services.AddScoped<IArticleService, ArticleService>();
-builder.Services.AddScoped<IUserService, UserService>(); // ← ДОБАВЬТЕ ЭТУ СТРОЧКУ
+builder.Services.AddScoped<IUserService, UserService>(); 
+builder.Services.AddScoped<IAdvertisementService, AdvertisementService>();
 
 var app = builder.Build();
 

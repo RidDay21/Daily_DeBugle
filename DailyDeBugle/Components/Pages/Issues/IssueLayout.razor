@@ -19,7 +19,8 @@
     Component Rendered: @DateTime.Now.ToString("HH:mm:ss.fff")
 </div>
 
-    <button class="btn btn-primary" @onclick="HandleAddPage">Add Page</button>
+<div class="header-buttons mb-3">
+    <button class="btn btn-success" @onclick="HandleAddPage">Add Page</button>
     
     <select @bind="selectedTemplate" class="form-select d-inline-block w-auto">
         <option value="Default Template">Default Template</option>
@@ -28,8 +29,12 @@
         <option value="Magazine Style">Magazine Style</option>
     </select>
     
+    <!-- ДОБАВЛЕНА КНОПКА ДЛЯ ПЕРЕХОДА К РЕКЛАМЕ -->
+    <a class="btn btn-info" href="/issues/@issueId/ads">Manage Ads</a>
+    
     <button class="btn btn-primary" @onclick="HandleSaveLayout">Save Layout</button>
     <a class="btn btn-secondary" href="/issues">Back to Issues</a>
+</div>
 
 <div class="form-check mb-3">
     <input type="checkbox" class="form-check-input" @bind="showOnlyApproved" />
