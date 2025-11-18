@@ -24,13 +24,14 @@ else
             <th>Date</th>
             <th>Status</th>
             <th>Cover</th>
+            <th>Actions</th> <!-- ДОБАВЛЕН НОВЫЙ СТОЛБЕЦ -->
         </tr>
         </thead>
         <tbody>
         @foreach (var issue in issues)
         {
             <tr>
-                <td>@issue.Publication.Name</td>
+                <td>@issue.Publication?.Name</td>
                 <td>@issue.IssueNumber</td>
                 <td>@issue.IssueDate.ToShortDateString()</td>
                 <td>@issue.Status</td>
@@ -39,6 +40,12 @@ else
                     {
                         <img src="@issue.CoverImagePath" width="100" />
                     }
+                </td>
+                <td>
+                    <!-- ДОБАВЛЕНА КНОПКА ДЛЯ ПЕРЕХОДА НА ВЕРСТКУ -->
+                    <a class="btn btn-primary btn-sm" href="/issues/@issue.IssueId/layout">
+                        Layout
+                    </a>
                 </td>
             </tr>
         }

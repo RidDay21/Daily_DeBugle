@@ -1,4 +1,5 @@
 ﻿@page "/issues/create"
+@rendermode InteractiveServer
 @inject DailyDeBugle.Services.IIssueService IssueService
 @inject NavigationManager Nav
 @using DailyDeBugle.Models
@@ -11,19 +12,19 @@
 }
 else
 {
-    <EditForm Model="@newIssue" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+    <EditForm Model="@newIssue" OnValidSubmit="HandleValidSubmit" FormName="CreateIssueForm">
+    	<DataAnnotationsValidator />
+    	<ValidationSummary />
 
         <div class="mb-3">
             <label>Publication:</label>
-            <select class="form-select" @bind="newIssue.PublicationId">
-                <option value="">Select publication</option>
+            <InputSelect @bind-Value="newIssue.PublicationId" class="form-select">
+                <option value="@(default(int))">Select publication</option>
                 @foreach (var pub in publications)
                 {
                     <option value="@pub.PublicationId">@pub.Name</option>
                 }
-            </select>
+            </InputSelect>
         </div>
 
         <div class="mb-3">
@@ -56,8 +57,32 @@ else
 
     private async Task HandleValidSubmit()
     {
-        await IssueService.CreateAsync(newIssue);
-        Nav.NavigateTo("/issues");
+        try
+        {
+            // ДОБАВЬТЕ ЭТИ СТРОКИ ДЛЯ ОТЛАДКИ
+            Console.WriteLine($"=== DEBUG ===");
+            Console.WriteLine($"PublicationId: {newIssue.PublicationId}");
+            Console.WriteLine($"IssueNumber: {newIssue.IssueNumber}");
+            Console.WriteLine($"IssueDate: {newIssue.IssueDate}");
+
+            // Проверка что PublicationId не 0
+            if (newIssue.PublicationId == 0)
+            {
+                Console.WriteLine("ERROR: PublicationId is 0 - no publication selected!");
+                // Можно показать сообщение пользователю
+                return;
+            }
+
+            await IssueService.CreateAsync(newIssue);
+            Console.WriteLine("SUCCESS: Issue created!");
+            Nav.NavigateTo("/issues");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            // Можно добавить отображение ошибки пользователю
+        }
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)

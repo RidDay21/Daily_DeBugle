@@ -16,8 +16,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
 builder.Services.AddScoped<IIssueService, IssueService>();
-// builder.Services.AddScoped<ILayoutService, LayoutService>();
-// остальные сервисы
+builder.Services.AddScoped<ILayoutService, LayoutService>();
+builder.Services.AddScoped<IArticleService, ArticleService>();
+builder.Services.AddScoped<IUserService, UserService>(); // ← ДОБАВЬТЕ ЭТУ СТРОЧКУ
 
 var app = builder.Build();
 

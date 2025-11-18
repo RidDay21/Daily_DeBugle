@@ -1,0 +1,347 @@
+@using DailyDeBugle.Models
+@using System.Text.Json
+@using DailyDeBugle.Services
+
+@page "/issues/{issueId:int}/layout"
+@rendermode InteractiveServer
+@inject DailyDeBugle.Services.IIssueService IssueService
+@inject DailyDeBugle.Services.IArticleService ArticleService
+@inject NavigationManager Navigation
+
+<h3>Layout for Issue: @issueId</h3>
+
+<!-- Отладочная информация -->
+<div class="alert alert-warning">
+    <strong>Debug Info:</strong><br>
+    Pages Count: @pages.Count<br>
+    Last Action: @lastAction<br>
+    Current Template: @selectedTemplate<br>
+    Component Rendered: @DateTime.Now.ToString("HH:mm:ss.fff")
+</div>
+
+    <button class="btn btn-primary" @onclick="HandleAddPage">Add Page</button>
+    
+    <select @bind="selectedTemplate" class="form-select d-inline-block w-auto">
+        <option value="Default Template">Default Template</option>
+        <option value="Two Column Layout">Two Column Layout</option>
+        <option value="With Sidebar">With Sidebar</option>
+        <option value="Magazine Style">Magazine Style</option>
+    </select>
+    
+    <button class="btn btn-primary" @onclick="HandleSaveLayout">Save Layout</button>
+    <a class="btn btn-secondary" href="/issues">Back to Issues</a>
+
+<div class="form-check mb-3">
+    <input type="checkbox" class="form-check-input" @bind="showOnlyApproved" />
+    <label class="form-check-label">Show only approved articles</label>
+</div>
+
+<hr />
+
+<div class="section mb-4">
+    <h4>Articles for Issue: @currentIssue?.IssueNumber</h4>
+    
+    @if (!filteredArticles.Any())
+    {
+        <p>No articles available for this issue.</p>
+    }
+    else
+    {
+        <div class="articles-list">
+            @foreach (var article in filteredArticles)
+            {
+                <div class="article-item card mb-2 @GetArticleCardClass(article.Status)">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title">@article.Headline</h5>
+                            <span class="badge @GetStatusBadgeClass(article.Status)">@article.Status</span>
+                        </div>
+                        <p class="card-text">@GetArticlePreview(article.Content)</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Author: @article.Author?.Username | 
+                                Created: @article.CreatedDate.ToShortDateString() |
+                                Words: @GetWordCount(article.Content)
+                            </small>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="@(() => HandlePlaceArticle(article))">
+                                Place on Page
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<div class="section">
+    <h4>Current Pages Layout</h4>
+    
+    @if (pages.Any())
+    {
+        <div class="mb-3">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="HandleClearAllPages">Clear All Pages</button>
+        </div>
+        
+        @foreach (var pageItem in pages)
+        {
+            <div class="page-item card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Page @pageItem.PageNumber (@pageItem.Template)</span>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemovePage(pageItem))">
+                        Remove Page
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (pageItem.Articles.Any())
+                    {
+                        <h6>Articles on this page:</h6>
+                        <ul class="list-group">
+                            @foreach (var article in pageItem.Articles)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@article.Headline</strong>
+                                        <span class="badge @GetStatusBadgeClass(article.Status) ms-2">@article.Status</span>
+                                        <br>
+                                        <small class="text-muted">by @article.Author?.Username</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemoveArticleFromPage(pageItem, article))">
+                                        Remove
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No articles placed on this page yet.</p>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <p>No pages added yet. Click "Add Page" to start designing the layout.</p>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-info mt-3">@message</div>
+}
+
+@code {
+    [Parameter]
+    public int issueId { get; set; }
+
+    private Issue? currentIssue;
+    private List<Article> allArticles = new List<Article>();
+    private List<Article> filteredArticles = new List<Article>();
+    private List<PageModel> pages = new List<PageModel>();
+    private string selectedTemplate = "Default Template";
+    private string message = "";
+    private bool showOnlyApproved = false;
+    private string lastAction = "None";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine($"=== LAYOUT COMPONENT INITIALIZED for issue {issueId} ===");
+        lastAction = "Component initialized";
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            currentIssue = await IssueService.GetIssueAsync(issueId);
+            
+            if (currentIssue != null)
+            {
+                allArticles = await ArticleService.GetArticlesByIssueAsync(issueId);
+                UpdateFilteredArticles();
+                Console.WriteLine($"Loaded {allArticles.Count} articles for issue {issueId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error loading data: {ex.Message}";
+            Console.WriteLine($"ERROR: {ex.Message}");
+        }
+    }
+
+    private void UpdateFilteredArticles()
+    {
+        if (showOnlyApproved)
+        {
+            filteredArticles = allArticles.Where(a => a.Status == ArticleStatus.Approved).ToList();
+        }
+        else
+        {
+            filteredArticles = allArticles.ToList();
+        }
+        StateHasChanged();
+    }
+
+    // ОБРАБОТЧИКИ КНОПОК
+    private void HandleAddPage()
+    {
+        Console.WriteLine("=== ADD PAGE BUTTON CLICKED ===");
+        
+        var newPageNumber = pages.Count + 1;
+        var newPage = new PageModel
+        {
+            PageNumber = newPageNumber,
+            Template = selectedTemplate,
+            Articles = new List<Article>()
+        };
+
+        // Создаем полностью новый список
+        var newPagesList = new List<PageModel>();
+        newPagesList.AddRange(pages);
+        newPagesList.Add(newPage);
+        
+        pages = newPagesList; // Присваиваем новый список
+        
+        message = $"Page {newPageNumber} added successfully!";
+        lastAction = $"Added page {newPageNumber} at {DateTime.Now:HH:mm:ss}";
+        
+        Console.WriteLine($"Page {newPageNumber} added. Total pages: {pages.Count}");
+        
+        // Принудительное обновление
+        StateHasChanged();
+        Console.WriteLine("StateHasChanged called");
+    }
+
+    private void HandleRemovePage(PageModel page)
+    {
+        pages = pages.Where(p => p != page).ToList();
+        message = $"Page {page.PageNumber} removed.";
+        lastAction = $"Removed page {page.PageNumber}";
+        StateHasChanged();
+    }
+
+    private void HandleClearAllPages()
+    {
+        pages = new List<PageModel>();
+        message = "All pages cleared.";
+        lastAction = "Cleared all pages";
+        StateHasChanged();
+    }
+
+    private void HandlePlaceArticle(Article article)
+    {
+        if (!pages.Any())
+        {
+            message = "Please add at least one page before placing articles.";
+            lastAction = "No pages available";
+            StateHasChanged();
+            return;
+        }
+        
+        if (pages.Any(p => p.Articles.Any(a => a.ArticleId == article.ArticleId)))
+        {
+            message = $"Article '{article.Headline}' is already placed on a page.";
+            lastAction = "Article already placed";
+            StateHasChanged();
+            return;
+        }
+        
+        // Создаем новую копию списка страниц
+        var newPages = pages.Select(p => new PageModel 
+        { 
+            PageNumber = p.PageNumber,
+            Template = p.Template,
+            Articles = new List<Article>(p.Articles)
+        }).ToList();
+        
+        newPages[0].Articles.Add(article);
+        pages = newPages;
+        
+        message = $"Article '{article.Headline}' placed on page 1.";
+        lastAction = $"Placed article: {article.Headline}";
+        StateHasChanged();
+    }
+
+    private void HandleRemoveArticleFromPage(PageModel page, Article article)
+    {
+        var newPages = pages.Select(p => new PageModel 
+        { 
+            PageNumber = p.PageNumber,
+            Template = p.Template,
+            Articles = new List<Article>(p.Articles)
+        }).ToList();
+        
+        var pageToUpdate = newPages.First(p => p.PageNumber == page.PageNumber);
+        pageToUpdate.Articles.Remove(article);
+        pages = newPages;
+        
+        message = $"Article '{article.Headline}' removed from page {page.PageNumber}.";
+        lastAction = $"Removed article from page {page.PageNumber}";
+        StateHasChanged();
+    }
+
+    private void HandleSaveLayout()
+    {
+        if (!pages.Any())
+        {
+            message = "Error: Cannot save layout without pages. Please add at least one page.";
+            lastAction = "Save failed: no pages";
+            StateHasChanged();
+            return;
+        }
+        
+        var totalArticles = pages.Sum(p => p.Articles.Count);
+        message = $"Layout saved successfully with {pages.Count} pages and {totalArticles} articles!";
+        lastAction = $"Saved layout with {pages.Count} pages";
+        StateHasChanged();
+    }
+
+    // Вспомогательные методы
+    private string GetArticlePreview(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        return content.Length > 100 ? content.Substring(0, 100) + "..." : content;
+    }
+
+    private int GetWordCount(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return 0;
+        return content.Split(new char[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    private string GetArticleCardClass(ArticleStatus status)
+    {
+        return status switch
+        {
+            ArticleStatus.Approved => "border-success",
+            ArticleStatus.UnderReview => "border-info",
+            ArticleStatus.RequiresRevision => "border-warning",
+            ArticleStatus.Draft => "border-secondary",
+            ArticleStatus.Rejected => "border-danger",
+            _ => ""
+        };
+    }
+
+    private string GetStatusBadgeClass(ArticleStatus status)
+    {
+        return status switch
+        {
+            ArticleStatus.Approved => "bg-success",
+            ArticleStatus.UnderReview => "bg-info",
+            ArticleStatus.RequiresRevision => "bg-warning",
+            ArticleStatus.Draft => "bg-secondary",
+            ArticleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    public class PageModel
+    {
+        public int PageNumber { get; set; }
+        public string Template { get; set; } = string.Empty;
+        public List<Article> Articles { get; set; } = new List<Article>();
+    }
+}
