@@ -1,0 +1,187 @@
+@page "/issues/{issueId}/header-footer"
+@rendermode InteractiveServer
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject IHeaderFooterService HeaderFooterService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Колонтитулы - Выпуск @issueId</PageTitle>
+
+<h3>Настройка колонтитулов</h3>
+
+<EditForm Model="@settings" OnValidSubmit="@SaveSettings" FormName="header_footer_form">
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Верхний колонтитул</h4>
+            
+            <div class="form-check mb-3">
+                <InputCheckbox class="form-check-input" @bind-Value="@settings.HeaderEnabled" />
+                <label class="form-check-label">Включен</label>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Слева</label>
+                <InputText class="form-control" @bind-Value="@settings.HeaderLeft" />
+                <small class="form-text text-muted">Доступные плейсхолдеры: {PublicationName}, {IssueNumber}, {IssueDate}</small>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">По центру</label>
+                <InputText class="form-control" @bind-Value="@settings.HeaderCenter" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Справа</label>
+                <InputText class="form-control" @bind-Value="@settings.HeaderRight" />
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <h4>Нижний колонтитул</h4>
+            
+            <div class="form-check mb-3">
+                <InputCheckbox class="form-check-input" @bind-Value="@settings.FooterEnabled" />
+                <label class="form-check-label">Включен</label>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Слева</label>
+                <InputText class="form-control" @bind-Value="@settings.FooterLeft" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">По центру</label>
+                <InputText class="form-control" @bind-Value="@settings.FooterCenter" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Справа</label>
+                <InputText class="form-control" @bind-Value="@settings.FooterRight" />
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <h5>Форматирование</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">Шрифт</label>
+                    <InputSelect class="form-select" @bind-Value="@settings.FontFamily">
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Helvetica">Helvetica</option>
+                    </InputSelect>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Размер шрифта</label>
+                    <InputNumber class="form-control" @bind-Value="@settings.FontSize" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Выравнивание</label>
+                    <InputSelect class="form-select" @bind-Value="@settings.Alignment">
+                        <option value="left">Слева</option>
+                        <option value="center">По центру</option>
+                        <option value="right">Справа</option>
+                    </InputSelect>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <button type="button" class="btn btn-secondary" @onclick="@ResetToDefault">Сбросить</button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="@NavigateBack">Назад</button>
+    </div>
+</EditForm>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <h4>Предпросмотр</h4>
+        <div class="preview-container border p-4">
+            @if (previewHeader != null)
+            {
+                <div class="preview-header border-bottom pb-2 mb-3">
+                    @((MarkupString)previewHeader)
+                </div>
+            }
+            
+            <div class="preview-content" style="min-height: 300px;">
+                <p>Основное содержание страницы...</p>
+                <p>Текст статьи будет расположен здесь. Это пример того, как будет выглядеть страница с примененными колонтитулами.</p>
+            </div>
+
+            @if (previewFooter != null)
+            {
+                <div class="preview-footer border-top pt-2 mt-3">
+                    @((MarkupString)previewFooter)
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string issueId { get; set; }
+
+    private HeaderFooterSettings settings = new();
+    private string previewHeader;
+    private string previewFooter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (int.TryParse(issueId, out int id))
+        {
+            settings = await HeaderFooterService.GetSettingsForIssueAsync(id);
+            await UpdatePreview();
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            settings = await HeaderFooterService.SaveSettingsAsync(settings);
+            await UpdatePreview();
+            
+            await JSRuntime.InvokeVoidAsync("alert", "Настройки колонтитулов успешно сохранены!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка при сохранении: {ex.Message}");
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        settings.HeaderLeft = "{PublicationName}";
+        settings.HeaderCenter = "Выпуск №{IssueNumber}";
+        settings.HeaderRight = "{IssueDate}";
+        settings.FooterLeft = "Контакт: {ContactEmail}";
+        settings.FooterCenter = "Страница {PageNumber}";
+        settings.FooterRight = "{CurrentDate}";
+        settings.FontFamily = "Times New Roman";
+        settings.FontSize = 10;
+        settings.Alignment = "center";
+        
+        await UpdatePreview();
+        StateHasChanged();
+    }
+
+    private async Task UpdatePreview()
+    {
+        if (int.TryParse(issueId, out int id))
+        {
+            previewHeader = await HeaderFooterService.RenderHeaderAsync(id, 1);
+            previewFooter = await HeaderFooterService.RenderFooterAsync(id, 1);
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/layout");
+    }
+}

@@ -1,0 +1,278 @@
+@page "/issues/{issueId}/text-style"
+@using DailyDeBugle.Services
+@rendermode InteractiveServer
+@inject IGlobalTextStyleService TextStyleService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Daily Debugle - Типографика</PageTitle>
+
+<div class="text-style-container">
+    <!-- Панель настроек -->
+    <div class="settings-panel">
+        <h3 class="panel-title">Типографика</h3>
+        
+        <!-- Шрифты -->
+        <div class="setting-group">
+            <h5>Шрифты:</h5>
+            
+            <div class="form-field">
+                <label>Основной шрифт:</label>
+                <select @bind="@styles.PrimaryFont" class="form-select">
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Garamond">Garamond</option>
+                </select>
+            </div>
+            
+            <div class="form-field">
+                <label>Заголовки:</label>
+                <select @bind="@styles.HeadingFont" class="form-select">
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Garamond">Garamond</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Размеры текста -->
+        <div class="setting-group">
+            <h5>Размеры текста (pt):</h5>
+            
+            <div class="form-field">
+                <label>Заголовок H1 (18-48pt):</label>
+                <input type="number" @bind="@styles.H1Size" 
+                       @oninput="@(e => { styles.H1Size = Clamp(Convert.ToInt32(e.Value), 18, 48); })" 
+                       class="form-control" />
+            </div>
+            
+            <div class="form-field">
+                <label>Заголовок H2 (16-36pt):</label>
+                <input type="number" @bind="@styles.H2Size" 
+                       @oninput="@(e => { styles.H2Size = Clamp(Convert.ToInt32(e.Value), 16, 36); })" 
+                       class="form-control" />
+            </div>
+            
+            <div class="form-field">
+                <label>Основной текст (12-18pt):</label>
+                <input type="number" @bind="@styles.BodySize" 
+                       @oninput="@(e => { styles.BodySize = Clamp(Convert.ToInt32(e.Value), 12, 18); })" 
+                       class="form-control" />
+            </div>
+        </div>
+
+        <!-- Междустрочные интервалы -->
+        <div class="setting-group">
+            <h5>Междустрочные интервалы:</h5>
+            
+            <div class="form-field">
+                <label>Основной текст (1.2-2.0):</label>
+                <input type="number" @bind="@styles.BodyLineSpacing" 
+                       @oninput="@(e => { styles.BodyLineSpacing = Clamp(Convert.ToDouble(e.Value), 1.2, 2.0); })" 
+                       class="form-control" step="0.1" />
+            </div>
+            
+            <div class="form-field">
+                <label>Заголовки (1.0-1.8):</label>
+                <input type="number" @bind="@styles.HeadingLineSpacing" 
+                       @oninput="@(e => { styles.HeadingLineSpacing = Clamp(Convert.ToDouble(e.Value), 1.0, 1.8); })" 
+                       class="form-control" step="0.1" />
+            </div>
+        </div>
+
+        <!-- Колонки -->
+        <div class="setting-group">
+            <h5>Колонки</h5>
+            
+            <div class="form-field">
+                <label>Количество колонок:</label>
+                <div class="column-buttons">
+                    @foreach (var col in new[] { 1, 2, 3, 4 })
+                    {
+                        <button class="column-btn @(styles.ColumnCount == col ? "active" : "")"
+                                @onclick="() => ChangeColumnCount(col)">
+                            @col
+                        </button>
+                    }
+                </div>
+            </div>
+            
+            <div class="form-field">
+                <label>Расстояние между колонками (0.5-3.0см):</label>
+                <input type="number" @bind="@styles.ColumnGap" 
+                       @oninput="@(e => { styles.ColumnGap = Clamp(Convert.ToDouble(e.Value), 0.5, 3.0); })" 
+                       class="form-control" step="0.1" />
+            </div>
+        </div>
+
+        <!-- Кнопки управления -->
+        <div class="action-buttons">
+            <button class="btn btn-secondary" @onclick="ResetToDefault">
+                Сбросить настройки
+            </button>
+            <button class="btn btn-primary" @onclick="SaveSettings">
+                Сохранить стиль
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="NavigateBack">
+                Назад
+            </button>
+        </div>
+    </div>
+
+    <!-- Панель предпросмотра -->
+    <div class="preview-panel">
+        <h4>Предпросмотр типографики</h4>
+        
+        <div class="current-settings">
+            <small>Текущие настройки: 
+                Шрифт: @styles.PrimaryFont, 
+                H1: @styles.H1Size pt, 
+                H2: @styles.H2Size pt,
+                Основной: @styles.BodySize pt,
+                Интервал: @Math.Round(styles.BodyLineSpacing, 1),
+                Колонки: @styles.ColumnCount
+            </small>
+        </div>
+        
+        <div class="preview-content" style="@GetPreviewStyle()">
+            <h1 style="@GetH1Style()">Заголовок статьи</h1>
+            <p style="@GetParagraphStyle()">
+                Это пример текста статьи с выбранными настройками стиля. 
+                Здесь вы можете видеть, как будет выглядеть текст после применения настроек типографики.
+                Обратите внимание на шрифт, размер текста, межстрочный интервал и количество колонок.
+            </p>
+            <h2 style="@GetH2Style()">Подзаголовок второго уровня</h2>
+            <p style="@GetParagraphStyle()">
+                Еще один абзац текста для демонстрации внешнего вида. 
+                Вы можете изменять настройки в левой панели и сразу видеть изменения в этом предпросмотре.
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string issueId { get; set; }
+
+    private GlobalTextStyle styles = new GlobalTextStyle();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (int.TryParse(issueId, out int id))
+        {
+            styles = await TextStyleService.GetStylesForIssueAsync(id);
+        }
+    }
+
+    private int Clamp(int value, int min, int max)
+    {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    private double Clamp(double value, double min, double max)
+    {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    private void ChangeColumnCount(int count)
+    {
+        styles.ColumnCount = count;
+        StateHasChanged();
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            styles = await TextStyleService.SaveStylesAsync(styles);
+            await TextStyleService.ApplyStylesToIssueAsync(styles.IssueId);
+            
+            await JSRuntime.InvokeVoidAsync("alert", "Настройки типографики успешно сохранены и применены!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка при сохранении: {ex.Message}");
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        styles.PrimaryFont = "Times New Roman";
+        styles.HeadingFont = "Times New Roman";
+        styles.H1Size = 24;
+        styles.H2Size = 20;
+        styles.BodySize = 14;
+        styles.BodyLineSpacing = 1.4;
+        styles.HeadingLineSpacing = 1.2;
+        styles.ColumnCount = 2;
+        styles.ColumnGap = 1.0;
+        
+        StateHasChanged();
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/layout");
+    }
+
+    private string GetPreviewStyle()
+    {
+        return $@"
+            font-family: {styles.PrimaryFont};
+            font-size: {styles.BodySize}pt;
+            line-height: {styles.BodyLineSpacing};
+            column-count: {styles.ColumnCount};
+            column-gap: {styles.ColumnGap}cm;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            min-height: 400px;
+        ";
+    }
+
+    private string GetH1Style()
+    {
+        return $@"
+            font-family: {styles.HeadingFont};
+            font-size: {styles.H1Size}pt;
+            line-height: {styles.HeadingLineSpacing};
+            color: #2c3e50;
+            margin: 30px 0 20px 0;
+        ";
+    }
+
+    private string GetH2Style()
+    {
+        return $@"
+            font-family: {styles.HeadingFont};
+            font-size: {styles.H2Size}pt;
+            line-height: {styles.HeadingLineSpacing};
+            color: #34495e;
+            margin: 25px 0 15px 0;
+        ";
+    }
+
+    private string GetParagraphStyle()
+    {
+        return $@"
+            font-family: {styles.PrimaryFont};
+            font-size: {styles.BodySize}pt;
+            line-height: {styles.BodyLineSpacing};
+            color: #2c3e50;
+            margin: 15px 0;
+            text-align: justify;
+        ";
+    }
+}
