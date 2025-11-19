@@ -1,6 +1,5 @@
-<h3>HeaderFooterConfig</h3>
-
 @page "/issues/{issueId}/header-footer"
+@rendermode InteractiveServer
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
 @inject IHeaderFooterService HeaderFooterService
@@ -11,7 +10,7 @@
 
 <h3>Настройка колонтитулов</h3>
 
-<EditForm Model="@settings" OnValidSubmit="@SaveSettings">
+<EditForm Model="@settings" OnValidSubmit="@SaveSettings" FormName="header_footer_form">
     <div class="row">
         <div class="col-md-6">
             <h4>Верхний колонтитул</h4>
@@ -148,7 +147,6 @@
             settings = await HeaderFooterService.SaveSettingsAsync(settings);
             await UpdatePreview();
             
-            // Show success message
             await JSRuntime.InvokeVoidAsync("alert", "Настройки колонтитулов успешно сохранены!");
         }
         catch (Exception ex)

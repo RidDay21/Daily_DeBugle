@@ -15,10 +15,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
+builder.Services.AddScoped<IHeaderFooterService, HeaderFooterService>();
 builder.Services.AddScoped<IGlobalTextStyleService, GlobalTextStyleService>();
-// builder.Services.AddScoped<IIssueService, IssueService>();
+builder.Services.AddScoped<IIssueService, IssueService>();
+builder.Services.AddScoped<IArticleService, ArticleService>();
+builder.Services.AddScoped<IUserService, UserService>();
 // builder.Services.AddScoped<ILayoutService, LayoutService>();
-// Добавь остальные сервисы
+// Остальные сервисы
 
 var app = builder.Build();
 

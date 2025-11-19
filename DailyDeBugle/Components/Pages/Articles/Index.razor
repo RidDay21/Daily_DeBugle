@@ -1,0 +1,51 @@
+﻿@page "/articles"
+@inject DailyDeBugle.Services.IArticleService ArticleService
+@using DailyDeBugle.Models
+
+<h3>Articles</h3>
+
+<a class="btn btn-success mb-3" href="/articles/create">+ New Article</a>
+
+@if (articles == null)
+{
+    <p>Loading...</p>
+}
+else if (articles.Count == 0)
+{
+    <p>No articles yet.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Headline</th>
+            <th>Author</th>
+            <th>Issue</th>
+            <th>Date</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var article in articles)
+        {
+            <tr>
+                <td>@article.Headline</td>
+                <td>@article.Author?.Username</td>
+                <td>@article.Issue?.IssueNumber</td>
+                <td>@article.CreatedDate.ToShortDateString()</td>
+                <td>@article.Status</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Article>? articles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        articles = await ArticleService.GetArticlesAsync();
+    }
+}

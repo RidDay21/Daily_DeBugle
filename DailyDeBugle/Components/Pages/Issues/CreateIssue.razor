@@ -1,0 +1,76 @@
+﻿@page "/issues/create"
+@rendermode InteractiveServer
+@inject DailyDeBugle.Services.IIssueService IssueService
+@inject NavigationManager Nav
+@using DailyDeBugle.Models
+
+<h3>Create New Issue</h3>
+
+@if (publications == null)
+{
+    <p>Loading publications...</p>
+}
+else
+{
+    <EditForm Model="@newIssue" OnValidSubmit="HandleValidSubmit" FormName="CreateIssueForm">
+    	<DataAnnotationsValidator />
+    	<ValidationSummary />
+
+        <div class="mb-3">
+            <label>Publication:</label>
+            <InputSelect @bind-Value="newIssue.PublicationId" class="form-select">
+                <option value="@(default(int))">Select publication</option>
+                @foreach (var pub in publications)
+                {
+                    <option value="@pub.PublicationId">@pub.Name</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label>Issue Number:</label>
+            <InputText @bind-Value="newIssue.IssueNumber" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Issue Date:</label>
+            <InputDate @bind-Value="newIssue.IssueDate" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Cover Image:</label>
+            <InputFile OnChange="HandleFileSelected" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">Create</button>
+    </EditForm>
+}
+
+@code {
+    private Issue newIssue = new() { IssueDate = DateTime.Today };
+    private List<Publication>? publications;
+
+    protected override async Task OnInitializedAsync()
+    {
+        publications = await IssueService.GetPublicationsAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await IssueService.CreateAsync(newIssue);
+        Nav.NavigateTo("/issues");
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var uploadsDir = Path.Combine("wwwroot", "covers");
+        Directory.CreateDirectory(uploadsDir);
+
+        var filePath = Path.Combine(uploadsDir, file.Name);
+        await using var fs = new FileStream(filePath, FileMode.Create);
+        await file.OpenReadStream().CopyToAsync(fs);
+
+        newIssue.CoverImagePath = $"/covers/{file.Name}";
+    }
+}
