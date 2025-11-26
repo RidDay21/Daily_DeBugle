@@ -6,7 +6,6 @@ namespace DailyDeBugle.Services
 {
     public class ArticleService : IArticleService
     {
-
         private readonly ApplicationDbContext _context;
 
         public ArticleService(ApplicationDbContext context)
@@ -15,6 +14,15 @@ namespace DailyDeBugle.Services
         }
 
         public async Task<List<Article>> GetArticlesAsync()
+        {
+            return await _context.Articles
+                .Include(a => a.Author)
+                .Include(a => a.Issue)
+                .OrderByDescending(a => a.CreatedDate)
+                .ToListAsync();
+        }
+        
+        public async Task<List<Article>> GetAllArticlesAsync()
         {
             return await _context.Articles
                 .Include(a => a.Author)
@@ -45,7 +53,7 @@ namespace DailyDeBugle.Services
             article.CreatedDate = DateTime.UtcNow;
             article.ModifiedDate = DateTime.UtcNow;
             article.Status = ArticleStatus.Draft;
-		    Console.WriteLine($"[DEBUG] Creating article: AuthorId={article.AuthorId}, IssueId={article.IssueId}, Headline={article.Headline}");
+            Console.WriteLine($"[DEBUG] Creating article: AuthorId={article.AuthorId}, IssueId={article.IssueId}, Headline={article.Headline}");
             _context.Articles.Add(article);
             await _context.SaveChangesAsync();
             return article;
@@ -67,6 +75,52 @@ namespace DailyDeBugle.Services
                 _context.Articles.Remove(article);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<List<Article>> GetArticlesByStatusAsync(ArticleStatus status)
+        {
+            return await _context.Articles
+                .Include(a => a.Author)
+                .Where(a => a.Status == status)
+                .OrderByDescending(a => a.CreatedDate)
+                .ToListAsync();
+        }
+
+        public async Task<bool> ApproveArticleAsync(int articleId, string editedContent)
+        {
+            var article = await _context.Articles.FindAsync(articleId);
+            if (article == null) return false;
+
+            article.Content = editedContent;
+            article.Status = ArticleStatus.Approved;
+            article.ModifiedDate = DateTime.UtcNow;
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> SendForRevisionAsync(int articleId, string comments)
+        {
+            var article = await _context.Articles.FindAsync(articleId);
+            if (article == null) return false;
+
+            article.Status = ArticleStatus.RequiresRevision;
+            article.ModifiedDate = DateTime.UtcNow;
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RejectArticleAsync(int articleId, string reason)
+        {
+            var article = await _context.Articles.FindAsync(articleId);
+            if (article == null) return false;
+
+            article.Status = ArticleStatus.Rejected;
+            article.ModifiedDate = DateTime.UtcNow;
+            
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

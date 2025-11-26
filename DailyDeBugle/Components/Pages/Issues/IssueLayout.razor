@@ -6,6 +6,7 @@
 @rendermode InteractiveServer
 @inject DailyDeBugle.Services.IIssueService IssueService
 @inject DailyDeBugle.Services.IArticleService ArticleService
+@inject DailyDeBugle.Services.ILayoutService LayoutService
 @inject NavigationManager Navigation
 
 <h3>Layout for Issue: @issueId</h3>
@@ -13,7 +14,7 @@
 <!-- Отладочная информация -->
 <div class="alert alert-warning">
     <strong>Debug Info:</strong><br>
-    Pages Count: @pages.Count<br>
+    Pages Count: @pageLayouts.Count<br>
     Last Action: @lastAction<br>
     Current Template: @selectedTemplate<br>
     Component Rendered: @DateTime.Now.ToString("HH:mm:ss.fff")
@@ -29,7 +30,6 @@
         <option value="Magazine Style">Magazine Style</option>
     </select>
     
-    <!-- ДОБАВЛЕНА КНОПКА ДЛЯ ПЕРЕХОДА К РЕКЛАМЕ -->
     <a class="btn btn-info" href="/issues/@issueId/ads">Manage Ads</a>
     
     <button class="btn btn-primary" @onclick="HandleSaveLayout">Save Layout</button>
@@ -82,36 +82,38 @@
 <div class="section">
     <h4>Current Pages Layout</h4>
     
-    @if (pages.Any())
+    @if (pageLayouts.Any())
     {
         <div class="mb-3">
             <button class="btn btn-sm btn-outline-secondary" @onclick="HandleClearAllPages">Clear All Pages</button>
         </div>
         
-        @foreach (var pageItem in pages)
+        @foreach (var pageLayout in pageLayouts)
         {
             <div class="page-item card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Page @pageItem.PageNumber (@pageItem.Template)</span>
-                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemovePage(pageItem))">
+                    <span>Page @pageLayout.PageNumber (@selectedTemplate)</span>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemovePage(pageLayout))">
                         Remove Page
                     </button>
                 </div>
                 <div class="card-body">
-                    @if (pageItem.Articles.Any())
+                    @if (pageLayout.LayoutElements.Any(le => le.Article != null))
                     {
                         <h6>Articles on this page:</h6>
                         <ul class="list-group">
-                            @foreach (var article in pageItem.Articles)
+                            @foreach (var element in pageLayout.LayoutElements.Where(le => le.Article != null))
                             {
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
                                     <div>
-                                        <strong>@article.Headline</strong>
-                                        <span class="badge @GetStatusBadgeClass(article.Status) ms-2">@article.Status</span>
+                                        <strong>@element.Article.Headline</strong>
+                                        <span class="badge @GetStatusBadgeClass(element.Article.Status) ms-2">@element.Article.Status</span>
                                         <br>
-                                        <small class="text-muted">by @article.Author?.Username</small>
+                                        <small class="text-muted">by @element.Article.Author?.Username</small>
+                                        <br>
+                                        <small class="text-muted">Position: @element.Position | Size: @element.Size</small>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemoveArticleFromPage(pageItem, article))">
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemoveArticleFromPage(pageLayout, element))">
                                         Remove
                                     </button>
                                 </li>
@@ -144,7 +146,7 @@
     private Issue? currentIssue;
     private List<Article> allArticles = new List<Article>();
     private List<Article> filteredArticles = new List<Article>();
-    private List<PageModel> pages = new List<PageModel>();
+    private List<PageLayout> pageLayouts = new List<PageLayout>();
     private string selectedTemplate = "Default Template";
     private string message = "";
     private bool showOnlyApproved = false;
@@ -166,8 +168,19 @@
             if (currentIssue != null)
             {
                 allArticles = await ArticleService.GetArticlesByIssueAsync(issueId);
+                pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
                 UpdateFilteredArticles();
-                Console.WriteLine($"Loaded {allArticles.Count} articles for issue {issueId}");
+                Console.WriteLine($"Loaded {allArticles.Count} articles and {pageLayouts.Count} page layouts for issue {issueId}");
+                
+                // Отладочная информация о загруженных страницах
+                foreach (var page in pageLayouts)
+                {
+                    Console.WriteLine($"Page {page.PageNumber} has {page.LayoutElements.Count} elements");
+                    foreach (var element in page.LayoutElements)
+                    {
+                        Console.WriteLine($"  - Element: ArticleId={element.ArticleId}, Type={element.Type}");
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -191,116 +204,221 @@
     }
 
     // ОБРАБОТЧИКИ КНОПОК
-    private void HandleAddPage()
+    private async Task HandleAddPage()
     {
         Console.WriteLine("=== ADD PAGE BUTTON CLICKED ===");
         
-        var newPageNumber = pages.Count + 1;
-        var newPage = new PageModel
+        try
         {
-            PageNumber = newPageNumber,
-            Template = selectedTemplate,
-            Articles = new List<Article>()
-        };
+            var newPageNumber = pageLayouts.Count + 1;
 
-        // Создаем полностью новый список
-        var newPagesList = new List<PageModel>();
-        newPagesList.AddRange(pages);
-        newPagesList.Add(newPage);
-        
-        pages = newPagesList; // Присваиваем новый список
-        
-        message = $"Page {newPageNumber} added successfully!";
-        lastAction = $"Added page {newPageNumber} at {DateTime.Now:HH:mm:ss}";
-        
-        Console.WriteLine($"Page {newPageNumber} added. Total pages: {pages.Count}");
-        
-        // Принудительное обновление
-        StateHasChanged();
-        Console.WriteLine("StateHasChanged called");
-    }
+            // ВРЕМЕННОЕ РЕШЕНИЕ: создаем PageLayout без TemplateId
+            // Для этого нам нужно обойти ограничение базы данных
+            var newPageLayout = new PageLayout
+            {
+                IssueId = issueId,
+                PageNumber = newPageNumber,
+                LayoutElements = new List<LayoutElement>(),
+                LayoutSettings = "{}"
+            };
 
-    private void HandleRemovePage(PageModel page)
-    {
-        pages = pages.Where(p => p != page).ToList();
-        message = $"Page {page.PageNumber} removed.";
-        lastAction = $"Removed page {page.PageNumber}";
-        StateHasChanged();
-    }
+            // Используем рефлексию чтобы установить TemplateId = 1 (первый шаблон)
+            // Это временное решение пока не создадим шаблоны в базе
+            var templateIdProperty = typeof(PageLayout).GetProperty("TemplateId");
+            if (templateIdProperty != null && templateIdProperty.CanWrite)
+            {
+                templateIdProperty.SetValue(newPageLayout, 1);
+            }
 
-    private void HandleClearAllPages()
-    {
-        pages = new List<PageModel>();
-        message = "All pages cleared.";
-        lastAction = "Cleared all pages";
-        StateHasChanged();
-    }
-
-    private void HandlePlaceArticle(Article article)
-    {
-        if (!pages.Any())
-        {
-            message = "Please add at least one page before placing articles.";
-            lastAction = "No pages available";
+            // Сохраняем в базу
+            await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
+            
+            // Перезагружаем данные
+            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+            
+            message = $"Page {newPageNumber} added successfully!";
+            lastAction = $"Added page {newPageNumber} at {DateTime.Now:HH:mm:ss}";
+            
+            Console.WriteLine($"Page {newPageNumber} added. Total pages: {pageLayouts.Count}");
             StateHasChanged();
-            return;
+        }
+        catch (Exception ex)
+        {
+            message = $"Error adding page: {ex.Message}";
+            lastAction = "Add page failed";
+            Console.WriteLine($"ERROR adding page: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleRemovePage(PageLayout pageLayout)
+    {
+        try
+        {
+            // Удаляем все элементы макета для этой страницы
+            foreach (var element in pageLayout.LayoutElements.ToList())
+            {
+                await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
+            }
+            
+            // Перезагружаем данные
+            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+            
+            message = $"Page {pageLayout.PageNumber} removed.";
+            lastAction = $"Removed page {pageLayout.PageNumber}";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error removing page: {ex.Message}";
+            lastAction = "Remove page failed";
+            Console.WriteLine($"ERROR removing page: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleClearAllPages()
+    {
+        try
+        {
+            // Удаляем все страницы
+            foreach (var pageLayout in pageLayouts.ToList())
+            {
+                foreach (var element in pageLayout.LayoutElements.ToList())
+                {
+                    await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
+                }
+            }
+            
+            pageLayouts = new List<PageLayout>();
+            message = "All pages cleared.";
+            lastAction = "Cleared all pages";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error clearing pages: {ex.Message}";
+            lastAction = "Clear pages failed";
+            Console.WriteLine($"ERROR clearing pages: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandlePlaceArticle(Article article)
+    {
+        try
+        {
+            if (!pageLayouts.Any())
+            {
+                message = "Please add at least one page before placing articles.";
+                lastAction = "No pages available";
+                StateHasChanged();
+                return;
+            }
+            
+            // Проверяем, не размещена ли статья уже на какой-то странице
+            var existingElement = pageLayouts
+                .SelectMany(pl => pl.LayoutElements)
+                .FirstOrDefault(le => le.ArticleId == article.ArticleId);
+                
+            if (existingElement != null)
+            {
+                message = $"Article '{article.Headline}' is already placed on a page.";
+                lastAction = "Article already placed";
+                StateHasChanged();
+                return;
+            }
+            
+            // Берем первую страницу
+            var firstPage = pageLayouts.First();
+            
+            // Добавляем статью на страницу через сервис
+            var defaultPosition = JsonSerializer.Serialize(new { X = 0, Y = 0 });
+            var defaultSize = JsonSerializer.Serialize(new { Width = 100, Height = 100 });
+            
+            await LayoutService.AddArticleToLayoutAsync(
+                firstPage.PageLayoutId, 
+                article.ArticleId, 
+                defaultPosition, 
+                defaultSize
+            );
+            
+            // Перезагружаем данные
+            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+            
+            message = $"Article '{article.Headline}' placed on page 1.";
+            lastAction = $"Placed article: {article.Headline}";
+            
+            Console.WriteLine($"Article {article.ArticleId} placed on page {firstPage.PageNumber}");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error placing article: {ex.Message}";
+            lastAction = "Place article failed";
+            Console.WriteLine($"ERROR placing article: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleRemoveArticleFromPage(PageLayout pageLayout, LayoutElement element)
+    {
+        try
+        {
+            await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
+            
+            // Перезагружаем данные
+            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+            
+            message = $"Article '{element.Article.Headline}' removed from page {pageLayout.PageNumber}.";
+            lastAction = $"Removed article from page {pageLayout.PageNumber}";
+            
+            Console.WriteLine($"Article {element.ArticleId} removed from page {pageLayout.PageNumber}");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error removing article: {ex.Message}";
+            lastAction = "Remove article failed";
+            Console.WriteLine($"ERROR removing article: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSaveLayout()
+    {
+        try
+        {
+            if (!pageLayouts.Any())
+            {
+                message = "Error: Cannot save layout without pages. Please add at least one page.";
+                lastAction = "Save failed: no pages";
+                StateHasChanged();
+                return;
+            }
+            
+            // Обновляем статус выпуска на "Ready for Print"
+            await LayoutService.UpdateIssueStatusAsync(issueId, IssueStatus.ReadyForPublish);
+            
+            var totalArticles = pageLayouts.Sum(pl => pl.LayoutElements.Count(le => le.Article != null));
+            message = $"Layout saved successfully with {pageLayouts.Count} pages and {totalArticles} articles! Status updated to Ready for Print.";
+            lastAction = $"Saved layout with {pageLayouts.Count} pages";
+            
+            Console.WriteLine($"Layout saved for issue {issueId} with {pageLayouts.Count} pages and {totalArticles} articles");
+            
+            // Показываем детальную информацию о сохраненном макете
+            foreach (var page in pageLayouts)
+            {
+                Console.WriteLine($"Page {page.PageNumber}: {page.LayoutElements.Count} elements");
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error saving layout: {ex.Message}";
+            lastAction = "Save failed";
+            Console.WriteLine($"ERROR saving layout: {ex.Message}");
         }
         
-        if (pages.Any(p => p.Articles.Any(a => a.ArticleId == article.ArticleId)))
-        {
-            message = $"Article '{article.Headline}' is already placed on a page.";
-            lastAction = "Article already placed";
-            StateHasChanged();
-            return;
-        }
-        
-        // Создаем новую копию списка страниц
-        var newPages = pages.Select(p => new PageModel 
-        { 
-            PageNumber = p.PageNumber,
-            Template = p.Template,
-            Articles = new List<Article>(p.Articles)
-        }).ToList();
-        
-        newPages[0].Articles.Add(article);
-        pages = newPages;
-        
-        message = $"Article '{article.Headline}' placed on page 1.";
-        lastAction = $"Placed article: {article.Headline}";
-        StateHasChanged();
-    }
-
-    private void HandleRemoveArticleFromPage(PageModel page, Article article)
-    {
-        var newPages = pages.Select(p => new PageModel 
-        { 
-            PageNumber = p.PageNumber,
-            Template = p.Template,
-            Articles = new List<Article>(p.Articles)
-        }).ToList();
-        
-        var pageToUpdate = newPages.First(p => p.PageNumber == page.PageNumber);
-        pageToUpdate.Articles.Remove(article);
-        pages = newPages;
-        
-        message = $"Article '{article.Headline}' removed from page {page.PageNumber}.";
-        lastAction = $"Removed article from page {page.PageNumber}";
-        StateHasChanged();
-    }
-
-    private void HandleSaveLayout()
-    {
-        if (!pages.Any())
-        {
-            message = "Error: Cannot save layout without pages. Please add at least one page.";
-            lastAction = "Save failed: no pages";
-            StateHasChanged();
-            return;
-        }
-        
-        var totalArticles = pages.Sum(p => p.Articles.Count);
-        message = $"Layout saved successfully with {pages.Count} pages and {totalArticles} articles!";
-        lastAction = $"Saved layout with {pages.Count} pages";
         StateHasChanged();
     }
 
@@ -341,12 +459,5 @@
             ArticleStatus.Rejected => "bg-danger",
             _ => "bg-secondary"
         };
-    }
-
-    public class PageModel
-    {
-        public int PageNumber { get; set; }
-        public string Template { get; set; } = string.Empty;
-        public List<Article> Articles { get; set; } = new List<Article>();
     }
 }

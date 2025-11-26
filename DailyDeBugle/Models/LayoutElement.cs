@@ -9,7 +9,7 @@ namespace DailyDeBugle.Models
         /// <summary>
         /// Добавил вот эту штучку
         /// </summary>
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         
         // Внешние ключи
         public int PageLayoutId { get; set; }
