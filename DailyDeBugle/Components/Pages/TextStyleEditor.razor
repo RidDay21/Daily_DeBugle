@@ -1,17 +1,29 @@
 @page "/issues/{issueId}/text-style"
 @using DailyDeBugle.Services
+@using DailyDeBugle.Models
 @rendermode InteractiveServer
 @inject IGlobalTextStyleService TextStyleService
+@inject IArticleService ArticleService
+@inject IIssueService IssueService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@using System.Globalization
 
 <PageTitle>Daily Debugle - Типографика</PageTitle>
 
 <div class="text-style-container">
     <!-- Панель настроек -->
     <div class="settings-panel">
-        <h3 class="panel-title">Типографика</h3>
+        <h3 class="panel-title">Типографика выпуска</h3>
         
+        <!-- Информация о выпуске -->
+        <div class="issue-info mb-3 p-2 bg-light rounded">
+            <small>
+                <strong>Выпуск:</strong> @(issue?.IssueNumber ?? "Загрузка...")<br>
+                <strong>Статей в выпуске:</strong> @(articles?.Count ?? 0)
+            </small>
+        </div>
+
         <!-- Шрифты -->
         <div class="setting-group">
             <h5>Шрифты:</h5>
@@ -76,14 +88,14 @@
             <div class="form-field">
                 <label>Основной текст (1.2-2.0):</label>
                 <input type="number" @bind="@styles.BodyLineSpacing" 
-                       @oninput="@(e => { styles.BodyLineSpacing = Clamp(Convert.ToDouble(e.Value), 1.2, 2.0); })" 
+                       @oninput="@(e => { styles.BodyLineSpacing = Clamp(Convert.ToDouble(e.Value?.ToString(), CultureInfo.InvariantCulture), 1.2, 2.0); })" 
                        class="form-control" step="0.1" />
             </div>
             
             <div class="form-field">
                 <label>Заголовки (1.0-1.8):</label>
                 <input type="number" @bind="@styles.HeadingLineSpacing" 
-                       @oninput="@(e => { styles.HeadingLineSpacing = Clamp(Convert.ToDouble(e.Value), 1.0, 1.8); })" 
+                       @oninput="@(e => { styles.HeadingLineSpacing = Clamp(Convert.ToDouble(e.Value?.ToString(), CultureInfo.InvariantCulture), 1.0, 1.8); })" 
                        class="form-control" step="0.1" />
             </div>
         </div>
@@ -108,7 +120,7 @@
             <div class="form-field">
                 <label>Расстояние между колонками (0.5-3.0см):</label>
                 <input type="number" @bind="@styles.ColumnGap" 
-                       @oninput="@(e => { styles.ColumnGap = Clamp(Convert.ToDouble(e.Value), 0.5, 3.0); })" 
+                       @oninput="@(e => { styles.ColumnGap = Clamp(Convert.ToDouble(e.Value?.ToString(), CultureInfo.InvariantCulture), 0.5, 3.0); })" 
                        class="form-control" step="0.1" />
             </div>
         </div>
@@ -127,9 +139,9 @@
         </div>
     </div>
 
-    <!-- Панель предпросмотра -->
+    <!-- Панель предпросмотра с реальными статьями -->
     <div class="preview-panel">
-        <h4>Предпросмотр типографики</h4>
+        <h4>Предпросмотр выпуска</h4>
         
         <div class="current-settings">
             <small>Текущие настройки: 
@@ -141,20 +153,53 @@
                 Колонки: @styles.ColumnCount
             </small>
         </div>
-        
-        <div class="preview-content" style="@GetPreviewStyle()">
-            <h1 style="@GetH1Style()">Заголовок статьи</h1>
-            <p style="@GetParagraphStyle()">
-                Это пример текста статьи с выбранными настройками стиля. 
-                Здесь вы можете видеть, как будет выглядеть текст после применения настроек типографики.
-                Обратите внимание на шрифт, размер текста, межстрочный интервал и количество колонок.
-            </p>
-            <h2 style="@GetH2Style()">Подзаголовок второго уровня</h2>
-            <p style="@GetParagraphStyle()">
-                Еще один абзац текста для демонстрации внешнего вида. 
-                Вы можете изменять настройки в левой панели и сразу видеть изменения в этом предпросмотре.
-            </p>
-        </div>
+
+        @if (articles == null || !articles.Any())
+        {
+            <div class="alert alert-info">
+                В этом выпуске пока нет статей. 
+                <a href="/articles/create" class="alert-link">Создайте первую статью</a>
+            </div>
+        }
+        else
+        {
+            <div class="preview-content" style="@GetPreviewStyle()">
+                @foreach (var article in articles)
+                {
+                    <div class="article-preview mb-4">
+                        <h1 style="@GetH1Style()">@article.Headline</h1>
+                        
+                        <div class="article-meta" style="font-size: @(styles.BodySize - 2)pt; color: #666; margin-bottom: 15px;">
+                            Автор: @article.Author?.Username | 
+                            Статус: @article.Status |
+                            Создано: @article.CreatedDate.ToString("dd.MM.yyyy")
+                        </div>
+                        
+                        <div style="@GetParagraphStyle()">
+                            @if (article.Content.Length > 500)
+                            {
+                                @article.Content.Substring(0, 500)
+                                <span>...</span>
+                            }
+                            else
+                            {
+                                @article.Content
+                            }
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(article.Headline) && article.Headline.Length > 50)
+                        {
+                            <h2 style="@GetH2Style()">Дополнительный раздел</h2>
+                            <div style="@GetParagraphStyle()">
+                                Это пример того, как будет выглядеть подзаголовок и дополнительный текст в вашей статье.
+                            </div>
+                        }
+                    </div>
+                    
+                    <hr style="margin: 30px 0;" />
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -163,12 +208,21 @@
     public string issueId { get; set; }
 
     private GlobalTextStyle styles = new GlobalTextStyle();
+    private List<Article> articles = new List<Article>();
+    private Issue issue;
 
     protected override async Task OnInitializedAsync()
     {
         if (int.TryParse(issueId, out int id))
         {
+            // Загружаем стили для выпуска
             styles = await TextStyleService.GetStylesForIssueAsync(id);
+            
+            // Загружаем статьи этого выпуска
+            articles = await ArticleService.GetArticlesByIssueAsync(id);
+            
+            // Загружаем информацию о выпуске
+            issue = await IssueService.GetIssueAsync(id);
         }
     }
 
@@ -196,10 +250,13 @@
     {
         try
         {
+            // Сохраняем стили для выпуска
             styles = await TextStyleService.SaveStylesAsync(styles);
+            
+            // Применяем стили ко всем статьям выпуска
             await TextStyleService.ApplyStylesToIssueAsync(styles.IssueId);
             
-            await JSRuntime.InvokeVoidAsync("alert", "Настройки типографики успешно сохранены и применены!");
+            await JSRuntime.InvokeVoidAsync("alert", "Настройки типографики успешно сохранены и применены ко всем статьям выпуска!");
         }
         catch (Exception ex)
         {
@@ -224,7 +281,7 @@
 
     private void NavigateBack()
     {
-        Navigation.NavigateTo($"/issues/{issueId}/layout");
+        Navigation.NavigateTo($"/issues/{issueId}");
     }
 
     private string GetPreviewStyle()
@@ -232,9 +289,9 @@
         return $@"
             font-family: {styles.PrimaryFont};
             font-size: {styles.BodySize}pt;
-            line-height: {styles.BodyLineSpacing};
+            line-height: {styles.BodyLineSpacing.ToString(CultureInfo.InvariantCulture)};
             column-count: {styles.ColumnCount};
-            column-gap: {styles.ColumnGap}cm;
+            column-gap: {styles.ColumnGap.ToString(CultureInfo.InvariantCulture)}cm;
             background: white;
             padding: 30px;
             border-radius: 8px;
@@ -247,9 +304,10 @@
         return $@"
             font-family: {styles.HeadingFont};
             font-size: {styles.H1Size}pt;
-            line-height: {styles.HeadingLineSpacing};
+            line-height: {styles.HeadingLineSpacing.ToString(CultureInfo.InvariantCulture)};
             color: #2c3e50;
             margin: 30px 0 20px 0;
+            break-inside: avoid;
         ";
     }
 
@@ -258,9 +316,10 @@
         return $@"
             font-family: {styles.HeadingFont};
             font-size: {styles.H2Size}pt;
-            line-height: {styles.HeadingLineSpacing};
+            line-height: {styles.HeadingLineSpacing.ToString(CultureInfo.InvariantCulture)};
             color: #34495e;
             margin: 25px 0 15px 0;
+            break-inside: avoid;
         ";
     }
 
@@ -269,7 +328,7 @@
         return $@"
             font-family: {styles.PrimaryFont};
             font-size: {styles.BodySize}pt;
-            line-height: {styles.BodyLineSpacing};
+            line-height: {styles.BodyLineSpacing.ToString(CultureInfo.InvariantCulture)};
             color: #2c3e50;
             margin: 15px 0;
             text-align: justify;

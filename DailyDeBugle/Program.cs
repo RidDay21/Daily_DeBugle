@@ -20,8 +20,8 @@ builder.Services.AddScoped<IGlobalTextStyleService, GlobalTextStyleService>();
 builder.Services.AddScoped<IIssueService, IssueService>();
 builder.Services.AddScoped<IArticleService, ArticleService>();
 builder.Services.AddScoped<IUserService, UserService>();
-// builder.Services.AddScoped<ILayoutService, LayoutService>();
-// Остальные сервисы
+builder.Services.AddScoped<ILayoutService, LayoutService>();
+builder.Services.AddScoped<ITemplateService, TemplateService>();
 
 var app = builder.Build();
 

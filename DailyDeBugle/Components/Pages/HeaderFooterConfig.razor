@@ -3,122 +3,190 @@
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
 @inject IHeaderFooterService HeaderFooterService
+@inject IIssueService IssueService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Колонтитулы - Выпуск @issueId</PageTitle>
 
-<h3>Настройка колонтитулов</h3>
-
-<EditForm Model="@settings" OnValidSubmit="@SaveSettings" FormName="header_footer_form">
-    <div class="row">
-        <div class="col-md-6">
-            <h4>Верхний колонтитул</h4>
-            
-            <div class="form-check mb-3">
-                <InputCheckbox class="form-check-input" @bind-Value="@settings.HeaderEnabled" />
-                <label class="form-check-label">Включен</label>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Слева</label>
-                <InputText class="form-control" @bind-Value="@settings.HeaderLeft" />
-                <small class="form-text text-muted">Доступные плейсхолдеры: {PublicationName}, {IssueNumber}, {IssueDate}</small>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">По центру</label>
-                <InputText class="form-control" @bind-Value="@settings.HeaderCenter" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Справа</label>
-                <InputText class="form-control" @bind-Value="@settings.HeaderRight" />
-            </div>
+<div class="header-footer-container">
+    <!-- Панель настроек -->
+    <div class="settings-panel">
+        <h3 class="panel-title">Настройка колонтитулов выпуска</h3>
+        
+        <!-- Информация о выпуске -->
+        <div class="issue-info mb-3 p-2 bg-light rounded">
+            <small>
+                <strong>Выпуск:</strong> @(issue?.IssueNumber ?? "Загрузка...")<br>
+                <strong>Дата выпуска:</strong> @(issue?.IssueDate.ToString("dd.MM.yyyy") ?? "Не указана")
+            </small>
         </div>
 
-        <div class="col-md-6">
-            <h4>Нижний колонтитул</h4>
-            
-            <div class="form-check mb-3">
-                <InputCheckbox class="form-check-input" @bind-Value="@settings.FooterEnabled" />
-                <label class="form-check-label">Включен</label>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Слева</label>
-                <InputText class="form-control" @bind-Value="@settings.FooterLeft" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">По центру</label>
-                <InputText class="form-control" @bind-Value="@settings.FooterCenter" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Справа</label>
-                <InputText class="form-control" @bind-Value="@settings.FooterRight" />
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-12">
-            <h5>Форматирование</h5>
+        <EditForm Model="@settings" OnValidSubmit="@SaveSettings" FormName="header_footer_form">
             <div class="row">
-                <div class="col-md-4">
-                    <label class="form-label">Шрифт</label>
-                    <InputSelect class="form-select" @bind-Value="@settings.FontFamily">
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Arial">Arial</option>
-                        <option value="Helvetica">Helvetica</option>
-                    </InputSelect>
+                <div class="col-md-6">
+                    <h4>Верхний колонтитул</h4>
+                    
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" @bind-Value="@settings.HeaderEnabled" />
+                        <label class="form-check-label">Включен</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Слева</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderLeft" placeholder="Например: {PublicationName}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">По центру</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderCenter" placeholder="Например: Выпуск №{IssueNumber}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Справа</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderRight" placeholder="Например: {IssueDate}" />
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Размер шрифта</label>
-                    <InputNumber class="form-control" @bind-Value="@settings.FontSize" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Выравнивание</label>
-                    <InputSelect class="form-select" @bind-Value="@settings.Alignment">
-                        <option value="left">Слева</option>
-                        <option value="center">По центру</option>
-                        <option value="right">Справа</option>
-                    </InputSelect>
+
+                <div class="col-md-6">
+                    <h4>Нижний колонтитул</h4>
+                    
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" @bind-Value="@settings.FooterEnabled" />
+                        <label class="form-check-label">Включен</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Слева</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterLeft" placeholder="Например: Контакт: {ContactEmail}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">По центру</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterCenter" placeholder="Например: Страница {PageNumber}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Справа</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterRight" placeholder="Например: {CurrentDate}" />
+                    </div>
                 </div>
             </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>Доступные переменные</h5>
+                    <div class="variables-info bg-light p-3 rounded">
+                        <small>
+                            <strong>Доступные плейсхолдеры:</strong><br>
+                            <code>{PublicationName}</code> - Название издания<br>
+                            <code>{IssueNumber}</code> - Номер выпуска<br>
+                            <code>{IssueDate}</code> - Дата выпуска<br>
+                            <code>{PageNumber}</code> - Номер страницы<br>
+                            <code>{CurrentDate}</code> - Текущая дата<br>
+                            <code>{ContactEmail}</code> - Контактный email<br>
+                            <code>{TotalPages}</code> - Всего страниц
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>Форматирование</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Шрифт</label>
+                            <InputSelect class="form-select" @bind-Value="@settings.FontFamily">
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Размер шрифта (pt)</label>
+                            <InputNumber class="form-control" @bind-Value="@settings.FontSize" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Выравнивание</label>
+                            <InputSelect class="form-select" @bind-Value="@settings.Alignment">
+                                <option value="left">Слева</option>
+                                <option value="center">По центру</option>
+                                <option value="right">Справа</option>
+                                <option value="justify">По ширине</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+                <button type="button" class="btn btn-secondary" @onclick="@ResetToDefault">Сбросить к умолчаниям</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="@NavigateBack">Назад к выпуску</button>
+            </div>
+        </EditForm>
+    </div>
+
+    <!-- Панель предпросмотра -->
+    <div class="preview-panel">
+        <h4>Предпросмотр страниц выпуска</h4>
+        
+        <div class="preview-controls mb-3">
+            <label>Страница для предпросмотра:</label>
+            <div class="btn-group">
+                @foreach (var pageNum in new[] { 1, 2, 3, 4 })
+                {
+                    <button class="btn btn-sm @(currentPreviewPage == pageNum ? "btn-primary" : "btn-outline-primary")"
+                            @onclick="() => ChangePreviewPage(pageNum)">
+                        Страница @pageNum
+                    </button>
+                }
+            </div>
         </div>
-    </div>
 
-    <div class="mt-4">
-        <button type="submit" class="btn btn-primary">Сохранить</button>
-        <button type="button" class="btn btn-secondary" @onclick="@ResetToDefault">Сбросить</button>
-        <button type="button" class="btn btn-outline-secondary" @onclick="@NavigateBack">Назад</button>
-    </div>
-</EditForm>
-
-<div class="row mt-5">
-    <div class="col-12">
-        <h4>Предпросмотр</h4>
-        <div class="preview-container border p-4">
-            @if (previewHeader != null)
+        <div class="preview-container border">
+            <!-- Верхний колонтитул -->
+            @if (settings.HeaderEnabled && !string.IsNullOrEmpty(previewHeader))
             {
-                <div class="preview-header border-bottom pb-2 mb-3">
+                <div class="preview-header border-bottom p-2" style="@GetHeaderFooterStyle()">
                     @((MarkupString)previewHeader)
                 </div>
             }
             
-            <div class="preview-content" style="min-height: 300px;">
-                <p>Основное содержание страницы...</p>
-                <p>Текст статьи будет расположен здесь. Это пример того, как будет выглядеть страница с примененными колонтитулами.</p>
+            <!-- Основное содержание -->
+            <div class="preview-content p-4" style="min-height: 400px;">
+                <h4>Содержание страницы @currentPreviewPage</h4>
+                <p>Это пример содержимого страницы. Здесь может быть текст статей, изображения и другие элементы верстки.</p>
+                <p>Колонтитулы помогают идентифицировать выпуск и обеспечивают навигацию по страницам.</p>
+                
+                @if (currentPreviewPage > 1)
+                {
+                    <div>
+                        <h5>Продолжение статьи</h5>
+                        <p>Текст статьи продолжается на этой странице. Колонтитулы помогают читателю ориентироваться в материале.</p>
+                    </div>
+                }
             </div>
 
-            @if (previewFooter != null)
+            <!-- Нижний колонтитул -->
+            @if (settings.FooterEnabled && !string.IsNullOrEmpty(previewFooter))
             {
-                <div class="preview-footer border-top pt-2 mt-3">
+                <div class="preview-footer border-top p-2" style="@GetHeaderFooterStyle()">
                     @((MarkupString)previewFooter)
                 </div>
             }
+        </div>
+
+        <div class="preview-info mt-3">
+            <small class="text-muted">
+                <strong>Текущие настройки:</strong><br>
+                Шрифт: @settings.FontFamily, Размер: @settings.FontSize pt, Выравнивание: @GetAlignmentText(settings.Alignment)<br>
+                Верхний колонтитул: @(settings.HeaderEnabled ? "Включен" : "Отключен") | 
+                Нижний колонтитул: @(settings.FooterEnabled ? "Включен" : "Отключен")
+            </small>
         </div>
     </div>
 </div>
@@ -128,14 +196,21 @@
     public string issueId { get; set; }
 
     private HeaderFooterSettings settings = new();
+    private Issue issue;
     private string previewHeader;
     private string previewFooter;
+    private int currentPreviewPage = 1;
 
     protected override async Task OnInitializedAsync()
     {
         if (int.TryParse(issueId, out int id))
         {
+            // Загружаем настройки колонтитулов для выпуска
             settings = await HeaderFooterService.GetSettingsForIssueAsync(id);
+            
+            // Загружаем информацию о выпуске
+            issue = await IssueService.GetIssueAsync(id);
+            
             await UpdatePreview();
         }
     }
@@ -144,10 +219,16 @@
     {
         try
         {
+            // Убедимся, что настройки привязаны к текущему выпуску
+            if (int.TryParse(issueId, out int id))
+            {
+                settings.IssueId = id;
+            }
+            
             settings = await HeaderFooterService.SaveSettingsAsync(settings);
             await UpdatePreview();
             
-            await JSRuntime.InvokeVoidAsync("alert", "Настройки колонтитулов успешно сохранены!");
+            await JSRuntime.InvokeVoidAsync("alert", "Настройки колонтитулов успешно сохранены для выпуска!");
         }
         catch (Exception ex)
         {
@@ -157,31 +238,77 @@
 
     private async Task ResetToDefault()
     {
-        settings.HeaderLeft = "{PublicationName}";
-        settings.HeaderCenter = "Выпуск №{IssueNumber}";
-        settings.HeaderRight = "{IssueDate}";
-        settings.FooterLeft = "Контакт: {ContactEmail}";
-        settings.FooterCenter = "Страница {PageNumber}";
-        settings.FooterRight = "{CurrentDate}";
-        settings.FontFamily = "Times New Roman";
-        settings.FontSize = 10;
-        settings.Alignment = "center";
+        settings = new HeaderFooterSettings
+        {
+            IssueId = int.Parse(issueId),
+            HeaderEnabled = true,
+            HeaderLeft = "{PublicationName}",
+            HeaderCenter = "Выпуск №{IssueNumber}",
+            HeaderRight = "{IssueDate}",
+            FooterEnabled = true,
+            FooterLeft = "Контакт: info@dailydebugle.com",
+            FooterCenter = "Страница {PageNumber} из {TotalPages}",
+            FooterRight = "{CurrentDate}",
+            FontFamily = "Times New Roman",
+            FontSize = 10,
+            Alignment = "center"
+        };
         
         await UpdatePreview();
         StateHasChanged();
+        
+        await JSRuntime.InvokeVoidAsync("alert", "Настройки сброшены к значениям по умолчанию!");
     }
 
     private async Task UpdatePreview()
     {
         if (int.TryParse(issueId, out int id))
         {
-            previewHeader = await HeaderFooterService.RenderHeaderAsync(id, 1);
-            previewFooter = await HeaderFooterService.RenderFooterAsync(id, 1);
+            previewHeader = await HeaderFooterService.RenderHeaderAsync(id, currentPreviewPage);
+            previewFooter = await HeaderFooterService.RenderFooterAsync(id, currentPreviewPage);
         }
+    }
+
+    private async Task ChangePreviewPage(int pageNumber)
+    {
+        currentPreviewPage = pageNumber;
+        await UpdatePreview();
+        StateHasChanged();
     }
 
     private void NavigateBack()
     {
-        Navigation.NavigateTo($"/issues/{issueId}/layout");
+        Navigation.NavigateTo($"/issues/{issueId}");
+    }
+
+    private string GetHeaderFooterStyle()
+    {
+        var textAlign = settings.Alignment switch
+        {
+            "left" => "left",
+            "center" => "center",
+            "right" => "right",
+            "justify" => "justify",
+            _ => "center"
+        };
+
+        return $@"
+            font-family: {settings.FontFamily};
+            font-size: {settings.FontSize}pt;
+            text-align: {textAlign};
+            background-color: #f8f9fa;
+        ";
+    }
+
+    private string GetAlignmentText(string alignment)
+    {
+        return alignment switch
+        {
+            "left" => "Слева",
+            "center" => "По центру",
+            "right" => "Справа",
+            "justify" => "По ширине",
+            _ => "По центру"
+        };
     }
 }

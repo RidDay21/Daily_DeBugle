@@ -14,5 +14,6 @@ namespace DailyDeBugle.Models
         public Article? Article { get; set; }
         public int? AdvertisementBlockId { get; set; }
         public AdvertisementBlock? AdvertisementBlock { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
