@@ -61,6 +61,40 @@ namespace DailyDeBugle.Data
                 entity.Property(hf => hf.FooterEnabled)
                       .HasDefaultValue(true);
             });
+            
+            modelBuilder.Entity<LayoutElement>(entity =>
+            {
+                entity.HasKey(e => e.LayoutElementId);
+        
+                // Настройка связей
+                entity.HasOne(e => e.PageLayout)
+                    .WithMany(p => p.LayoutElements)
+                    .HasForeignKey(e => e.PageLayoutId)
+                    .OnDelete(DeleteBehavior.Cascade);
+        
+                entity.HasOne(e => e.Article)
+                    .WithMany()
+                    .HasForeignKey(e => e.ArticleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+        
+                entity.HasOne(e => e.AdvertisementBlock)
+                    .WithMany()
+                    .HasForeignKey(e => e.AdvertisementBlockId)
+                    .OnDelete(DeleteBehavior.Restrict);
+              
+                // Или если в классе свойство называется CreatedDate, то просто:
+                entity.Property(e => e.CreatedDate);
+        
+                // Настройка других свойств при необходимости
+                entity.Property(e => e.Type)
+                    .HasConversion<int>(); // если это enum
+        
+                entity.Property(e => e.Position)
+                    .IsRequired();
+              
+                entity.Property(e => e.Size)
+                    .IsRequired();
+            });
 
             // Конфигурация для HeaderFooterTemplate
             modelBuilder.Entity<HeaderFooterTemplate>(entity =>
