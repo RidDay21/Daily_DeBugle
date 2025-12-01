@@ -37,19 +37,32 @@ namespace DailyDeBugle.Services
         }
 
         public async Task<Issue> CreateAsync(Issue issue)
-        {
-            issue.Status = IssueStatus.InProgress;
-            _context.Issues.Add(issue);
-            await _context.SaveChangesAsync();
-            return issue;
-        }
+		{
+    		if (issue.IssueDate.Kind == DateTimeKind.Unspecified)
+    		{
+        		issue.IssueDate = DateTime.SpecifyKind(issue.IssueDate, DateTimeKind.Local).ToUniversalTime();
+    		}
+    		else
+    		{
+        		issue.IssueDate = issue.IssueDate.ToUniversalTime();
+    		}
+    		issue.Status = IssueStatus.InProgress;
+    		_context.Issues.Add(issue);
+    		await _context.SaveChangesAsync();
+    		return issue;
+		}
 
         public async Task<Issue> UpdateAsync(Issue issue)
         {
-            _context.Issues.Update(issue);
-            await _context.SaveChangesAsync();
-            return issue;
-        }
+    		if (issue.IssueDate.Kind == DateTimeKind.Unspecified)
+        		issue.IssueDate = DateTime.SpecifyKind(issue.IssueDate, DateTimeKind.Local).ToUniversalTime();
+    		else
+        		issue.IssueDate = issue.IssueDate.ToUniversalTime();
+
+    		_context.Issues.Update(issue);
+    		await _context.SaveChangesAsync();
+    		return issue;
+		}
 
         public async Task DeleteAsync(int id)
         {

@@ -12,14 +12,14 @@ namespace DailyDeBugle.Services
         Task<Article> UpdateArticleAsync(Article article);
         Task<List<Article>> GetAllArticlesAsync();
         Task DeleteArticleAsync(int id);
-        
+
         /// <summary>
         /// Получить статьи по статусу (Under Review) 
         /// </summary>
         /// <returns></returns>
-        
+
         Task<List<Article>> GetArticlesByStatusAsync(ArticleStatus status);
-        
+
         /// <summary>
         /// Утвердить статью
         /// </summary>
@@ -27,7 +27,7 @@ namespace DailyDeBugle.Services
         /// <param name="editedContent"></param>
         /// <returns></returns>
         Task<bool> ApproveArticleAsync(int articleId, string editedContent);
-        
+
         /// <summary>
         /// Для альтернативного сценария 1: Отправить на доработку
         /// </summary>
@@ -35,7 +35,7 @@ namespace DailyDeBugle.Services
         /// <param name="comments"></param>
         /// <returns></returns>
         Task<bool> SendForRevisionAsync(int articleId, string comments);
-        
+
         /// <summary>
         /// // Для альтернативного сценария 2: Отклонить статью 
         /// </summary>

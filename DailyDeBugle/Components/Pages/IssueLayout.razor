@@ -1,0 +1,277 @@
+@page "/issues/{issueId}/layout"
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject ILayoutService LayoutService
+@inject IIssueService IssueService
+@inject ITemplateService TemplateService
+@inject NavigationManager Navigation
+
+<PageTitle>Настройка макета выпуска</PageTitle>
+
+<h3>Настройка макета выпуска</h3>
+
+@if (issue == null)
+{
+    <p>Загрузка...</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Страница @currentPageConfig.PageNumber</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="PrevPage" disabled="@(currentPageConfig.PageNumber <= 1)">← Назад</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="NextPage">Вперед →</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@currentPageConfig" OnValidSubmit="@SaveLayout">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Количество колонок</label>
+                                <InputNumber @bind-Value="@currentPageConfig.ColumnCount" class="form-control" min="1" max="4" />
+                                <ValidationMessage For="@(() => currentPageConfig.ColumnCount)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Шаблон</label>
+                                <InputSelect @bind-Value="@selectedTemplateId" class="form-select">
+                                    <option value="">-- Выберите шаблон --</option>
+                                    @foreach (var template in templates)
+                                    {
+                                        <option value="@template.TemplateId">@template.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+
+                        <h6>Отступы (см)</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Верхний</label>
+                                <InputNumber @bind-Value="@currentPageConfig.MarginTop" class="form-control" step="0.1" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Нижний</label>
+                                <InputNumber @bind-Value="@currentPageConfig.MarginBottom" class="form-control" step="0.1" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Левый</label>
+                                <InputNumber @bind-Value="@currentPageConfig.MarginLeft" class="form-control" step="0.1" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Правый</label>
+                                <InputNumber @bind-Value="@currentPageConfig.MarginRight" class="form-control" step="0.1" />
+                            </div>
+                        </div>
+
+                        <h6>Размеры областей (см)</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Ширина текстовой области</label>
+                                <InputNumber @bind-Value="@currentPageConfig.TextAreaWidth" class="form-control" step="0.1" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Высота текстовой области</label>
+                                <InputNumber @bind-Value="@currentPageConfig.TextAreaHeight" class="form-control" step="0.1" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Ширина области изображений</label>
+                                <InputNumber @bind-Value="@currentPageConfig.ImageAreaWidth" class="form-control" step="0.1" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Высота области изображений</label>
+                                <InputNumber @bind-Value="@currentPageConfig.ImageAreaHeight" class="form-control" step="0.1" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Расстояние между колонками (см)</label>
+                            <InputNumber @bind-Value="@currentPageConfig.ColumnGap" class="form-control" step="0.1" />
+                        </div>
+
+                        @if (conflicts.Any())
+                        {
+                            <div class="alert alert-warning">
+                                <h6>Обнаружены конфликты макета:</h6>
+                                <ul>
+                                    @foreach (var conflict in conflicts)
+                                    {
+                                        <li>@conflict</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Сохранить макет</button>
+                            <button type="button" class="btn btn-secondary" @onclick="ValidateLayout">Проверить макет</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Отмена</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Предпросмотр макета</h5>
+                </div>
+                <div class="card-body">
+                    <div class="layout-preview border p-3 bg-light" style="height: 400px; position: relative;">
+                        <!-- Preview of page layout with columns -->
+                        @for (int i = 0; i < currentPageConfig.ColumnCount; i++)
+                        {
+                            <div class="border" style="
+                                position: absolute;
+                                left: @(currentPageConfig.MarginLeft + i * (currentPageConfig.TextAreaWidth / currentPageConfig.ColumnCount + currentPageConfig.ColumnGap))cm;
+                                top: @(currentPageConfig.MarginTop)cm;
+                                width: @(currentPageConfig.TextAreaWidth / currentPageConfig.ColumnCount)cm;
+                                height: @(currentPageConfig.TextAreaHeight)cm;
+                                background-color: white;">
+                                <small class="text-muted">Колонка @(i + 1)</small>
+                            </div>
+                        }
+                        
+                        <!-- Image area preview -->
+                        <div class="border border-primary" style="
+                            position: absolute;
+                            left: @(currentPageConfig.MarginLeft)cm;
+                            top: @(currentPageConfig.MarginTop + currentPageConfig.TextAreaHeight + 0.5)cm;
+                            width: @(currentPageConfig.ImageAreaWidth)cm;
+                            height: @(currentPageConfig.ImageAreaHeight)cm;
+                            background-color: #e3f2fd;">
+                            <small class="text-primary">Область изображений</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string issueId { get; set; }
+
+    private Issue issue;
+    private List<PageLayout> pageLayouts = new();
+    private PageLayoutConfiguration currentPageConfig = new();
+    private List<Template> templates = new();
+    private int? selectedTemplateId;
+    private List<string> conflicts = new();
+    private int currentPageNumber = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (int.TryParse(issueId, out int id))
+        {
+            issue = await IssueService.GetIssueAsync(id);
+            pageLayouts = await LayoutService.GetIssueLayoutsAsync(id);
+            templates = await TemplateService.GetTemplatesAsync();
+            
+            await LoadPage(currentPageNumber);
+        }
+    }
+
+    private async Task LoadPage(int pageNumber)
+    {
+        var pageLayout = await LayoutService.GetPageLayoutAsync(issue.IssueId, pageNumber);
+        
+        if (pageLayout != null)
+        {
+            currentPageConfig = new PageLayoutConfiguration
+            {
+                PageNumber = pageNumber,
+                ColumnCount = pageLayout.ColumnCount,
+                MarginTop = pageLayout.MarginTop,
+                MarginBottom = pageLayout.MarginBottom,
+                MarginLeft = pageLayout.MarginLeft,
+                MarginRight = pageLayout.MarginRight,
+                ColumnGap = pageLayout.ColumnGap,
+                TextAreaWidth = pageLayout.TextAreaWidth,
+                TextAreaHeight = pageLayout.TextAreaHeight,
+                ImageAreaWidth = pageLayout.ImageAreaWidth,
+                ImageAreaHeight = pageLayout.ImageAreaHeight,
+                TemplateId = pageLayout.TemplateId
+            };
+            selectedTemplateId = pageLayout.TemplateId;
+        }
+        else
+        {
+            currentPageConfig = new PageLayoutConfiguration 
+            { 
+                PageNumber = pageNumber,
+                ColumnCount = 1 
+            };
+        }
+        
+        conflicts.Clear();
+        StateHasChanged();
+    }
+
+    private async Task SaveLayout()
+    {
+        currentPageConfig.TemplateId = selectedTemplateId;
+        
+        var isValid = await LayoutService.ValidateLayoutConfigurationAsync(currentPageConfig);
+        if (isValid)
+        {
+            var pageLayout = await LayoutService.GetPageLayoutAsync(issue.IssueId, currentPageNumber);
+            if (pageLayout == null)
+            {
+                // Создаем новый макет
+                pageLayout = new PageLayout 
+                { 
+                    IssueId = issue.IssueId, 
+                    PageNumber = currentPageNumber,
+                    TemplateId = selectedTemplateId ?? 0
+                };
+                pageLayout = await LayoutService.CreatePageLayoutAsync(pageLayout);
+            }
+            
+            await LayoutService.ConfigurePageLayoutAsync(pageLayout.PageLayoutId, currentPageConfig);
+            Navigation.NavigateTo($"/issues/{issueId}");
+        }
+        else
+        {
+            conflicts.Add("Некорректные настройки макета");
+        }
+    }
+
+    private async Task ValidateLayout()
+    {
+        var pageLayout = await LayoutService.GetPageLayoutAsync(issue.IssueId, currentPageNumber);
+        if (pageLayout != null)
+        {
+            conflicts = await LayoutService.CheckLayoutConflictsAsync(pageLayout.PageLayoutId);
+        }
+        StateHasChanged();
+    }
+
+    private async Task NextPage()
+    {
+        currentPageNumber++;
+        await LoadPage(currentPageNumber);
+    }
+
+    private async Task PrevPage()
+    {
+        if (currentPageNumber > 1)
+        {
+            currentPageNumber--;
+            await LoadPage(currentPageNumber);
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}");
+    }
+}

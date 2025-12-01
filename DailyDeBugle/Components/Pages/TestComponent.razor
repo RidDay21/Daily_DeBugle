@@ -1,0 +1,17 @@
+@page "/test"
+
+<h3>Тестовый компонент</h3>
+
+<button @onclick="TestClick" class="btn btn-primary">Тест кнопка</button>
+
+<p>Кликов: @clickCount</p>
+
+@code {
+    private int clickCount = 0;
+    
+    private void TestClick()
+    {
+        clickCount++;
+        Console.WriteLine($"Кнопка нажата! Кликов: {clickCount}");
+    }
+}
