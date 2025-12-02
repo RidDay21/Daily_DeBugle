@@ -1,0 +1,435 @@
+@page "/issues/{issueId:int}/preview"
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@using System.Text.Json
+@inject IIssueService IssueService
+@inject IArticleService ArticleService
+@inject ILayoutService LayoutService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<PageTitle>Предпросмотр выпуска: @currentIssue?.IssueNumber</PageTitle>
+
+<div class="preview-container">
+    <!-- Шапка с навигацией -->
+    <div class="preview-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h3>Предпросмотр выпуска: @currentIssue?.IssueNumber</h3>
+                <p class="text-muted mb-0">Дата выпуска: @currentIssue?.IssueDate.ToString("dd.MM.yyyy")</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="NavigateBack">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-1" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                    </svg>
+                    Назад к редактору
+                </button>
+                <button class="btn btn-success" @onclick="PrintPreview">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-printer-fill me-1" viewBox="0 0 16 16">
+                        <path d="M5 1a2 2 0 0 0-2 2v1h10V3a2 2 0 0 0-2-2H5zm6 8H5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1z"/>
+                        <path d="M0 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-1v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2H2a2 2 0 0 1-2-2V7zm2.5 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                    </svg>
+                    Печать/PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Навигация по страницам -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary"
+                        @onclick="PrevPage"
+                        disabled="@(currentPageNumber <= 1)">
+                    ← Предыдущая
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="NextPage">
+                    Следующая →
+                </button>
+            </div>
+            <div>
+                <h5 class="mb-0">
+                    Страница @currentPageNumber из @pageLayouts.Count
+                    @if (currentPageLayout != null)
+                    {
+                    <span class="badge bg-info ms-2">@currentPageLayout.ColumnCount колонки</span>
+                    }
+                </h5>
+            </div>
+            <div class="text-muted small">
+                Размер: А4 (21×29.7 см)
+            </div>
+        </div>
+    </div>
+
+    <!-- Основной контейнер предпросмотра -->
+    <div class="preview-content bg-light p-4 rounded d-flex justify-content-center"
+         style="min-height: 800px; overflow: auto;">
+
+        <!-- Контейнер для потоковой верстки -->
+        <div class="flow-container"
+             style="
+                width: 21cm;
+                min-height: 29.7cm;
+                background: white;
+                box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                position: relative;
+                padding: 2cm;
+             ">
+
+            @if (currentPageLayout != null)
+            {
+            <!-- Колонтитулы -->
+            <div class="header-footer" style="position: absolute; top: 0.5cm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666;">
+                Ежедневный Дибьюгл • Выпуск №@currentIssue?.IssueNumber • @currentIssue?.IssueDate.ToString("dd.MM.yyyy")
+            </div>
+
+            <div class="header-footer" style="position: absolute; bottom: 0.5cm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666;">
+                Страница @currentPageNumber • Подписной индекс 12345
+            </div>
+
+            <!-- Основной контент с колонками -->
+            <div class="multi-column-content"
+                 style="
+                     column-count: @currentPageLayout.ColumnCount;
+                     column-gap: @(currentPageLayout.ColumnGap)cm;
+                     column-fill: auto;
+                     height: 25.7cm; /* Высота минус отступы */
+                     ">
+
+                <!-- Статьи на этой странице -->
+                @{
+                var articlesOnPage = GetArticlesForPage(currentPageNumber);
+                }
+
+                @foreach (var article in articlesOnPage)
+                {
+                <!-- Статья -->
+                <div class="article-flow" style="break-inside: avoid; margin-bottom: 1cm;">
+                    <h2 style="
+                                    font-family: 'Georgia', serif;
+                                    font-size: 24px;
+                                    font-weight: bold;
+                                    margin-bottom: 0.5cm;
+                                    color: #333;
+                                ">
+                        @article.Headline
+                        @if (article.ContinuedFromArticleId.HasValue)
+                        {
+                        <span style="color: #999; font-size: 10px; margin-left: 0.5cm;">
+                                        (продолжение)
+                                    </span>
+                        }
+                    </h2>
+
+                    <div style="
+                                    font-style: italic;
+                                    color: #666;
+                                    margin-bottom: 0.5cm;
+                                    font-size: 12px;
+                                    border-bottom: 1px solid #eee;
+                                    padding-bottom: 0.3cm;
+                                ">
+                        Автор: @article.Author?.Username
+                        @if (article.ContinuedOnArticleId.HasValue || article.ContinuedOnPage.HasValue)
+                        {
+                        <span style="float: right; color: #999; font-size: 10px;">
+                                        продолжение следует
+                                    </span>
+                        }
+                    </div>
+
+                    <div style="
+                                    font-family: 'Times New Roman', serif;
+                                    font-size: 14px;
+                                    line-height: 1.4;
+                                    text-align: justify;
+                                ">
+                        @article.Content
+                    </div>
+                </div>
+                }
+
+                <!-- Рекламные блоки -->
+                @{
+                var adsOnPage = GetAdsForPage(currentPageNumber);
+                }
+
+                @foreach (var ad in adsOnPage)
+                {
+                <div class="advertisement-flow" style="
+                                break-inside: avoid;
+                                margin: 1cm 0;
+                                padding: 0.5cm;
+                                background: #f9f9f9;
+                                border: 1px solid #ddd;
+                                border-radius: 3px;
+                            ">
+                    <div style="
+                                    font-weight: bold;
+                                    color: #d35400;
+                                    font-size: 12px;
+                                    margin-bottom: 0.3cm;
+                                    text-align: center;
+                                ">
+                        РЕКЛАМА
+                    </div>
+
+                    <div style="
+                                    font-weight: bold;
+                                    font-size: 14px;
+                                    margin-bottom: 0.2cm;
+                                    text-align: center;
+                                ">
+                        @ad.Advertiser
+                    </div>
+
+                    <div style="
+                                    font-size: 12px;
+                                    color: #666;
+                                    text-align: center;
+                                ">
+                        @ad.Content
+                    </div>
+
+                    <div style="
+                                    font-size: 10px;
+                                    color: #888;
+                                    margin-top: 0.3cm;
+                                    text-align: center;
+                                    font-style: italic;
+                                ">
+                        Действует с @ad.StartDate.ToString("dd.MM.yy") по @ad.EndDate.ToString("dd.MM.yy")
+                    </div>
+                </div>
+                }
+            </div>
+            }
+            else
+            {
+            <div class="d-flex justify-content-center align-items-center h-100">
+                <div class="text-center text-muted">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-file-earmark" viewBox="0 0 16 16">
+                        <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                    </svg>
+                    <h5 class="mt-3">Макет страницы не найден</h5>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Панель информации -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Содержимое страницы @currentPageNumber</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Статьи:</h6>
+                            @{
+                            var articlesList = GetArticlesForPage(currentPageNumber);
+                            }
+
+                            @if (articlesList.Any())
+                            {
+                            <ul class="list-unstyled">
+                                @foreach (var article in articlesList)
+                                {
+                                <li class="mb-2">
+                                    <strong>@article.Headline</strong>
+                                    <div class="small text-muted">@article.Author?.Username • @article.Status</div>
+                                    @if (article.ContinuedFromArticleId.HasValue)
+                                    {
+                                    <div class="small text-info">↑ Продолжение статьи</div>
+                                    }
+                                    @if (article.ContinuedOnArticleId.HasValue || article.ContinuedOnPage.HasValue)
+                                    {
+                                    <div class="small text-warning">↓ Имеет продолжение</div>
+                                    }
+                                </li>
+                                }
+                            </ul>
+                            }
+                            else
+                            {
+                            <p class="text-muted">Нет статей на этой странице</p>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Рекламные блоки:</h6>
+                            @{
+                            var adsList = GetAdsForPage(currentPageNumber);
+                            }
+
+                            @if (adsList.Any())
+                            {
+                            <ul class="list-unstyled">
+                                @foreach (var ad in adsList)
+                                {
+                                <li class="mb-2">
+                                    <strong>@ad.Advertiser</strong>
+                                    <div class="small text-muted">Действует до @ad.EndDate.ToString("dd.MM.yyyy")</div>
+                                </li>
+                                }
+                            </ul>
+                            }
+                            else
+                            {
+                            <p class="text-muted">Нет рекламы на этой странице</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+[Parameter]
+public int issueId { get; set; }
+
+private Issue currentIssue;
+private List<PageLayout> pageLayouts = new();
+private PageLayout currentPageLayout;
+private int currentPageNumber = 1;
+
+// Кэшированные данные
+private List<Article> allArticles = new();
+private List<AdvertisementBlock> allAds = new();
+
+protected override async Task OnInitializedAsync()
+{
+await LoadData();
+}
+
+private async Task LoadData()
+{
+try
+{
+currentIssue = await IssueService.GetIssueAsync(issueId);
+
+if (currentIssue != null)
+{
+pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+allArticles = await ArticleService.GetArticlesByIssueAsync(issueId);
+
+// Загружаем рекламные блоки
+await LoadAdvertisementBlocks();
+
+await LoadCurrentPageLayout();
+}
+}
+catch (Exception ex)
+{
+Console.WriteLine($"Ошибка загрузки данных: {ex.Message}");
+}
+}
+
+private async Task LoadAdvertisementBlocks()
+{
+try
+{
+// Пока используем заглушку
+allAds = new List<AdvertisementBlock>
+{
+new AdvertisementBlock
+{
+AdvertisementBlockId = 1,
+Advertiser = "Coffee Shop",
+Content = "Лучший кофе в городе! Скидка 20% по промокоду 'GAZETA'",
+StartDate = DateTime.Now.AddDays(-7),
+EndDate = DateTime.Now.AddDays(30)
+},
+new AdvertisementBlock
+{
+AdvertisementBlockId = 2,
+Advertiser = "IT Courses",
+Content = "Научись программированию за 3 месяца. Гарантия трудоустройства",
+StartDate = DateTime.Now.AddDays(-14),
+EndDate = DateTime.Now.AddDays(60)
+}
+};
+}
+catch
+{
+// Если ошибка, создаем пустой список
+allAds = new List<AdvertisementBlock>();
+}
+}
+
+private async Task LoadCurrentPageLayout()
+{
+currentPageLayout = pageLayouts.FirstOrDefault(p => p.PageNumber == currentPageNumber);
+StateHasChanged();
+}
+
+private async Task SwitchToPage(int pageNumber)
+{
+currentPageNumber = pageNumber;
+await LoadCurrentPageLayout();
+}
+
+private async Task NextPage()
+{
+if (currentPageNumber < pageLayouts.Count)
+{
+currentPageNumber++;
+await LoadCurrentPageLayout();
+}
+}
+
+private async Task PrevPage()
+{
+if (currentPageNumber > 1)
+{
+currentPageNumber--;
+await LoadCurrentPageLayout();
+}
+}
+
+// Получаем статьи для конкретной страницы
+private List<Article> GetArticlesForPage(int pageNumber)
+{
+var layout = pageLayouts.FirstOrDefault(p => p.PageNumber == pageNumber);
+if (layout == null) return new List<Article>();
+
+var articleIds = layout.LayoutElements
+.Where(le => le.ArticleId.HasValue)
+.Select(le => le.ArticleId.Value)
+.ToList();
+
+return allArticles.Where(a => articleIds.Contains(a.ArticleId)).ToList();
+}
+
+// Получаем рекламу для конкретной страницы
+private List<AdvertisementBlock> GetAdsForPage(int pageNumber)
+{
+var layout = pageLayouts.FirstOrDefault(p => p.PageNumber == pageNumber);
+if (layout == null) return new List<AdvertisementBlock>();
+
+var adIds = layout.LayoutElements
+.Where(le => le.AdvertisementBlockId.HasValue)
+.Select(le => le.AdvertisementBlockId.Value)
+.ToList();
+
+return allAds.Where(ad => adIds.Contains(ad.AdvertisementBlockId)).ToList();
+}
+
+private void NavigateBack()
+{
+Navigation.NavigateTo($"/issues/{issueId}/layout");
+}
+
+private async Task PrintPreview()
+{
+await JS.InvokeVoidAsync("window.print");
+}
+}

@@ -19,6 +19,9 @@ namespace DailyDeBugle.Data
         public DbSet<HeaderFooterSettings> HeaderFooterSettings { get; set; }
         public DbSet<HeaderFooterTemplate> HeaderFooterTemplates { get; set; }
         public DbSet<GlobalTextStyle> GlobalTextStyles { get; set; }
+        
+        // ДОБАВЛЯЕМ ЭТУ СТРОЧКУ
+        public DbSet<ArticlePart> ArticleParts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -33,6 +36,89 @@ namespace DailyDeBugle.Data
                 .HasOne(a => a.Author)
                 .WithMany(u => u.Articles)
                 .HasForeignKey(a => a.AuthorId);
+            
+            // ДОБАВЛЯЕМ КОНФИГУРАЦИЮ ДЛЯ ARTICLE С ПРОДОЛЖЕНИЯМИ
+            modelBuilder.Entity<Article>(entity =>
+            {
+                // Связь для продолжений (самосвязь)
+                entity.HasOne(a => a.ContinuedFromArticle)
+                    .WithMany()
+                    .HasForeignKey(a => a.ContinuedFromArticleId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired(false);
+        
+                entity.HasOne(a => a.ContinuedOnArticle)
+                    .WithMany()
+                    .HasForeignKey(a => a.ContinuedOnArticleId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired(false);
+    
+                // Связь с частями статьи
+                entity.HasMany(a => a.ArticleParts)
+                    .WithOne(ap => ap.Article)
+                    .HasForeignKey(ap => ap.ArticleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+    
+                // Связь с автором
+                entity.HasOne(a => a.Author)
+                    .WithMany(u => u.Articles)
+                    .HasForeignKey(a => a.AuthorId);
+    
+                // Связь с выпуском
+                entity.HasOne(a => a.Issue)
+                    .WithMany(i => i.Articles)
+                    .HasForeignKey(a => a.IssueId);
+    
+                // Ограничения для новых полей
+                entity.Property(a => a.EstimatedHeightCm)
+                    .HasDefaultValue(0);
+        
+                entity.Property(a => a.WordCount)
+                    .HasDefaultValue(0);
+        
+                entity.Property(a => a.CharacterCount)
+                    .HasDefaultValue(0);
+        
+                entity.Property(a => a.ParagraphCount)
+                    .HasDefaultValue(0);
+        
+                entity.Property(a => a.HasContinuation)
+                    .HasDefaultValue(false);
+        
+                entity.Property(a => a.FontFamily)
+                    .HasMaxLength(50);
+            });
+            
+            // ДОБАВЛЯЕМ КОНФИГУРАЦИЮ ДЛЯ ARTICLEPART
+            modelBuilder.Entity<ArticlePart>(entity =>
+            {
+                entity.HasKey(ap => ap.ArticlePartId);
+                
+                entity.Property(ap => ap.ContentPart)
+                    .IsRequired()
+                    .HasMaxLength(4000);
+                    
+                entity.Property(ap => ap.PartNumber)
+                    .IsRequired();
+                    
+                entity.Property(ap => ap.TotalParts)
+                    .IsRequired();
+                    
+                entity.Property(ap => ap.IsBeginning)
+                    .HasDefaultValue(false);
+                    
+                entity.Property(ap => ap.IsEnding)
+                    .HasDefaultValue(false);
+                    
+                entity.Property(ap => ap.CreatedDate)
+                    .HasDefaultValueSql("NOW()");
+                    
+                // Индекс для быстрого поиска частей по статье
+                entity.HasIndex(ap => ap.ArticleId);
+                
+                // Индекс для поиска по номеру страницыи
+                entity.HasIndex(ap => ap.PageNumber);
+            });
 
             // Конфигурация для HeaderFooterSettings
             modelBuilder.Entity<HeaderFooterSettings>(entity =>
@@ -173,7 +259,25 @@ namespace DailyDeBugle.Data
                 entity.Property(g => g.ColumnCount).HasDefaultValue(2);
                 entity.Property(g => g.ColumnGap).HasDefaultValue(1.0);
             });
-            // Добавь остальные конфигурации по аналогии
+            
+            // ДОБАВЛЯЕМ КОНФИГУРАЦИЮ ДЛЯ ADVERTISEMENTBLOCK (если нужно)
+            modelBuilder.Entity<AdvertisementBlock>(entity =>
+            {
+                entity.HasKey(ab => ab.AdvertisementBlockId);
+                
+                entity.Property(ab => ab.Advertiser)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                    
+                entity.Property(ab => ab.Content)
+                    .IsRequired()
+                    .HasMaxLength(1000);
+                    
+                entity.HasMany(ab => ab.LayoutElements)
+                    .WithOne(le => le.AdvertisementBlock)
+                    .HasForeignKey(le => le.AdvertisementBlockId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

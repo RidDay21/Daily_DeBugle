@@ -1,162 +1,436 @@
-@using DailyDeBugle.Models
-@using System.Text.Json
-@using DailyDeBugle.Services
-
 @page "/issues/{issueId:int}/layout"
-@rendermode InteractiveServer
-@inject DailyDeBugle.Services.IIssueService IssueService
-@inject DailyDeBugle.Services.IArticleService ArticleService
-@inject DailyDeBugle.Services.ILayoutService LayoutService
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@using System.Text.Json
+@inject IIssueService IssueService
+@inject IArticleService ArticleService
+@inject ILayoutService LayoutService
+@inject ITemplateService TemplateService
 @inject NavigationManager Navigation
+@rendermode InteractiveServer
 
-<h3>Layout for Issue: @issueId</h3>
+<PageTitle>Макет выпуска: @currentIssue?.IssueNumber</PageTitle>
 
-<!-- Отладочная информация -->
-<div class="alert alert-warning">
-    <strong>Debug Info:</strong><br>
-    Pages Count: @pageLayouts.Count<br>
-    Last Action: @lastAction<br>
-    Current Template: @selectedTemplate<br>
-    Component Rendered: @DateTime.Now.ToString("HH:mm:ss.fff")
-</div>
+<div class="layout-container">
+    <!-- Шапка с навигацией и управлением -->
+    <div class="layout-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h3>Макет выпуска: @currentIssue?.IssueNumber</h3>
+                <p class="text-muted mb-0">Дата выпуска: @currentIssue?.IssueDate.ToString("dd.MM.yyyy")</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="NavigateToIssuesList">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-1" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                    </svg>
+                    Назад к выпускам
+                </button>
+                <button class="btn btn-outline-primary" @onclick="NavigateToTextStyle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-type me-1" viewBox="0 0 16 16">
+                        <path d="M2.244 13.081l.943-2.803H6.66l.944 2.803H8.86L5.54 3.75H4.322L1 13.081h1.244zm2.7-7.923L6.34 9.314H3.51l1.4-4.156h.034zm9.146 7.027h.035v.896h1.128V8.125c0-1.51-1.114-2.345-2.646-2.345-1.736 0-2.59.916-2.666 2.174h1.108c.068-.718.595-1.19 1.517-1.19.971 0 1.518.52 1.518 1.464v.731H12.19c-1.647.007-2.522.8-2.522 2.058 0 1.319.957 2.18 2.345 2.18 1.06 0 1.716-.43 2.078-1.011zm-1.763.035c-.752 0-1.456-.397-1.456-1.244 0-.65.424-1.115 1.408-1.115h1.805v.834c0 .896-.752 1.525-1.757 1.525z"/>
+                    </svg>
+                    Типографика
+                </button>
+                <button class="btn btn-outline-success" @onclick="NavigateToHeaderFooter">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-border-top me-1" viewBox="0 0 16 16">
+                        <path d="M0 1.5A.5.5 0 0 1 .5 1h15a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-.5.5H.5a.5.5 0 0 1-.5-.5v-13zm1 13h14v-13H1v13z"/>
+                    </svg>
+                    Колонтитулы
+                </button>
+                <a class="btn btn-outline-info" href="/issues/@issueId/ads">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-megaphone me-1" viewBox="0 0 16 16">
+                        <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+                    </svg>
+                    Реклама
+                </a>
+                <button class="btn btn-success" @onclick="HandleAddPage">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                    </svg>
+                    Добавить страницу
+                </button>
+                <button class="btn btn-outline-warning" @onclick="NavigateToPreview">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye me-1" viewBox="0 0 16 16">
+                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                    </svg>
+                    Предпросмотр
+                </button>
+            </div>
+        </div>
+    </div>
 
-<div class="header-buttons mb-3">
-    <button class="btn btn-success" @onclick="HandleAddPage">Add Page</button>
-    
-    <select @bind="selectedTemplate" class="form-select d-inline-block w-auto">
-        <option value="Default Template">Default Template</option>
-        <option value="Two Column Layout">Two Column Layout</option>
-        <option value="With Sidebar">With Sidebar</option>
-        <option value="Magazine Style">Magazine Style</option>
-    </select>
-    
-    <a class="btn btn-info" href="/issues/@issueId/ads">Manage Ads</a>
-    
-    <button class="btn btn-primary" @onclick="HandleSaveLayout">Save Layout</button>
-    <a class="btn btn-secondary" href="/issues">Back to Issues</a>
-</div>
-
-<div class="form-check mb-3">
-    <input type="checkbox" class="form-check-input" @bind="showOnlyApproved" />
-    <label class="form-check-label">Show only approved articles</label>
-</div>
-
-<hr />
-
-<div class="section mb-4">
-    <h4>Articles for Issue: @currentIssue?.IssueNumber</h4>
-    
-    @if (!filteredArticles.Any())
-    {
-        <p>No articles available for this issue.</p>
-    }
-    else
-    {
-        <div class="articles-list">
-            @foreach (var article in filteredArticles)
-            {
-                <div class="article-item card mb-2 @GetArticleCardClass(article.Status)">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <h5 class="card-title">@article.Headline</h5>
-                            <span class="badge @GetStatusBadgeClass(article.Status)">@article.Status</span>
-                        </div>
-                        <p class="card-text">@GetArticlePreview(article.Content)</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">
-                                Author: @article.Author?.Username | 
-                                Created: @article.CreatedDate.ToShortDateString() |
-                                Words: @GetWordCount(article.Content)
-                            </small>
-                            <button class="btn btn-sm btn-outline-primary" @onclick="@(() => HandlePlaceArticle(article))">
-                                Place on Page
-                            </button>
-                        </div>
+    <!-- Основной контент -->
+    <div class="row">
+        <!-- Левая колонка: Статьи и настройки макета -->
+        <div class="col-md-8">
+            <!-- Панель управления макетом текущей страницы -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        Страница @currentPageNumber 
+                        <span class="badge bg-secondary ms-2">Всего страниц: @pageLayouts.Count</span>
+                    </h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" 
+                                @onclick="PrevPage" 
+                                disabled="@(currentPageNumber <= 1)">
+                            ← Назад
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="NextPage">
+                            Вперед →
+                        </button>
                     </div>
                 </div>
-            }
-        </div>
-    }
-</div>
-
-<div class="section">
-    <h4>Current Pages Layout</h4>
-    
-    @if (pageLayouts.Any())
-    {
-        <div class="mb-3">
-            <button class="btn btn-sm btn-outline-secondary" @onclick="HandleClearAllPages">Clear All Pages</button>
-        </div>
-        
-        @foreach (var pageLayout in pageLayouts)
-        {
-            <div class="page-item card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Page @pageLayout.PageNumber (@selectedTemplate)</span>
-                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemovePage(pageLayout))">
-                        Remove Page
-                    </button>
-                </div>
+                
                 <div class="card-body">
-                    @if (pageLayout.LayoutElements.Any(le => le.Article != null))
+                    @if (currentPageLayout != null)
                     {
-                        <h6>Articles on this page:</h6>
-                        <ul class="list-group">
-                            @foreach (var element in pageLayout.LayoutElements.Where(le => le.Article != null))
-                            {
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>@element.Article.Headline</strong>
-                                        <span class="badge @GetStatusBadgeClass(element.Article.Status) ms-2">@element.Article.Status</span>
-                                        <br>
-                                        <small class="text-muted">by @element.Article.Author?.Username</small>
-                                        <br>
-                                        <small class="text-muted">Position: @element.Position | Size: @element.Size</small>
+                        <EditForm Model="@currentPageLayout" OnValidSubmit="@SaveLayoutConfig">
+                            <div class="row g-3">
+                                <!-- Настройки колонок -->
+                                <div class="col-md-6">
+                                    <label class="form-label">Количество колонок</label>
+                                    <InputNumber @bind-Value="@currentPageLayout.ColumnCount" 
+                                                @onchange="@((e) => { 
+                                                               currentPageLayout.ColumnCount = Convert.ToInt32(e.Value); 
+                                                               AdjustColumnsLayout(); 
+                                                               StateHasChanged(); 
+                                                           })"
+                                                class="form-control" 
+                                                min="1" max="4" />
+                                    <div class="form-text">
+                                        @if (currentPageLayout != null)
+                                        {
+                                            <span>Ширина колонки: @(GetColumnWidth().ToString("F1")) см</span>
+                                        }
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => HandleRemoveArticleFromPage(pageLayout, element))">
-                                        Remove
-                                    </button>
-                                </li>
-                            }
-                        </ul>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">Шаблон</label>
+                                    <InputSelect @bind-Value="@selectedTemplateId" class="form-select">
+                                        <option value="">-- Без шаблона --</option>
+                                        @foreach (var template in templates)
+                                        {
+                                            <option value="@template.TemplateId">@template.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                
+                                <!-- Кнопки управления -->
+                                <div class="col-12">
+                                    <div class="d-flex gap-2 pt-3 border-top">
+                                        <button type="submit" class="btn btn-primary">
+                                            Сохранить настройки
+                                        </button>
+                                        <button type="button" class="btn btn-danger" 
+                                                @onclick="() => HandleRemovePage(currentPageLayout)">
+                                            Удалить страницу
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </EditForm>
+                        
+                        <!-- Статистика по текущей странице -->
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <h6>Статистика страницы:</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div>Колонок: <strong>@currentPageLayout.ColumnCount</strong></div>
+                                    <div>Статей на странице: <strong>@currentPageLayout.LayoutElements.Count(le => le.Article != null)</strong></div>
+                                </div>
+                                <div class="col-6">
+                                    <div>Ширина колонки: <strong>@(GetColumnWidth().ToString("F1")) см</strong></div>
+                                    <div>Рекламных блоков: <strong>@currentPageLayout.LayoutElements.Count(le => le.AdvertisementBlock != null)</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        @if (conflicts.Any())
+                        {
+                            <div class="alert alert-warning mt-3">
+                                <h6>Обнаружены конфликты макета:</h6>
+                                <ul class="mb-0">
+                                    @foreach (var conflict in conflicts)
+                                    {
+                                        <li>@conflict</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
                     }
                     else
                     {
-                        <p class="text-muted">No articles placed on this page yet.</p>
+                        <div class="alert alert-info">
+                            Нет данных о макете для страницы @currentPageNumber. 
+                            <button class="btn btn-sm btn-primary" @onclick="InitializePageLayout">
+                                Создать макет
+                            </button>
+                        </div>
                     }
                 </div>
             </div>
-        }
-    }
-    else
-    {
-        <p>No pages added yet. Click "Add Page" to start designing the layout.</p>
-    }
+            
+            <!-- Список статей для выпуска -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Статьи выпуска</h5>
+                    <div class="form-check mt-2">
+                        <input type="checkbox" class="form-check-input" 
+                               checked="@showOnlyApproved" 
+                               @onchange="@((e) => { 
+                                              showOnlyApproved = (bool)e.Value; 
+                                              UpdateFilteredArticles(); 
+                                          })" />
+                        <label class="form-check-label">Только одобренные</label>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    @if (!filteredArticles.Any())
+                    {
+                        <p class="text-muted">Нет статей для этого выпуска.</p>
+                    }
+                    else
+                    {
+                        <!-- Статьи на текущей странице -->
+                        <h6>Статьи на текущей странице (@currentPageNumber)</h6>
+                        
+                            var placedArticles = currentPageLayout?.LayoutElements?
+                                .Where(le => le.Article != null)
+                                .Select(le => le.Article)
+                                .ToList() ?? new List<Article>();
+                        
+                        
+                        @if (placedArticles.Any())
+                        {
+                            <div class="list-group mb-4">
+                                @foreach (var article in placedArticles)
+                                {
+                                    <div class="list-group-item @GetArticleCardClass(article.Status)">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">@article.Headline</h6>
+                                                <div class="d-flex align-items-center gap-2 mb-2">
+                                                    <span class="badge @GetStatusBadgeClass(article.Status)">
+                                                        @article.Status
+                                                    </span>
+                                                    <span class="badge bg-success">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-check me-1" viewBox="0 0 16 16">
+                                                            <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                                        </svg>
+                                                        На странице @currentPageNumber
+                                                    </span>
+                                                </div>
+                                                <p class="small text-muted mb-1">
+                                                    @GetArticlePreview(article.Content)
+                                                </p>
+                                                <div class="small text-muted">
+                                                    Автор: @article.Author?.Username | 
+                                                    Слов: @GetWordCount(article.Content)
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-column gap-1">
+                                                @if (currentPageLayout != null)
+                                                {
+                                                    var element = currentPageLayout.LayoutElements
+                                                        .First(le => le.ArticleId == article.ArticleId);
+                                                    <button class="btn btn-sm btn-outline-danger"
+                                                            @onclick="() => HandleRemoveArticleFromPage(currentPageLayout, element)">
+                                                        Убрать
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-4">На этой странице еще нет статей. Разместите статьи из списка ниже.</p>
+                        }
+                        
+                        <!-- Все доступные статьи -->
+                        <h6>Доступные статьи для размещения</h6>
+                        
+                            var availableArticles = filteredArticles
+                                .Where(a => !placedArticles.Any(pa => pa.ArticleId == a.ArticleId))
+                                .ToList();
+                        
+                        
+                        @if (availableArticles.Any())
+                        {
+                            <div class="list-group">
+                                @foreach (var article in availableArticles)
+                                {
+                                    <div class="list-group-item @GetArticleCardClass(article.Status)">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">@article.Headline</h6>
+                                                <div class="d-flex align-items-center gap-2 mb-2">
+                                                    <span class="badge @GetStatusBadgeClass(article.Status)">
+                                                        @article.Status
+                                                    </span>
+                                                </div>
+                                                <p class="small text-muted mb-1">
+                                                    @GetArticlePreview(article.Content)
+                                                </p>
+                                                <div class="small text-muted">
+                                                    Автор: @article.Author?.Username | 
+                                                    Слов: @GetWordCount(article.Content)
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-column gap-1">
+                                                @if (currentPageLayout != null)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary"
+                                                            @onclick="() => HandlePlaceArticle(article)">
+                                                        Разместить
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">Нет доступных статей для размещения.</p>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <!-- Правая колонка: Только текущие страницы -->
+        <div class="col-md-4">
+            <!-- Текущие страницы выпуска -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Страницы выпуска</h5>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            @onclick="HandleClearAllPages"
+                            disabled="@(!pageLayouts.Any())">
+                        Очистить все
+                    </button>
+                </div>
+                
+                <div class="card-body">
+                    @if (!pageLayouts.Any())
+                    {
+                        <p class="text-muted">Страницы не добавлены</p>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var pageLayout in pageLayouts.OrderBy(p => p.PageNumber))
+                            {
+                                var isActive = pageLayout.PageNumber == currentPageNumber;
+                                var articleCount = pageLayout.LayoutElements.Count(le => le.Article != null);
+                                var adCount = pageLayout.LayoutElements.Count(le => le.AdvertisementBlock != null);
+                                
+                                <button class="list-group-item list-group-item-action @(isActive ? "active" : "")"
+                                        @onclick="() => SwitchToPage(pageLayout.PageNumber)">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Страница @pageLayout.PageNumber</strong>
+                                            <div class="small">
+                                                <div>Колонок: @pageLayout.ColumnCount</div>
+                                                @if (articleCount > 0)
+                                                {
+                                                    <div>Статей: @articleCount</div>
+                                                }
+                                                @if (adCount > 0)
+                                                {
+                                                    <div>Рекламы: @adCount</div>
+                                                }
+                                            </div>
+                                        </div>
+                                        @if (isActive)
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+                                            </svg>
+                                        }
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                        
+                        <!-- Общая статистика выпуска -->
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <h6>Общая статистика:</h6>
+                            <div>Всего страниц: <strong>@pageLayouts.Count</strong></div>
+                            <div>Всего статей размещено: <strong>@pageLayouts.Sum(p => p.LayoutElements.Count(le => le.Article != null))</strong></div>
+                            <div>Всего рекламных блоков: <strong>@pageLayouts.Sum(p => p.LayoutElements.Count(le => le.AdvertisementBlock != null))</strong></div>
+                        </div>
+                        
+                        <div class="mt-3 pt-3 border-top">
+                            <button class="btn btn-success w-100" @onclick="HandleSaveLayout">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                Сохранить макет
+                            </button>
+                            <div class="mt-2 text-center">
+                                <small class="text-muted">
+                                    Для визуального просмотра используйте кнопку "Предпросмотр"
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-
-@if (!string.IsNullOrEmpty(message))
-{
-    <div class="alert alert-info mt-3">@message</div>
-}
 
 @code {
     [Parameter]
     public int issueId { get; set; }
 
-    private Issue? currentIssue;
-    private List<Article> allArticles = new List<Article>();
-    private List<Article> filteredArticles = new List<Article>();
-    private List<PageLayout> pageLayouts = new List<PageLayout>();
-    private string selectedTemplate = "Default Template";
-    private string message = "";
+    private Issue currentIssue;
+    private List<Article> allArticles = new();
+    private List<Article> filteredArticles = new();
+    private List<PageLayout> pageLayouts = new();
+    private List<Template> templates = new();
+    private PageLayout currentPageLayout;
+    private int? selectedTemplateId;
+    private List<string> conflicts = new();
+    private int currentPageNumber = 1;
     private bool showOnlyApproved = false;
-    private string lastAction = "None";
+    
+    // Константы для размеров страницы (А4)
+    private const double PAGE_WIDTH = 21.0;    // см, ширина страницы А4
+    private const double PAGE_HEIGHT = 29.7;   // см, высота страницы А4
+    private const double MIN_MARGIN = 0.5;     // минимальный отступ
+    private const double MAX_MARGIN = 5.0;     // максимальный отступ
+    private const double MIN_COLUMN_WIDTH = 4.0; // минимальная ширина колонки
+    private const double MAX_COLUMN_GAP = 2.0;  // максимальный промежуток между колонками
+    
+    // Ошибки валидации макета
+    private List<string> layoutErrors = new();
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine($"=== LAYOUT COMPONENT INITIALIZED for issue {issueId} ===");
-        lastAction = "Component initialized";
         await LoadData();
+    }
+    
+    private void NavigateToIssuesList()
+    {
+        Navigation.NavigateTo("/issues");
+    }
+    
+    private void NavigateToPreview()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/preview");
     }
 
     private async Task LoadData()
@@ -169,257 +443,521 @@
             {
                 allArticles = await ArticleService.GetArticlesByIssueAsync(issueId);
                 pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
-                UpdateFilteredArticles();
-                Console.WriteLine($"Loaded {allArticles.Count} articles and {pageLayouts.Count} page layouts for issue {issueId}");
+                templates = await TemplateService.GetTemplatesAsync();
                 
-                // Отладочная информация о загруженных страницах
-                foreach (var page in pageLayouts)
-                {
-                    Console.WriteLine($"Page {page.PageNumber} has {page.LayoutElements.Count} elements");
-                    foreach (var element in page.LayoutElements)
-                    {
-                        Console.WriteLine($"  - Element: ArticleId={element.ArticleId}, Type={element.Type}");
-                    }
-                }
+                UpdateFilteredArticles();
+                await LoadCurrentPageLayout();
             }
         }
         catch (Exception ex)
         {
-            message = $"Error loading data: {ex.Message}";
-            Console.WriteLine($"ERROR: {ex.Message}");
+            Console.WriteLine($"Ошибка загрузки данных: {ex.Message}");
         }
+    }
+
+    private async Task LoadCurrentPageLayout()
+    {
+        currentPageLayout = pageLayouts.FirstOrDefault(p => p.PageNumber == currentPageNumber);
+        if (currentPageLayout != null)
+        {
+            selectedTemplateId = currentPageLayout.TemplateId;
+        }
+        conflicts.Clear();
+        StateHasChanged();
     }
 
     private void UpdateFilteredArticles()
     {
-        if (showOnlyApproved)
-        {
-            filteredArticles = allArticles.Where(a => a.Status == ArticleStatus.Approved).ToList();
-        }
-        else
-        {
-            filteredArticles = allArticles.ToList();
-        }
-        StateHasChanged();
+        filteredArticles = showOnlyApproved
+            ? allArticles.Where(a => a.Status == ArticleStatus.Approved).ToList()
+            : allArticles.ToList();
     }
 
-    // ОБРАБОТЧИКИ КНОПОК
+    private async Task SwitchToPage(int pageNumber)
+    {
+        currentPageNumber = pageNumber;
+        await LoadCurrentPageLayout();
+    }
+    
+    private double GetColumnWidth()
+    {
+        if (currentPageLayout == null || currentPageLayout.ColumnCount == 0) 
+            return 0;
+    
+        double totalGaps = (currentPageLayout.ColumnCount - 1) * currentPageLayout.ColumnGap;
+        double availableWidth = currentPageLayout.TextAreaWidth - totalGaps;
+        return availableWidth / currentPageLayout.ColumnCount;
+    }
+    
+    private void AdjustColumnsLayout()
+    {
+        if (currentPageLayout == null) return;
+    
+        // Фиксированные отступы
+        currentPageLayout.MarginTop = 2.0;
+        currentPageLayout.MarginBottom = 2.0;
+        currentPageLayout.MarginLeft = 2.0;
+        currentPageLayout.MarginRight = 2.0;
+    
+        // Текстовая область занимает все пространство между отступами
+        currentPageLayout.TextAreaWidth = PAGE_WIDTH - currentPageLayout.MarginLeft - currentPageLayout.MarginRight;
+        currentPageLayout.TextAreaHeight = PAGE_HEIGHT - currentPageLayout.MarginTop - currentPageLayout.MarginBottom;
+    
+        // Настраиваем промежутки между колонками в зависимости от количества
+        switch (currentPageLayout.ColumnCount)
+        {
+            case 1:
+                currentPageLayout.ColumnGap = 0;
+                break;
+            case 2:
+                currentPageLayout.ColumnGap = 1.0; // 1 см между двумя колонками
+                break;
+            case 3:
+                currentPageLayout.ColumnGap = 0.7; // 0.7 см между тремя колонками
+                break;
+            case 4:
+                currentPageLayout.ColumnGap = 0.5; // 0.5 см между четырьмя колонками
+                break;
+        }
+    
+        // Округляем значения
+        currentPageLayout.TextAreaWidth = Math.Round(currentPageLayout.TextAreaWidth, 1);
+        currentPageLayout.TextAreaHeight = Math.Round(currentPageLayout.TextAreaHeight, 1);
+        currentPageLayout.ColumnGap = Math.Round(currentPageLayout.ColumnGap, 1);
+    
+        ValidateLayout();
+    }
+    
+    private async Task NextPage()
+    {
+        currentPageNumber++;
+        await LoadCurrentPageLayout();
+    }
+
+    private async Task PrevPage()
+    {
+        if (currentPageNumber > 1)
+        {
+            currentPageNumber--;
+            await LoadCurrentPageLayout();
+        }
+    }
+
+    private async Task InitializePageLayout()
+    {
+        // Ищем шаблон по умолчанию
+        Template defaultTemplate = templates.FirstOrDefault(t => t.Name.Contains("Стандартный")) 
+                                   ?? templates.FirstOrDefault();
+    
+        var newPageLayout = new PageLayout
+        {
+            IssueId = issueId,
+            PageNumber = currentPageNumber,
+            LayoutSettings = "{}",
+            LayoutElements = new List<LayoutElement>(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    
+        // Начальные значения
+        newPageLayout.ColumnCount = 2; // По умолчанию 2 колонки
+    
+        // Применяем автоматическую настройку колонок
+        AdjustColumnsLayout();
+    
+        await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
+        await LoadData();
+    }
+    
+    // Проверяет все страницы на переполнение и создает новые при необходимости
+private async Task CheckAndFixOverflow()
+{
+    bool changesMade = false;
+    
+    foreach (var pageLayout in pageLayouts.OrderBy(p => p.PageNumber).ToList())
+    {
+        var elementsInColumn = GetElementsInColumn(pageLayout, 0);
+        double totalHeight = 0.5; // Начальный отступ
+        
+        foreach (var element in elementsInColumn)
+        {
+            var size = GetElementSize(element);
+            totalHeight += size.Height + 0.5; // Высота элемента + отступ
+            
+            // Если суммарная высота превышает допустимую
+            if (totalHeight > pageLayout.TextAreaHeight)
+            {
+                // Находим все элементы после текущего
+                var elementsToMove = elementsInColumn
+                    .SkipWhile(e => e != element)
+                    .ToList();
+                
+                // Создаем новую страницу
+                var newPageNumber = pageLayouts.Count + 1;
+                var newPageLayout = new PageLayout
+                {
+                    IssueId = issueId,
+                    PageNumber = newPageNumber,
+                    ColumnCount = pageLayout.ColumnCount,
+                    LayoutElements = new List<LayoutElement>(),
+                    LayoutSettings = "{}",
+                    TemplateId = pageLayout.TemplateId
+                };
+                
+                await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
+                changesMade = true;
+                
+                // Переносим элементы на новую страницу
+                double newPageY = 0.5;
+                foreach (var elementToMove in elementsToMove)
+                {
+                    // Удаляем элемент со старой страницы
+                    await LayoutService.RemoveElementFromLayoutAsync(elementToMove.LayoutElementId);
+                    
+                    // Добавляем на новую страницу
+                    if (elementToMove.ArticleId.HasValue)
+                    {
+                        var position = JsonSerializer.Serialize(new { X = 0, Y = newPageY });
+                        var elementSize = GetElementSize(elementToMove);
+                        var sizeJson = JsonSerializer.Serialize(new { 
+                            Width = elementSize.Width, 
+                            Height = elementSize.Height 
+                        });
+                        
+                        await LayoutService.AddArticleToLayoutAsync(
+                            newPageLayout.PageLayoutId,
+                            elementToMove.ArticleId.Value,
+                            position,
+                            sizeJson
+                        );
+                    }
+                    
+                    newPageY += GetElementSize(elementToMove).Height + 0.5;
+                }
+                
+                break; // Прерываем после первого переполнения
+            }
+        }
+    }
+    
+    if (changesMade)
+    {
+        await LoadData();
+        ShowNotification("Обнаружено переполнение страниц. Часть статей была автоматически перенесена на новые страницы.");
+    }
+}
+
+    private async Task SaveLayoutConfig()
+    {
+        if (currentPageLayout != null)
+        {
+            currentPageLayout.TemplateId = selectedTemplateId ?? 0;
+            await LayoutService.CreateOrUpdatePageLayoutAsync(currentPageLayout);
+            await LoadData();
+        }
+    }
+
+    private void ValidateLayout()
+    {
+        layoutErrors.Clear();
+    
+        if (currentPageLayout == null) return;
+    
+        // Проверяем, что все влезает на страницу
+        double totalWidth = currentPageLayout.MarginLeft + currentPageLayout.TextAreaWidth + currentPageLayout.MarginRight;
+        if (totalWidth > PAGE_WIDTH)
+        {
+            layoutErrors.Add($"Суммарная ширина ({totalWidth:F1} см) превышает ширину страницы ({PAGE_WIDTH} см)");
+        }
+    
+        double totalHeight = currentPageLayout.MarginTop + currentPageLayout.TextAreaHeight + currentPageLayout.MarginBottom;
+        if (totalHeight > PAGE_HEIGHT)
+        {
+            layoutErrors.Add($"Суммарная высота ({totalHeight:F1} см) превышает высоту страницы ({PAGE_HEIGHT} см)");
+        }
+    
+        // Проверяем ширину колонок (не менее 4 см для читаемости)
+        double columnWidth = GetColumnWidth();
+        if (columnWidth < MIN_COLUMN_WIDTH)
+        {
+            layoutErrors.Add($"Ширина колонки ({columnWidth:F1} см) слишком мала (минимум {MIN_COLUMN_WIDTH} см)");
+        }
+    }
+
     private async Task HandleAddPage()
     {
-        Console.WriteLine("=== ADD PAGE BUTTON CLICKED ===");
-        
-        try
+        var newPageNumber = pageLayouts.Count + 1;
+        var newPageLayout = new PageLayout
         {
-            var newPageNumber = pageLayouts.Count + 1;
+            IssueId = issueId,
+            PageNumber = newPageNumber,
+            ColumnCount = 2,
+            LayoutElements = new List<LayoutElement>(),
+            LayoutSettings = "{}",
+            TemplateId = 0
+        };
 
-            // ВРЕМЕННОЕ РЕШЕНИЕ: создаем PageLayout без TemplateId
-            // Для этого нам нужно обойти ограничение базы данных
-            var newPageLayout = new PageLayout
-            {
-                IssueId = issueId,
-                PageNumber = newPageNumber,
-                LayoutElements = new List<LayoutElement>(),
-                LayoutSettings = "{}"
-            };
-
-            // Используем рефлексию чтобы установить TemplateId = 1 (первый шаблон)
-            // Это временное решение пока не создадим шаблоны в базе
-            var templateIdProperty = typeof(PageLayout).GetProperty("TemplateId");
-            if (templateIdProperty != null && templateIdProperty.CanWrite)
-            {
-                templateIdProperty.SetValue(newPageLayout, 1);
-            }
-
-            // Сохраняем в базу
-            await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
-            
-            // Перезагружаем данные
-            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
-            
-            message = $"Page {newPageNumber} added successfully!";
-            lastAction = $"Added page {newPageNumber} at {DateTime.Now:HH:mm:ss}";
-            
-            Console.WriteLine($"Page {newPageNumber} added. Total pages: {pageLayouts.Count}");
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            message = $"Error adding page: {ex.Message}";
-            lastAction = "Add page failed";
-            Console.WriteLine($"ERROR adding page: {ex.Message}");
-            StateHasChanged();
-        }
+        await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
+        await LoadData();
+        currentPageNumber = newPageNumber;
+        await LoadCurrentPageLayout();
     }
 
     private async Task HandleRemovePage(PageLayout pageLayout)
     {
-        try
+        foreach (var element in pageLayout.LayoutElements.ToList())
         {
-            // Удаляем все элементы макета для этой страницы
-            foreach (var element in pageLayout.LayoutElements.ToList())
-            {
-                await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
-            }
-            
-            // Перезагружаем данные
-            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
-            
-            message = $"Page {pageLayout.PageNumber} removed.";
-            lastAction = $"Removed page {pageLayout.PageNumber}";
-            StateHasChanged();
+            await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
         }
-        catch (Exception ex)
+    
+        await LayoutService.DeletePageLayoutAsync(pageLayout.PageLayoutId);
+    
+        await LoadData();
+    
+        if (currentPageNumber > pageLayouts.Count)
         {
-            message = $"Error removing page: {ex.Message}";
-            lastAction = "Remove page failed";
-            Console.WriteLine($"ERROR removing page: {ex.Message}");
-            StateHasChanged();
+            currentPageNumber = pageLayouts.Count;
         }
+    
+        await LoadCurrentPageLayout();
     }
 
     private async Task HandleClearAllPages()
     {
         try
         {
-            // Удаляем все страницы
-            foreach (var pageLayout in pageLayouts.ToList())
+            // Получаем все макеты страниц для этого выпуска
+            var allLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+        
+            // Удаляем все элементы макета
+            foreach (var pageLayout in allLayouts)
             {
                 foreach (var element in pageLayout.LayoutElements.ToList())
                 {
                     await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
                 }
             }
-            
-            pageLayouts = new List<PageLayout>();
-            message = "All pages cleared.";
-            lastAction = "Cleared all pages";
+        
+            // Удаляем сами макеты страниц
+            foreach (var pageLayout in allLayouts)
+            {
+                await LayoutService.DeletePageLayoutAsync(pageLayout.PageLayoutId);
+            }
+        
+            // Очищаем локальные списки
+            pageLayouts.Clear();
+            currentPageLayout = null;
+            currentPageNumber = 1;
+        
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            message = $"Error clearing pages: {ex.Message}";
-            lastAction = "Clear pages failed";
-            Console.WriteLine($"ERROR clearing pages: {ex.Message}");
-            StateHasChanged();
+            Console.WriteLine($"Ошибка при очистке страниц: {ex.Message}");
         }
     }
 
     private async Task HandlePlaceArticle(Article article)
+{
+    if (currentPageLayout != null)
     {
-        try
+        double columnWidth = GetColumnWidth();
+        double columnSpacing = columnWidth + currentPageLayout.ColumnGap;
+        
+        // Автоматически выбираем первую колонку
+        int selectedColumn = 0;
+        double x = selectedColumn * columnSpacing;
+        
+        // Определяем Y-позицию (ставим после последнего элемента в колонке 0)
+        var elementsInColumn = GetElementsInColumn(currentPageLayout, 0);
+        double y = 0.5; // Отступ от верха
+        
+        if (elementsInColumn.Any())
         {
-            if (!pageLayouts.Any())
-            {
-                message = "Please add at least one page before placing articles.";
-                lastAction = "No pages available";
-                StateHasChanged();
-                return;
-            }
-            
-            // Проверяем, не размещена ли статья уже на какой-то странице
-            var existingElement = pageLayouts
-                .SelectMany(pl => pl.LayoutElements)
-                .FirstOrDefault(le => le.ArticleId == article.ArticleId);
-                
-            if (existingElement != null)
-            {
-                message = $"Article '{article.Headline}' is already placed on a page.";
-                lastAction = "Article already placed";
-                StateHasChanged();
-                return;
-            }
-            
-            // Берем первую страницу
-            var firstPage = pageLayouts.First();
-            
-            // Добавляем статью на страницу через сервис
-            var defaultPosition = JsonSerializer.Serialize(new { X = 0, Y = 0 });
-            var defaultSize = JsonSerializer.Serialize(new { Width = 100, Height = 100 });
-            
-            await LayoutService.AddArticleToLayoutAsync(
-                firstPage.PageLayoutId, 
-                article.ArticleId, 
-                defaultPosition, 
-                defaultSize
-            );
-            
-            // Перезагружаем данные
-            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
-            
-            message = $"Article '{article.Headline}' placed on page 1.";
-            lastAction = $"Placed article: {article.Headline}";
-            
-            Console.WriteLine($"Article {article.ArticleId} placed on page {firstPage.PageNumber}");
-            StateHasChanged();
+            // Берем последний элемент в первой колонке
+            var lastElement = elementsInColumn.Last();
+            var lastPosition = GetElementPosition(lastElement);
+            var lastSize = GetElementSize(lastElement);
+            y = lastPosition.Y + lastSize.Height + 0.5;
         }
-        catch (Exception ex)
+        
+        // Рассчитываем высоту статьи на основе количества символов
+        double elementHeight = CalculateArticleHeight(article);
+        
+        // Проверяем, помещается ли статья на текущей странице
+        bool needsNewPage = await CheckIfNeedsNewPage(currentPageLayout, elementHeight, y);
+        
+        PageLayout targetPageLayout = currentPageLayout;
+        double targetY = y;
+        int targetPageNumber = currentPageNumber;
+        
+        if (needsNewPage)
         {
-            message = $"Error placing article: {ex.Message}";
-            lastAction = "Place article failed";
-            Console.WriteLine($"ERROR placing article: {ex.Message}");
-            StateHasChanged();
+            // Создаем новую страницу
+            targetPageNumber = pageLayouts.Count + 1;
+            var newPageLayout = new PageLayout
+            {
+                IssueId = issueId,
+                PageNumber = targetPageNumber,
+                ColumnCount = currentPageLayout.ColumnCount,
+                LayoutElements = new List<LayoutElement>(),
+                LayoutSettings = "{}",
+                TemplateId = currentPageLayout.TemplateId,
+                MarginTop = currentPageLayout.MarginTop,
+                MarginBottom = currentPageLayout.MarginBottom,
+                MarginLeft = currentPageLayout.MarginLeft,
+                MarginRight = currentPageLayout.MarginRight,
+                TextAreaWidth = currentPageLayout.TextAreaWidth,
+                TextAreaHeight = currentPageLayout.TextAreaHeight,
+                ColumnGap = currentPageLayout.ColumnGap
+            };
+
+            await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
+            await LoadData();
+            
+            targetPageLayout = pageLayouts.FirstOrDefault(p => p.PageNumber == targetPageNumber);
+            targetY = 0.5; // Начинаем с верха новой страницы
+            
+            // Показываем уведомление
+            ShowNotification($"Статья не поместилась на странице {currentPageNumber}. " +
+                           $"Была создана страница {targetPageNumber}.");
+            
+            // Переключаемся на новую страницу
+            await SwitchToPage(targetPageNumber);
         }
+        else if (y + elementHeight > currentPageLayout.TextAreaHeight)
+        {
+            // Если не помещается по высоте, просто ставим сверху (для простоты)
+            y = 0.5;
+        }
+        
+        var position = JsonSerializer.Serialize(new { X = x, Y = targetY });
+        var size = JsonSerializer.Serialize(new { Width = columnWidth, Height = elementHeight });
+        
+        await LayoutService.AddArticleToLayoutAsync(
+            targetPageLayout.PageLayoutId, 
+            article.ArticleId, 
+            position, 
+            size
+        );
+        
+        await LoadData();
     }
+}
+
+// Проверяет, нужна ли новая страница для статьи
+private async Task<bool> CheckIfNeedsNewPage(PageLayout layout, double articleHeight, double proposedY)
+{
+    // Если статья не помещается по высоте на текущей странице
+    if (proposedY + articleHeight > layout.TextAreaHeight)
+    {
+        // Проверяем, есть ли еще страницы после текущей
+        var nextPage = pageLayouts.FirstOrDefault(p => p.PageNumber == currentPageNumber + 1);
+        
+        if (nextPage != null)
+        {
+            // Проверяем, поместится ли статья на следующей странице
+            var elementsOnNextPage = GetElementsInColumn(nextPage, 0);
+            double nextPageY = 0.5;
+            
+            if (elementsOnNextPage.Any())
+            {
+                var lastElement = elementsOnNextPage.Last();
+                var lastPosition = GetElementPosition(lastElement);
+                var lastSize = GetElementSize(lastElement);
+                nextPageY = lastPosition.Y + lastSize.Height + 0.5;
+            }
+            
+            // Если на следующей странице есть место
+            if (nextPageY + articleHeight <= nextPage.TextAreaHeight)
+            {
+                return false; // Не создаем новую, используем существующую
+            }
+        }
+        
+        return true; // Нужна новая страница
+    }
+    
+    return false;
+}
+
+// Рассчитывает высоту статьи на основе количества символов
+private double CalculateArticleHeight(Article article)
+{
+    if (article == null || string.IsNullOrEmpty(article.Content)) 
+        return 3.0; // Минимальная высота
+    
+    // Базовые параметры (можно вынести в настройки)
+    const double charsPerCm = 35.0; // Примерно 35 символов на 1 см высоты при 12pt шрифте
+    const double lineHeightCm = 0.45; // Высота строки в см
+    const double minHeight = 3.0; // Минимальная высота статьи
+    const double maxHeight = 15.0; // Максимальная высота на одной странице
+    
+    // Рассчитываем примерное количество строк
+    double estimatedLines = article.Content.Length / charsPerCm;
+    double estimatedHeight = estimatedLines * lineHeightCm;
+    
+    // Добавляем высоту для заголовка и отступов
+    estimatedHeight += 1.0;
+    
+    // Ограничиваем минимальной и максимальной высотой
+    estimatedHeight = Math.Max(minHeight, Math.Min(estimatedHeight, maxHeight));
+    
+    return Math.Round(estimatedHeight, 1);
+}
+
+// Методы для уведомлений
+private string? notificationMessage = null;
+
+private void ShowNotification(string message)
+{
+    notificationMessage = message;
+    StateHasChanged();
+    
+    // Автоматически скрыть уведомление через 5 секунд
+    _ = AutoDismissNotification();
+}
+
+private async Task AutoDismissNotification()
+{
+    await Task.Delay(5000);
+    notificationMessage = null;
+    await InvokeAsync(StateHasChanged);
+}
+
+private void DismissNotification()
+{
+    notificationMessage = null;
+    StateHasChanged();
+}
 
     private async Task HandleRemoveArticleFromPage(PageLayout pageLayout, LayoutElement element)
     {
-        try
-        {
-            await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
-            
-            // Перезагружаем данные
-            pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
-            
-            message = $"Article '{element.Article.Headline}' removed from page {pageLayout.PageNumber}.";
-            lastAction = $"Removed article from page {pageLayout.PageNumber}";
-            
-            Console.WriteLine($"Article {element.ArticleId} removed from page {pageLayout.PageNumber}");
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            message = $"Error removing article: {ex.Message}";
-            lastAction = "Remove article failed";
-            Console.WriteLine($"ERROR removing article: {ex.Message}");
-            StateHasChanged();
-        }
+        await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
+        await LoadData();
     }
 
     private async Task HandleSaveLayout()
     {
-        try
+        if (pageLayouts.Any())
         {
-            if (!pageLayouts.Any())
-            {
-                message = "Error: Cannot save layout without pages. Please add at least one page.";
-                lastAction = "Save failed: no pages";
-                StateHasChanged();
-                return;
-            }
-            
-            // Обновляем статус выпуска на "Ready for Print"
-            await LayoutService.UpdateIssueStatusAsync(issueId, IssueStatus.ReadyForPublish);
-            
-            var totalArticles = pageLayouts.Sum(pl => pl.LayoutElements.Count(le => le.Article != null));
-            message = $"Layout saved successfully with {pageLayouts.Count} pages and {totalArticles} articles! Status updated to Ready for Print.";
-            lastAction = $"Saved layout with {pageLayouts.Count} pages";
-            
-            Console.WriteLine($"Layout saved for issue {issueId} with {pageLayouts.Count} pages and {totalArticles} articles");
-            
-            // Показываем детальную информацию о сохраненном макете
-            foreach (var page in pageLayouts)
-            {
-                Console.WriteLine($"Page {page.PageNumber}: {page.LayoutElements.Count} elements");
-            }
-        }
-        catch (Exception ex)
-        {
-            message = $"Error saving layout: {ex.Message}";
-            lastAction = "Save failed";
-            Console.WriteLine($"ERROR saving layout: {ex.Message}");
-        }
+            // Проверяем на переполнение перед сохранением
+            await CheckAndFixOverflow();
         
-        StateHasChanged();
+            await LayoutService.UpdateIssueStatusAsync(issueId, IssueStatus.ReadyForPublish);
+            ShowNotification("Макет сохранен. Все страницы проверены на переполнение.");
+            Console.WriteLine($"Макет сохранен для выпуска {issueId}");
+        }
+    }
+
+    private void NavigateToTextStyle()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/text-style");
+    }
+
+    private void NavigateToHeaderFooter()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/header-footer");
     }
 
     // Вспомогательные методы
@@ -439,11 +977,11 @@
     {
         return status switch
         {
-            ArticleStatus.Approved => "border-success",
-            ArticleStatus.UnderReview => "border-info",
-            ArticleStatus.RequiresRevision => "border-warning",
-            ArticleStatus.Draft => "border-secondary",
-            ArticleStatus.Rejected => "border-danger",
+            ArticleStatus.Approved => "border-start border-success border-5",
+            ArticleStatus.UnderReview => "border-start border-info border-5",
+            ArticleStatus.RequiresRevision => "border-start border-warning border-5",
+            ArticleStatus.Draft => "border-start border-secondary border-5",
+            ArticleStatus.Rejected => "border-start border-danger border-5",
             _ => ""
         };
     }
@@ -459,5 +997,78 @@
             ArticleStatus.Rejected => "bg-danger",
             _ => "bg-secondary"
         };
+    }
+
+    // Методы для работы с элементами (оставлены для внутренней логики)
+    private List<LayoutElement> GetElementsInColumn(PageLayout layout, int columnIndex)
+    {
+        var elements = new List<LayoutElement>();
+    
+        if (layout == null || layout.ColumnCount == 0) return elements;
+    
+        double columnWidth = GetColumnWidth();
+        double columnSpacing = columnWidth + layout.ColumnGap;
+    
+        foreach (var element in layout.LayoutElements)
+        {
+            var position = GetElementPosition(element);
+        
+            // Определяем колонку с учетом промежутков
+            int elementColumn = (int)(position.X / columnSpacing);
+        
+            if (elementColumn == columnIndex)
+            {
+                elements.Add(element);
+            }
+        }
+    
+        return elements.OrderBy(e => GetElementPosition(e).Y).ToList();
+    }
+
+    private (double X, double Y) GetElementPosition(LayoutElement element)
+    {
+        // Простая реализация - возвращаем позицию из JSON или (0,0)
+        try
+        {
+            if (!string.IsNullOrEmpty(element.Position))
+            {
+                var position = JsonSerializer.Deserialize<Dictionary<string, double>>(element.Position);
+                if (position != null)
+                {
+                    double x = position.ContainsKey("X") ? position["X"] : 0;
+                    double y = position.ContainsKey("Y") ? position["Y"] : 0;
+                    return (x, y);
+                }
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки парсинга
+        }
+    
+        return (0, 0);
+    }
+
+    private (double Width, double Height) GetElementSize(LayoutElement element)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(element.Size))
+            {
+                var size = JsonSerializer.Deserialize<Dictionary<string, double>>(element.Size);
+                if (size != null && size.ContainsKey("Width") && size.ContainsKey("Height"))
+                {
+                    return (size["Width"], size["Height"]);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка парсинга размера: {ex.Message}");
+        }
+    
+        // Размеры по умолчанию: 1 колонка шириной, высота 3 см
+        double columnWidth = currentPageLayout?.TextAreaWidth / currentPageLayout?.ColumnCount ?? 5.0;
+        return (columnWidth, 3.0);
     }
 }

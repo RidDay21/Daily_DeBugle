@@ -11,6 +11,7 @@ namespace DailyDeBugle.Services
         Task AddArticleToLayoutAsync(int pageLayoutId, int articleId, string position, string size);
         Task RemoveElementFromLayoutAsync(int layoutElementId);
         Task UpdateIssueStatusAsync(int issueId, IssueStatus status);
+        Task DeletePageLayoutAsync(int pageLayoutId);
         Task<LayoutElement> UpdateLayoutElementAsync(LayoutElement element);
         Task ApplyTemplateAsync(int pageLayoutId, int templateId);
         Task<List<Template>> GetTemplatesAsync();
