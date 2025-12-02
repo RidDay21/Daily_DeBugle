@@ -1,4 +1,5 @@
 ﻿@page "/publications"
+@rendermode InteractiveServer
 @inject DailyDeBugle.Services.IPublicationService PublicationService
 @using DailyDeBugle.Models
 
@@ -23,6 +24,7 @@ else
             <th>Description</th>
             <th>Created</th>
             <th>Status</th>
+            <th>Actions</th> 
         </tr>
         </thead>
         <tbody>
@@ -33,17 +35,71 @@ else
                 <td>@pub.Description</td>
                 <td>@pub.CreatedDate.ToShortDateString()</td>
                 <td>@(pub.IsActive ? "Active" : "Inactive")</td>
+                <td>
+                    <a href="/publications/edit/@pub.PublicationId" class="btn btn-primary btn-sm">Edit</a>
+                    
+                    <button class="btn btn-danger btn-sm" 
+                            @onclick="() => ConfirmDelete(pub.PublicationId, pub.Name)">
+                        Delete
+                    </button>
+                </td>
             </tr>
         }
         </tbody>
     </table>
 }
 
+@if (publicationIdToDelete.HasValue)
+{
+    <div class="alert alert-warning mt-4 p-4" role="alert">
+        <h4>Подтвердите удаление</h4>
+        <p>
+            Вы уверены, что хотите удалить публикацию **"@publicationNameToDelete"**?
+            Это действие приведет к безвозвратному удалению всех связанных выпусков и статей.
+        </p>
+        <button class="btn btn-danger me-2" @onclick="DeletePublicationConfirmed">
+            Да, удалить навсегда
+        </button>
+        <button class="btn btn-secondary" @onclick="CancelDelete">
+            Отмена
+        </button>
+    </div>
+}
+
+
 @code {
     private List<Publication>? publications;
+    
+    private int? publicationIdToDelete;
+    private string? publicationNameToDelete;
 
     protected override async Task OnInitializedAsync()
     {
         publications = await PublicationService.GetPublicationsAsync();
+    }
+
+    private void ConfirmDelete(int publicationId, string publicationName)
+    {
+        publicationIdToDelete = publicationId;
+        publicationNameToDelete = publicationName;
+    }
+
+    private void CancelDelete()
+    {
+        publicationIdToDelete = null;
+        publicationNameToDelete = null;
+    }
+
+    private async Task DeletePublicationConfirmed()
+    {
+        if (publicationIdToDelete.HasValue)
+        {
+            await PublicationService.DeletePublicationAsync(publicationIdToDelete.Value);
+            
+            publications = await PublicationService.GetPublicationsAsync(); 
+            
+            publicationIdToDelete = null;
+            publicationNameToDelete = null;
+        }
     }
 }
