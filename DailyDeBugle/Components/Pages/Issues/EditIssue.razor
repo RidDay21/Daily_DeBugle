@@ -1,0 +1,368 @@
+@page "/issues/edit/{id:int}"
+@rendermode InteractiveServer
+@inject IIssueService IssueService
+@inject NavigationManager NavigationManager
+@using System.ComponentModel.DataAnnotations
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+
+<PageTitle>Edit Issue - DailyDeBugle</PageTitle>
+
+<h3>Edit Issue</h3>
+
+@if (issue == null)
+{
+    <p>Loading...</p>
+}
+else if (!canEdit)
+{
+    <div class="alert alert-warning">
+        <h4>Cannot Edit Issue</h4>
+        <p>This issue cannot be edited because its status is: <strong>@issue.Status</strong>.</p>
+        <p>Only issues with "In Progress" status can be edited.</p>
+        <a href="/issues" class="btn btn-secondary">Back to Issues</a>
+    </div>
+}
+else
+{
+    <EditForm Model="@editModel" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Issue Details</h5>
+                        
+                        <!-- Publication Info (readonly) -->
+                        <div class="mb-3">
+                            <label class="form-label">Publication</label>
+                            <input type="text" class="form-control" value="@issue.Publication?.Name" readonly />
+                        </div>
+
+                        <!-- Issue Number -->
+                        <div class="mb-3">
+                            <label for="issueNumber" class="form-label">Issue Number *</label>
+                            <InputText id="issueNumber" class="form-control" @bind-Value="editModel.IssueNumber" />
+                            <ValidationMessage For="@(() => editModel.IssueNumber)" />
+                        </div>
+
+                        <!-- Issue Date -->
+                        <div class="mb-3">
+                            <label for="issueDate" class="form-label">Issue Date *</label>
+                            <InputDate id="issueDate" class="form-control" @bind-Value="editModel.IssueDate" />
+                            <ValidationMessage For="@(() => editModel.IssueDate)" />
+                        </div>
+
+                        <!-- Cover Image -->
+                        <div class="mb-3">
+                            <label class="form-label">Cover Image</label>
+                            
+                            @if (!string.IsNullOrEmpty(issue.CoverImagePath))
+                            {
+                                <div class="mb-2">
+                                    <p>Current Cover:</p>
+                                    <img src="@issue.CoverImagePath" 
+                                         alt="Current Cover" 
+                                         class="img-thumbnail" 
+                                         style="max-height: 150px;" />
+                                    <div class="form-check mt-2">
+                                        <InputCheckbox @bind-Value="removeCurrentCover" class="form-check-input" />
+                                        <label class="form-check-label text-danger">
+                                            Remove current cover
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+
+                            <InputFile class="form-control" 
+                                      OnChange="@HandleCoverImageChange" 
+                                      accept=".jpg,.jpeg,.png,.gif" />
+                            <small class="form-text text-muted">
+                                Formats: JPG, PNG, GIF • Max size: 10 MB
+                            </small>
+                            
+                            @if (newCoverImage != null)
+                            {
+                                <div class="mt-2">
+                                    <small>New image: @newCoverImage.Name (@(newCoverImage.Size / 1024) KB)</small>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                @(isSaving ? "Saving..." : "Save Changes")
+                            </button>
+                            <a href="/issues" class="btn btn-secondary">Cancel</a>
+                            <button type="button" class="btn btn-outline-danger ms-auto" @onclick="ResetChanges">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Preview</h5>
+                        
+                        <div class="border p-3 text-center">
+                            <h4>@issue.Publication?.Name</h4>
+                            <h5>Issue @editModel.IssueNumber</h5>
+                            <p>@editModel.IssueDate.ToShortDateString()</p>
+                            
+                            <div class="mt-3">
+                                <small>Cover Preview:</small>
+                                <div class="border mt-1 p-2" style="height: 150px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                    @if (newCoverImage != null)
+                                    {
+                                        <p class="mb-0"><i>New image selected</i></p>
+                                    }
+                                    else if (!string.IsNullOrEmpty(issue.CoverImagePath) && !removeCurrentCover)
+                                    {
+                                        <img src="@issue.CoverImagePath" 
+                                             alt="Cover" 
+                                             style="max-height: 100%; max-width: 100%;" />
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted mb-0"><i>No cover image</i></p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <h6>Status: 
+                                <span class="badge @GetStatusBadgeClass(issue.Status)">
+                                    @issue.Status
+                                </span>
+                            </h6>
+                            <small class="text-muted">
+                                Only issues with "In Progress" status can be edited.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Issue? issue;
+    private bool canEdit = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private IBrowserFile? newCoverImage;
+    private bool removeCurrentCover = false;
+
+    // Модель для редактирования
+    private EditIssueModel editModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        issue = await IssueService.GetIssueAsync(Id);
+        
+        if (issue != null)
+        {
+            canEdit = await IssueService.CanEditIssueAsync(Id);
+            
+            // Инициализируем модель редактирования
+            editModel = new EditIssueModel
+            {
+                IssueNumber = issue.IssueNumber,
+                IssueDate = issue.IssueDate
+            };
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            // Обновляем базовые данные выпуска
+            var updatedIssue = await IssueService.UpdateIssueDetailsAsync(
+                Id, 
+                editModel.IssueNumber, 
+                editModel.IssueDate
+            );
+
+            if (updatedIssue == null)
+            {
+                errorMessage = "Failed to update issue. It may no longer be editable.";
+                isSaving = false;
+                return;
+            }
+
+            // Обрабатываем обложку
+            string? newCoverPath = null;
+            
+            if (newCoverImage != null)
+            {
+                // Загружаем новую обложку
+                newCoverPath = await UploadCoverImage(newCoverImage);
+            }
+            else if (removeCurrentCover && !string.IsNullOrEmpty(issue.CoverImagePath))
+            {
+                // Удаляем текущую обложку
+                await DeleteCoverImage(issue.CoverImagePath);
+                newCoverPath = null;
+            }
+
+            // Обновляем путь к обложке если он изменился
+            if (newCoverPath != issue.CoverImagePath)
+            {
+                // Если есть старая обложка и мы меняем на новую, удаляем старую
+                if (!string.IsNullOrEmpty(issue.CoverImagePath) && 
+                    newCoverImage != null && 
+                    !string.IsNullOrEmpty(newCoverPath))
+                {
+                    await DeleteCoverImage(issue.CoverImagePath);
+                }
+                
+                updatedIssue.CoverImagePath = newCoverPath;
+                await IssueService.UpdateAsync(updatedIssue);
+            }
+
+            NavigationManager.NavigateTo($"/issues");
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task<string?> UploadCoverImage(IBrowserFile file)
+    {
+        // Проверка размера файла (10 MB)
+        if (file.Size > 10 * 1024 * 1024)
+            throw new InvalidOperationException("File size exceeds 10 MB limit.");
+
+        // Проверка типа файла
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+        var extension = Path.GetExtension(file.Name).ToLower();
+        
+        if (!allowedExtensions.Contains(extension))
+            throw new InvalidOperationException("Invalid file format. Please upload JPG, PNG or GIF.");
+
+        // Создаем директорию если не существует
+        var uploadsDir = Path.Combine("wwwroot", "covers");
+        if (!Directory.Exists(uploadsDir))
+            Directory.CreateDirectory(uploadsDir);
+
+        // Генерируем уникальное имя файла
+        var fileName = $"cover_{Id}_{Guid.NewGuid()}{extension}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+
+        // Сохраняем файл
+        await using var fs = new FileStream(filePath, FileMode.Create);
+        await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(fs);
+
+        return $"/covers/{fileName}";
+    }
+
+    private async Task DeleteCoverImage(string imagePath)
+    {
+        if (string.IsNullOrEmpty(imagePath))
+            return;
+
+        try
+        {
+            var filePath = Path.Combine("wwwroot", imagePath.TrimStart('/'));
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting file {imagePath}: {ex.Message}");
+        }
+    }
+
+    private void HandleCoverImageChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        
+        // Проверка размера файла (10 MB)
+        if (file.Size > 10 * 1024 * 1024)
+        {
+            errorMessage = "File size exceeds 10 MB limit.";
+            return;
+        }
+
+        // Проверка типа файла
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+        var extension = Path.GetExtension(file.Name).ToLower();
+        
+        if (!allowedExtensions.Contains(extension))
+        {
+            errorMessage = "Invalid file format. Please upload JPG, PNG or GIF.";
+            return;
+        }
+
+        newCoverImage = file;
+        removeCurrentCover = false; // Если загружаем новую, не удаляем старую
+        errorMessage = null;
+        StateHasChanged();
+    }
+
+    private void ResetChanges()
+    {
+        if (issue != null)
+        {
+            editModel = new EditIssueModel
+            {
+                IssueNumber = issue.IssueNumber,
+                IssueDate = issue.IssueDate
+            };
+            newCoverImage = null;
+            removeCurrentCover = false;
+            errorMessage = null;
+            StateHasChanged();
+        }
+    }
+
+    private string GetStatusBadgeClass(IssueStatus status)
+    {
+        return status switch
+        {
+            IssueStatus.InProgress => "bg-warning",
+            IssueStatus.LayoutInProgress => "bg-info",
+            IssueStatus.ReadyForPublish => "bg-success",
+            IssueStatus.Published => "bg-primary",
+            _ => "bg-secondary"
+        };
+    }
+
+    // Модель для редактирования
+    public class EditIssueModel
+    {
+        [Required(ErrorMessage = "Issue number is required.")]
+        [MaxLength(50, ErrorMessage = "Issue number cannot exceed 50 characters.")]
+        public string IssueNumber { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Issue date is required.")]
+        public DateTime IssueDate { get; set; } = DateTime.Today;
+    }
+}

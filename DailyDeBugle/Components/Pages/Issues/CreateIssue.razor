@@ -1,8 +1,9 @@
 ﻿@page "/issues/create"
 @rendermode InteractiveServer
-@inject DailyDeBugle.Services.IIssueService IssueService
+@inject IIssueService IssueService
 @inject NavigationManager Nav
 @using DailyDeBugle.Models
+@using DailyDeBugle.Services
 
 <h3>Create New Issue</h3>
 
@@ -13,8 +14,13 @@
 else
 {
     <EditForm Model="@newIssue" OnValidSubmit="HandleValidSubmit" FormName="CreateIssueForm">
-    	<DataAnnotationsValidator />
-    	<ValidationSummary />
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
 
         <div class="mb-3">
             <label>Publication:</label>
@@ -25,11 +31,13 @@ else
                     <option value="@pub.PublicationId">@pub.Name</option>
                 }
             </InputSelect>
+            <ValidationMessage For="@(() => newIssue.PublicationId)" />
         </div>
 
         <div class="mb-3">
             <label>Issue Number:</label>
             <InputText @bind-Value="newIssue.IssueNumber" class="form-control" />
+            <ValidationMessage For="@(() => newIssue.IssueNumber)" />
         </div>
 
         <div class="mb-3">
@@ -39,16 +47,32 @@ else
 
         <div class="mb-3">
             <label>Cover Image:</label>
-            <InputFile OnChange="HandleFileSelected" />
+            <InputFile OnChange="HandleFileSelected" 
+                      accept=".jpg,.jpeg,.png,.gif" />
+            <small class="form-text text-muted">
+                Formats: JPG, PNG, GIF • Max size: 10 MB
+            </small>
+            @if (coverFile != null)
+            {
+                <div class="mt-2">
+                    <small>Selected: @coverFile.Name (@(coverFile.Size / 1024) KB)</small>
+                </div>
+            }
         </div>
 
-        <button class="btn btn-primary" type="submit">Create</button>
+        <button class="btn btn-primary" type="submit" disabled="@isSubmitting">
+            @(isSubmitting ? "Creating..." : "Create")
+        </button>
+        <a href="/issues" class="btn btn-secondary">Cancel</a>
     </EditForm>
 }
 
 @code {
     private Issue newIssue = new() { IssueDate = DateTime.Today };
     private List<Publication>? publications;
+    private string? errorMessage;
+    private bool isSubmitting = false;
+    private IBrowserFile? coverFile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -57,20 +81,69 @@ else
 
     private async Task HandleValidSubmit()
     {
-        await IssueService.CreateAsync(newIssue);
-        Nav.NavigateTo("/issues");
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            // Если был выбран файл, загружаем его
+            if (coverFile != null)
+            {
+                newIssue.CoverImagePath = await UploadCoverImage(coverFile);
+            }
+
+            await IssueService.CreateAsync(newIssue);
+            Nav.NavigateTo("/issues");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating issue: {ex.Message}";
+            isSubmitting = false;
+        }
     }
 
-    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    private void HandleFileSelected(InputFileChangeEventArgs e)
     {
         var file = e.File;
+        
+        // Проверка размера файла (10 MB)
+        if (file.Size > 10 * 1024 * 1024)
+        {
+            errorMessage = "File size exceeds 10 MB limit.";
+            return;
+        }
+
+        // Проверка типа файла
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+        var extension = Path.GetExtension(file.Name).ToLower();
+        
+        if (!allowedExtensions.Contains(extension))
+        {
+            errorMessage = "Invalid file format. Please upload JPG, PNG or GIF.";
+            return;
+        }
+
+        coverFile = file;
+        errorMessage = null;
+        StateHasChanged();
+    }
+
+    private async Task<string> UploadCoverImage(IBrowserFile file)
+    {
+        // Создаем директорию если не существует
         var uploadsDir = Path.Combine("wwwroot", "covers");
-        Directory.CreateDirectory(uploadsDir);
+        if (!Directory.Exists(uploadsDir))
+            Directory.CreateDirectory(uploadsDir);
 
-        var filePath = Path.Combine(uploadsDir, file.Name);
+        // Генерируем уникальное имя файла
+        var extension = Path.GetExtension(file.Name);
+        var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+        var filePath = Path.Combine(uploadsDir, uniqueFileName);
+
+        // Сохраняем файл
         await using var fs = new FileStream(filePath, FileMode.Create);
-        await file.OpenReadStream().CopyToAsync(fs);
+        await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(fs);
 
-        newIssue.CoverImagePath = $"/covers/{file.Name}";
+        return $"/covers/{uniqueFileName}";
     }
 }

@@ -1,4 +1,5 @@
 ﻿using DailyDeBugle.Models;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace DailyDeBugle.Services
 {
@@ -27,5 +28,14 @@ namespace DailyDeBugle.Services
 
         // Получение списка публикаций для выбора при создании выпуска
         Task<List<Publication>> GetPublicationsAsync();
+        
+        // Редактирование выпуска
+        public Task<Issue?> UpdateIssueDetailsAsync(int id, string issueNumber, DateTime issueDate);
+        
+        // Проверка возможности редактирования
+        Task<bool> CanEditIssueAsync(int id);
+        
+        // Полное удаление выпуска со всеми зависимостями
+        Task<bool> DeleteIssueWithContentAsync(int id);
     }
 }

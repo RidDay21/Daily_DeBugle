@@ -1,6 +1,9 @@
 ﻿@page "/issues"
-@inject DailyDeBugle.Services.IIssueService IssueService
+@rendermode InteractiveServer
+@inject IIssueService IssueService
+@inject NavigationManager NavigationManager
 @using DailyDeBugle.Models
+@using DailyDeBugle.Services
 
 <h3>Issues</h3>
 
@@ -24,21 +27,44 @@ else
             <th>Date</th>
             <th>Status</th>
             <th>Cover</th>
+            <th>Actions</th>
         </tr>
         </thead>
         <tbody>
         @foreach (var issue in issues)
         {
             <tr>
-                <td>@issue.Publication.Name</td>
+                <td>@issue.Publication?.Name</td>
                 <td>@issue.IssueNumber</td>
                 <td>@issue.IssueDate.ToShortDateString()</td>
-                <td>@issue.Status</td>
+                <td>
+                    <span class="badge @GetStatusBadgeClass(issue.Status)">
+                        @issue.Status
+                    </span>
+                </td>
                 <td>
                     @if (!string.IsNullOrEmpty(issue.CoverImagePath))
                     {
-                        <img src="@issue.CoverImagePath" width="100" />
+                        <img src="@issue.CoverImagePath" width="100" alt="Cover" class="img-thumbnail" />
                     }
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        @if (issue.Status == IssueStatus.InProgress)
+                        {
+                            <a class="btn btn-primary" href="/issues/edit/@issue.IssueId" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        }
+                        <a class="btn btn-info" href="/issues/details/@issue.IssueId" title="View">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <button class="btn btn-danger" 
+                                @onclick="() => ShowDeleteConfirmation(issue)"
+                                title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         }
@@ -46,11 +72,76 @@ else
     </table>
 }
 
+@if (showDeleteDialog)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete issue <strong>@issueToDelete?.IssueNumber</strong>?</p>
+                    <p class="text-danger">
+                        <small>
+                            This will permanently delete all articles, layouts, and the cover image.
+                            This action cannot be undone.
+                        </small>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-danger" href="/issues/delete/@issueToDelete?.IssueId">
+                        Yes, Delete Permanently
+                    </a>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteDialog">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<Issue>? issues;
+    private bool showDeleteDialog = false;
+    private Issue? issueToDelete;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadIssues();
+    }
+
+    private async Task LoadIssues()
+    {
         issues = await IssueService.GetAllAsync();
+    }
+
+    private void ShowDeleteConfirmation(Issue issue)
+    {
+        issueToDelete = issue;
+        showDeleteDialog = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        showDeleteDialog = false;
+        issueToDelete = null;
+    }
+
+    private string GetStatusBadgeClass(IssueStatus status)
+    {
+        return status switch
+        {
+            IssueStatus.InProgress => "bg-warning",
+            IssueStatus.LayoutInProgress => "bg-info",
+            IssueStatus.ReadyForPublish => "bg-success",
+            IssueStatus.Published => "bg-primary",
+            _ => "bg-secondary"
+        };
     }
 }
