@@ -27,7 +27,7 @@ else
             <th>Date</th>
             <th>Status</th>
             <th>Cover</th>
-            <th>Actions</th>
+            <th style="width: 200px;">Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -45,24 +45,29 @@ else
                 <td>
                     @if (!string.IsNullOrEmpty(issue.CoverImagePath))
                     {
-                        <img src="@issue.CoverImagePath" width="100" alt="Cover" class="img-thumbnail" />
+                        <img src="@issue.CoverImagePath" width="80" alt="Cover" class="img-thumbnail" />
+                    }
+                    else
+                    {
+                        <span class="text-muted">No cover</span>
                     }
                 </td>
                 <td>
-                    <div class="btn-group btn-group-sm" role="group">
+                    <div class="d-flex flex-wrap gap-1">
                         @if (issue.Status == IssueStatus.InProgress)
                         {
-                            <a class="btn btn-primary" href="/issues/edit/@issue.IssueId" title="Edit">
-                                <i class="bi bi-pencil"></i>
+                            <a class="btn btn-outline-primary btn-sm d-flex align-items-center" 
+                               href="/issues/edit/@issue.IssueId" 
+                               title="Edit">
+                                <i class="bi bi-pencil me-1"></i>
+                                <span>Edit</span>
                             </a>
                         }
-                        <a class="btn btn-info" href="/issues/details/@issue.IssueId" title="View">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                        <button class="btn btn-danger" 
+                        <button class="btn btn-outline-danger btn-sm d-flex align-items-center" 
                                 @onclick="() => ShowDeleteConfirmation(issue)"
                                 title="Delete">
-                            <i class="bi bi-trash"></i>
+                            <i class="bi bi-trash me-1"></i>
+                            <span>Delete</span>
                         </button>
                     </div>
                 </td>
@@ -95,9 +100,11 @@ else
                 </div>
                 <div class="modal-footer">
                     <a class="btn btn-danger" href="/issues/delete/@issueToDelete?.IssueId">
+                        <i class="bi bi-trash me-2"></i>
                         Yes, Delete Permanently
                     </a>
                     <button type="button" class="btn btn-secondary" @onclick="CloseDeleteDialog">
+                        <i class="bi bi-x-circle me-2"></i>
                         Cancel
                     </button>
                 </div>
@@ -137,8 +144,8 @@ else
     {
         return status switch
         {
-            IssueStatus.InProgress => "bg-warning",
-            IssueStatus.LayoutInProgress => "bg-info",
+            IssueStatus.InProgress => "bg-warning text-dark",
+            IssueStatus.LayoutInProgress => "bg-info text-dark",
             IssueStatus.ReadyForPublish => "bg-success",
             IssueStatus.Published => "bg-primary",
             _ => "bg-secondary"
