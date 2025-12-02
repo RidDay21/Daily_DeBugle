@@ -49,6 +49,18 @@ namespace DailyDeBugle.Services
 
         public async Task<Publication> UpdatePublicationAsync(Publication publication)
         {
+            // Проверка на дублирование названия
+            bool nameExists = await _context.Publications
+                .Where(p => p.IsActive)
+                .Where(p => p.Name == publication.Name)
+                .AnyAsync(p => p.PublicationId != publication.PublicationId);
+
+            if (nameExists)
+            {
+                throw new InvalidOperationException("A publication with this name already exists.");
+            }
+
+            // Обновление и сохранение
             _context.Entry(publication).State = EntityState.Modified;
             await _context.SaveChangesAsync();
             return publication;
@@ -56,12 +68,31 @@ namespace DailyDeBugle.Services
 
         public async Task DeletePublicationAsync(int id)
         {
-            var publication = await _context.Publications.FindAsync(id);
-            if (publication != null)
+            var publication = await _context.Publications
+                .Include(p => p.Issues)
+                .ThenInclude(i => i.Articles)
+                .FirstOrDefaultAsync(p => p.PublicationId == id);
+
+            if (publication == null)
             {
-                publication.IsActive = false;
-                await _context.SaveChangesAsync();
+                return; 
             }
+            
+            var allArticlesToDelete = publication.Issues
+                .SelectMany(i => i.Articles) 
+                .ToList();
+            
+            if (allArticlesToDelete.Any())
+            {
+                _context.Articles.RemoveRange(allArticlesToDelete);
+            }
+            if (publication.Issues.Any())
+            {
+                _context.Issues.RemoveRange(publication.Issues);
+            }
+            
+            publication.IsActive = false;
+            await _context.SaveChangesAsync();
         }
     }
 }
