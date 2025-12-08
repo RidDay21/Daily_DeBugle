@@ -1,0 +1,100 @@
+﻿@page "/publications/edit/{PublicationId:int}"
+@rendermode InteractiveServer
+@inject DailyDeBugle.Services.IPublicationService PublicationService
+@inject NavigationManager Nav
+@using DailyDeBugle.Models
+
+<h3>Edit Publication (ID: @PublicationId)</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">Error: @errorMessage</div>
+}
+
+
+@if (publication == null && !IsLoading)
+{
+    <div class="alert alert-danger">Publication with ID @PublicationId not found.</div>
+}
+else if (publication == null || IsLoading)
+{
+    <p>Loading publication details...</p>
+}
+else
+{
+    <EditForm Model="@publication" OnValidSubmit="HandleValidSubmit" FormName="EditPublicationForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="name">Name:</label>
+            <InputText id="name" @bind-Value="publication.Name" class="form-control" />
+            <ValidationMessage For="@(() => publication.Name)" />
+        </div>
+
+        <div class="mb-3">
+            <label for="description">Description:</label>
+            <InputTextArea id="description" @bind-Value="publication.Description" class="form-control" rows="5" />
+            <ValidationMessage For="@(() => publication.Description)" />
+        </div>
+
+        <div class="mb-3 form-check">
+            <InputCheckbox id="isActive" @bind-Value="publication.IsActive" class="form-check-input" />
+            <label class="form-check-label" for="isActive">Is Active</label>
+            <span class="text-muted ms-3">Current Status: @(publication.IsActive ? "Active" : "Inactive")</span>
+        </div>
+        
+        <p class="text-muted mt-3">Created Date: @publication.CreatedDate.ToShortDateString()</p>
+
+        <button type="submit" class="btn btn-primary me-2">Save Changes</button>
+        <button type="button" class="btn btn-secondary" @onclick="GoBack">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int PublicationId { get; set; }
+
+    private Publication? publication;
+    private bool IsLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        publication = await PublicationService.GetPublicationAsync(PublicationId);
+        IsLoading = false;
+        
+        if (publication == null)
+        {
+            Console.WriteLine($"[ERROR] Publication ID {PublicationId} not found.");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        errorMessage = null;
+        if (publication != null)
+        {
+            try
+            {
+                await PublicationService.UpdatePublicationAsync(publication);
+                Nav.NavigateTo("/publications"); 
+            }
+            catch (InvalidOperationException ex)
+            {
+                errorMessage = ex.Message;
+                Console.WriteLine($"[ERROR] Validation error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "An unexpected error occurred during update.";
+                Console.WriteLine($"[ERROR] Failed to update publication: {ex.Message}");
+            }
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/publications"); 
+    }
+}

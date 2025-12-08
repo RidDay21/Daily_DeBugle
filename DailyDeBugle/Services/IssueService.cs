@@ -38,6 +38,14 @@ namespace DailyDeBugle.Services
 
         public async Task<Issue> CreateAsync(Issue issue)
 		{
+			bool exists = await _context.Issues
+        		.AnyAsync(i => i.IssueNumber == issue.IssueNumber && 
+                       		i.PublicationId == issue.PublicationId);
+
+    		if (exists)
+    		{
+        		throw new InvalidOperationException($"Issue number '{issue.IssueNumber}' already exists for this publication.");
+    		}
     		if (issue.IssueDate.Kind == DateTimeKind.Unspecified)
     		{
         		issue.IssueDate = DateTime.SpecifyKind(issue.IssueDate, DateTimeKind.Local).ToUniversalTime();
