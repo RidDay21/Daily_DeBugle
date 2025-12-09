@@ -1,7 +1,327 @@
 ﻿@page "/"
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject IIssueService IssueService
+@inject IPublicationService PublicationService
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Daily DeBugle - Главная</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="homepage-container">
+    <!-- Шапка с логотипом и навигацией -->
+    <header class="homepage-header mb-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-4 fw-bold text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-newspaper me-3" viewBox="0 0 16 16">
+                            <path d="M0 2.5A1.5 1.5 0 0 1 1.5 1h11A1.5 1.5 0 0 1 14 2.5v10.528c0 .3-.05.654-.238.972h.738a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 1 1 0v9a1.5 1.5 0 0 1-1.5 1.5H1.497A1.497 1.497 0 0 1 0 13.5v-11zM12 14c.37 0 .654-.211.853-.441.092-.106.147-.279.147-.531V2.5a.5.5 0 0 0-.5-.5h-11a.5.5 0 0 0-.5.5v11c0 .278.223.5.497.5H12z"/>
+                            <path d="M2 3h10v2H2V3zm0 3h4v3H2V6zm0 4h4v1H2v-1zm0 2h4v1H2v-1zm5-6h2v1H7V3zm3 0h2v1h-2V3zM7 6h2v1H7V6zm3 0h2v1h-2V6zm-3 4h2v1H7v-1zm3 0h2v1h-2v-1zm-3 2h2v1H7v-1zm3 0h2v1h-2v-1z"/>
+                        </svg>
+                        Daily DeBugle
+                    </h1>
+                    <p class="lead text-muted">Ваш надежный источник новостей и аналитики в мире технологий</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="current-date">
+                        <strong>@DateTime.Now.ToString("dddd, dd MMMM yyyy")</strong>
+                        <div class="text-muted">Выпуск №@(latestIssue?.IssueNumber ?? "---")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
 
-Welcome to your new app.
+    <!-- Главный контент -->
+    <main class="container">
+        <!-- Последний опубликованный выпуск -->
+        @if (latestIssue != null)
+        {
+            <div class="featured-issue mb-5">
+                <div class="card border-0 shadow-lg">
+                    <div class="row g-0">
+                        <div class="col-md-4">
+                            <div class="featured-cover h-100" 
+                                 style="background-image: url('@GetCoverImageUrl(latestIssue)');">
+                                <div class="cover-overlay">
+                                    <div class="cover-badge">ГЛАВНЫЙ ВЫПУСК</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card-body p-5">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h2 class="card-title display-6 fw-bold">
+                                            @latestIssue.Publication?.Name - Выпуск №@latestIssue.IssueNumber
+                                        </h2>
+                                        <div class="d-flex align-items-center gap-3 mb-3">
+                                            <span class="badge bg-primary">Выпуск №@latestIssue.IssueNumber</span>
+                                            <span class="text-muted">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar me-1" viewBox="0 0 16 16">
+                                                    <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                                                </svg>
+                                                @latestIssue.IssueDate.ToString("dd MMMM yyyy")
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-outline-primary" @onclick="() => ToggleFullIssue(latestIssue.IssueId)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <p class="card-text mb-4">
+                                    @(string.IsNullOrEmpty(latestIssue.Description) 
+                                        ? $"Выпуск №{latestIssue.IssueNumber} издания {latestIssue.Publication?.Name} от {latestIssue.IssueDate.ToString("dd.MM.yyyy")}" 
+                                        : latestIssue.Description)
+                                </p>
+                                
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <div class="stat-card">
+                                            <div class="stat-number">@(latestIssue.Articles?.Count ?? 0)</div>
+                                            <div class="stat-label">Статей</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stat-card">
+                                            <div class="stat-number">@(latestIssue.PageLayouts?.Count ?? 0)</div>
+                                            <div class="stat-label">Страниц</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="stat-card">
+                                            <div class="stat-number">@latestIssue.ViewCount</div>
+                                            <div class="stat-label">Просмотров</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <a href="/issues/@latestIssue.IssueId/read" class="btn btn-primary btn-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-book me-2" viewBox="0 0 16 16">
+                                            <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/>
+                                        </svg>
+                                        Читать выпуск
+                                    </a>
+                                    <button class="btn btn-outline-secondary btn-lg" @onclick="() => DownloadIssue(latestIssue.IssueId)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-download me-2" viewBox="0 0 16 16">
+                                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                                        </svg>
+                                        Скачать
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info text-center py-5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-newspaper text-muted mb-3" viewBox="0 0 16 16">
+                    <path d="M0 2.5A1.5 1.5 0 0 1 1.5 1h11A1.5 1.5 0 0 1 14 2.5v10.528c0 .3-.05.654-.238.972h.738a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 1 1 0v9a1.5 1.5 0 0 1-1.5 1.5H1.497A1.497 1.497 0 0 1 0 13.5v-11zM12 14c.37 0 .654-.211.853-.441.092-.106.147-.279.147-.531V2.5a.5.5 0 0 0-.5-.5h-11a.5.5 0 0 0-.5.5v11c0 .278.223.5.497.5H12z"/>
+                    <path d="M2 3h10v2H2V3zm0 3h4v3H2V6zm0 4h4v1H2v-1zm0 2h4v1H2v-1zm5-6h2v1H7V3zm3 0h2v1h-2V3zM7 6h2v1H7V6zm3 0h2v1h-2V6zm-3 4h2v1H7v-1zm3 0h2v1h-2v-1zm-3 2h2v1H7v-1zm3 0h2v1h-2v-1z"/>
+                </svg>
+                <h4 class="text-muted">Нет опубликованных выпусков</h4>
+                <p class="text-muted">Первый выпуск еще не опубликован на главной странице</p>
+            </div>
+        }
+
+        <!-- Предыдущие выпуски -->
+        @if (recentIssues.Any())
+        {
+            <div class="recent-issues mt-5">
+                <h3 class="mb-4 border-bottom pb-2">Предыдущие выпуски</h3>
+                <div class="row">
+                    @foreach (var issue in recentIssues)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-cover" 
+                                     style="background-image: url('@GetCoverImageUrl(issue)'); height: 150px;">
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        @issue.Publication?.Name - Выпуск №@issue.IssueNumber
+                                    </h5>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="badge bg-secondary">№@issue.IssueNumber</span>
+                                        <small class="text-muted">@issue.IssueDate.ToString("dd.MM.yyyy")</small>
+                                    </div>
+                                    <p class="card-text small text-muted">
+                                        @(issue.Articles?.Count ?? 0) статей, @(issue.PageLayouts?.Count ?? 0) страниц
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-flex justify-content-between">
+                                        <a href="/issues/@issue.IssueId/read" class="btn btn-sm btn-outline-primary">
+                                            Читать
+                                        </a>
+                                        @if (userRole == "Editor-in-Chief" || userRole == "Admin")
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => SetAsFeatured(issue.IssueId)"
+                                                    disabled="@issue.IsFeatured">
+                                                @if (issue.IsFeatured)
+                                                {
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-star-fill me-1" viewBox="0 0 16 16">
+                                                        <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                                                    </svg>
+                                                    <span>На главной</span>
+                                                }
+                                                else
+                                                {
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-star me-1" viewBox="0 0 16 16">
+                                                        <path d="M2.866 14.85c-.078.444.36.791.746.593l4.39-2.256 4.389 2.256c.386.198.824-.149.746-.592l-.83-4.73 3.522-3.356c.33-.314.16-.888-.282-.95l-4.898-.696L8.465.792a.513.513 0 0 0-.927 0L5.354 5.12l-4.898.696c-.441.062-.612.636-.283.95l3.523 3.356-.83 4.73zm4.905-2.767-3.686 1.894.694-3.957a.565.565 0 0 0-.163-.505L1.71 6.745l4.052-.576a.525.525 0 0 0 .393-.288L8 2.223l1.847 3.658a.525.525 0 0 0 .393.288l4.052.575-2.906 2.77a.565.565 0 0 0-.163.506l.694 3.957-3.686-1.894a.503.503 0 0 0-.461 0z"/>
+                                                    </svg>
+                                                    <span>На главную</span>
+                                                }
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                @if (totalIssues > recentIssues.Count)
+                {
+                    <div class="text-center mt-4">
+                        <a href="/issues/archive" class="btn btn-outline-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-archive me-1" viewBox="0 0 16 16">
+                                <path d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 1 12.5V5a1 1 0 0 1-1-1V2zm2 3v7.5A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V5H2zm13-3H1v2h14V2zM5 7.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+                            </svg>
+                            Все выпуски (@totalIssues)
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+    </main>
+
+    <!-- Футер -->
+    <footer class="homepage-footer mt-5 py-4 bg-light border-top">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>Daily DeBugle</h5>
+                    <p class="text-muted small">Ваш надежный источник новостей в мире технологий и не только.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Быстрые ссылки</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="/issues" class="text-muted text-decoration-none">Все выпуски</a></li>
+                        <li><a href="/publications" class="text-muted text-decoration-none">Издания</a></li>
+                        <li><a href="/about" class="text-muted text-decoration-none">О проекте</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>Статистика</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li>Всего выпусков: @totalIssues</li>
+                        <li>Опубликовано: @publishedIssues</li>
+                        <li>Последнее обновление: @DateTime.Now.ToString("dd.MM.yyyy HH:mm")</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="text-center mt-4 pt-3 border-top">
+                <small class="text-muted">© 2025 Daily DeBugle. Все права защищены.</small>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- Модальное окно для полного просмотра выпуска -->
+@if (showFullIssue && selectedIssue != null)
+{
+    <div class="modal-backdrop show" style="opacity: 0.5;"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@selectedIssue.Publication?.Name - Выпуск №@selectedIssue.IssueNumber</h5>
+                    <button type="button" class="btn-close" @onclick="CloseFullIssue"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Здесь будет встроенный просмотр выпуска -->
+                    <iframe src="/issues/@selectedIssue.IssueId/read" class="w-100 h-100 border-0"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private Issue? latestIssue;
+    private List<Issue> recentIssues = new();
+    private int totalIssues = 0;
+    private int publishedIssues = 0;
+    private Issue? selectedIssue;
+    private bool showFullIssue = false;
+    private string userRole = "Reader";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHomepageData();
+    }
+
+    private async Task LoadHomepageData()
+    {
+        // Загружаем последний опубликованный выпуск для главной страницы
+        latestIssue = await IssueService.GetFeaturedIssueAsync();
+        
+        // Загружаем недавние выпуски
+        recentIssues = await IssueService.GetRecentIssuesAsync(6);
+        
+        // Получаем статистику
+        totalIssues = await IssueService.GetTotalIssuesCountAsync();
+        publishedIssues = await IssueService.GetPublishedIssuesCountAsync();
+    }
+
+    private string GetCoverImageUrl(Issue issue)
+    {
+        if (!string.IsNullOrEmpty(issue.CoverImagePath))
+        {
+            // Возвращаем путь к изображению
+            return issue.CoverImagePath.StartsWith("http") 
+                ? issue.CoverImagePath 
+                : $"/images/covers/{issue.CoverImagePath}";
+        }
+        
+        // Запасное изображение (базовая градиентная заливка)
+        return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+    }
+
+    private void ToggleFullIssue(int issueId)
+    {
+        selectedIssue = latestIssue?.IssueId == issueId 
+            ? latestIssue 
+            : recentIssues.FirstOrDefault(i => i.IssueId == issueId);
+        showFullIssue = true;
+    }
+
+    private void CloseFullIssue()
+    {
+        showFullIssue = false;
+        selectedIssue = null;
+    }
+
+    private async Task SetAsFeatured(int issueId)
+    {
+        if (await IssueService.SetAsFeaturedIssueAsync(issueId))
+        {
+            await LoadHomepageData();
+        }
+    }
+
+    private async Task DownloadIssue(int issueId)
+    {
+        await IssueService.DownloadIssueAsPdfAsync(issueId);
+    }
+}

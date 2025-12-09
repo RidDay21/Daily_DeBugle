@@ -23,5 +23,9 @@ namespace DailyDeBugle.Models
         // Навигационные свойства
         public List<Article> Articles { get; set; } = new();
         public List<PageLayout> PageLayouts { get; set; } = new();
+        
+        public bool IsFeatured { get; set; } = false;
+        public int ViewCount { get; set; } = 0;
+        public string? Description { get; set; }
     }
 }
