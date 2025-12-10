@@ -26,17 +26,23 @@ namespace DailyDeBugle.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            
+
             // Конфигурация связей и ограничений
             modelBuilder.Entity<Publication>()
                 .HasMany(p => p.Editors)
                 .WithMany(u => u.Publications);
-                
+
             modelBuilder.Entity<Article>()
                 .HasOne(a => a.Author)
                 .WithMany(u => u.Articles)
                 .HasForeignKey(a => a.AuthorId);
-            
+
+            modelBuilder.Entity<GlobalTextStyle>()
+                .HasOne(g => g.Issue)
+                .WithMany()
+                .HasForeignKey(g => g.IssueId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // ДОБАВЛЯЕМ КОНФИГУРАЦИЮ ДЛЯ ARTICLE С ПРОДОЛЖЕНИЯМИ
             modelBuilder.Entity<Article>(entity =>
             {
@@ -46,76 +52,78 @@ namespace DailyDeBugle.Data
                     .HasForeignKey(a => a.ContinuedFromArticleId)
                     .OnDelete(DeleteBehavior.Restrict)
                     .IsRequired(false);
-        
+
                 entity.HasOne(a => a.ContinuedOnArticle)
                     .WithMany()
                     .HasForeignKey(a => a.ContinuedOnArticleId)
                     .OnDelete(DeleteBehavior.Restrict)
                     .IsRequired(false);
-    
+
+
+
                 // Связь с частями статьи
                 entity.HasMany(a => a.ArticleParts)
                     .WithOne(ap => ap.Article)
                     .HasForeignKey(ap => ap.ArticleId)
                     .OnDelete(DeleteBehavior.Cascade);
-    
+
                 // Связь с автором
                 entity.HasOne(a => a.Author)
                     .WithMany(u => u.Articles)
                     .HasForeignKey(a => a.AuthorId);
-    
+
                 // Связь с выпуском
                 entity.HasOne(a => a.Issue)
                     .WithMany(i => i.Articles)
                     .HasForeignKey(a => a.IssueId);
-    
+
                 // Ограничения для новых полей
                 entity.Property(a => a.EstimatedHeightCm)
                     .HasDefaultValue(0);
-        
+
                 entity.Property(a => a.WordCount)
                     .HasDefaultValue(0);
-        
+
                 entity.Property(a => a.CharacterCount)
                     .HasDefaultValue(0);
-        
+
                 entity.Property(a => a.ParagraphCount)
                     .HasDefaultValue(0);
-        
+
                 entity.Property(a => a.HasContinuation)
                     .HasDefaultValue(false);
-        
+
                 entity.Property(a => a.FontFamily)
                     .HasMaxLength(50);
             });
-            
+
             // ДОБАВЛЯЕМ КОНФИГУРАЦИЮ ДЛЯ ARTICLEPART
             modelBuilder.Entity<ArticlePart>(entity =>
             {
                 entity.HasKey(ap => ap.ArticlePartId);
-                
+
                 entity.Property(ap => ap.ContentPart)
                     .IsRequired()
                     .HasMaxLength(4000);
-                    
+
                 entity.Property(ap => ap.PartNumber)
                     .IsRequired();
-                    
+
                 entity.Property(ap => ap.TotalParts)
                     .IsRequired();
-                    
+
                 entity.Property(ap => ap.IsBeginning)
                     .HasDefaultValue(false);
-                    
+
                 entity.Property(ap => ap.IsEnding)
                     .HasDefaultValue(false);
-                    
+
                 entity.Property(ap => ap.CreatedDate)
                     .HasDefaultValueSql("NOW()");
-                    
+
                 // Индекс для быстрого поиска частей по статье
                 entity.HasIndex(ap => ap.ArticleId);
-                
+
                 // Индекс для поиска по номеру страницыи
                 entity.HasIndex(ap => ap.PageNumber);
             });
@@ -124,60 +132,60 @@ namespace DailyDeBugle.Data
             modelBuilder.Entity<HeaderFooterSettings>(entity =>
             {
                 entity.HasKey(hf => hf.Id);
-                
+
                 // Один-к-одному отношение с Issue
                 entity.HasOne(hf => hf.Issue)
-                      .WithOne()
-                      .HasForeignKey<HeaderFooterSettings>(hf => hf.IssueId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                
+                    .WithOne()
+                    .HasForeignKey<HeaderFooterSettings>(hf => hf.IssueId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 // Уникальный индекс для IssueId
                 entity.HasIndex(hf => hf.IssueId)
-                      .IsUnique();
-                
+                    .IsUnique();
+
                 // Значения по умолчанию
                 entity.Property(hf => hf.FontFamily)
-                      .HasDefaultValue("Times New Roman");
+                    .HasDefaultValue("Times New Roman");
                 entity.Property(hf => hf.FontSize)
-                      .HasDefaultValue(10);
+                    .HasDefaultValue(10);
                 entity.Property(hf => hf.Alignment)
-                      .HasDefaultValue("center");
+                    .HasDefaultValue("center");
                 entity.Property(hf => hf.HeaderEnabled)
-                      .HasDefaultValue(true);
+                    .HasDefaultValue(true);
                 entity.Property(hf => hf.FooterEnabled)
-                      .HasDefaultValue(true);
+                    .HasDefaultValue(true);
             });
-            
+
             modelBuilder.Entity<LayoutElement>(entity =>
             {
                 entity.HasKey(e => e.LayoutElementId);
-        
+
                 // Настройка связей
                 entity.HasOne(e => e.PageLayout)
                     .WithMany(p => p.LayoutElements)
                     .HasForeignKey(e => e.PageLayoutId)
                     .OnDelete(DeleteBehavior.Cascade);
-        
+
                 entity.HasOne(e => e.Article)
                     .WithMany()
                     .HasForeignKey(e => e.ArticleId)
                     .OnDelete(DeleteBehavior.Restrict);
-        
+
                 entity.HasOne(e => e.AdvertisementBlock)
                     .WithMany()
                     .HasForeignKey(e => e.AdvertisementBlockId)
                     .OnDelete(DeleteBehavior.Restrict);
-              
+
                 // Или если в классе свойство называется CreatedDate, то просто:
                 entity.Property(e => e.CreatedDate);
-        
+
                 // Настройка других свойств при необходимости
                 entity.Property(e => e.Type)
                     .HasConversion<int>(); // если это enum
-        
+
                 entity.Property(e => e.Position)
                     .IsRequired();
-              
+
                 entity.Property(e => e.Size)
                     .IsRequired();
             });
@@ -186,17 +194,17 @@ namespace DailyDeBugle.Data
             modelBuilder.Entity<HeaderFooterTemplate>(entity =>
             {
                 entity.HasKey(hft => hft.Id);
-                
+
                 entity.Property(hft => hft.IsSystemTemplate)
-                      .HasDefaultValue(false);
-                
+                    .HasDefaultValue(false);
+
                 entity.Property(hft => hft.Name)
-                      .IsRequired()
-                      .HasMaxLength(100);
-                
+                    .IsRequired()
+                    .HasMaxLength(100);
+
                 entity.Property(hft => hft.TemplateType)
-                      .IsRequired()
-                      .HasMaxLength(20);
+                    .IsRequired()
+                    .HasMaxLength(20);
             });
 
             // Добавляем начальные данные для шаблонов
@@ -212,7 +220,7 @@ namespace DailyDeBugle.Data
                 new HeaderFooterTemplate
                 {
                     Id = 2,
-                    Name = "Стандартный нижний", 
+                    Name = "Стандартный нижний",
                     TemplateType = "footer",
                     ContentTemplate = "Контакт: {ContactEmail} • Страница {PageNumber} • {CurrentDate}",
                     IsSystemTemplate = true
@@ -221,7 +229,7 @@ namespace DailyDeBugle.Data
                 {
                     Id = 3,
                     Name = "Минималистичный верхний",
-                    TemplateType = "header", 
+                    TemplateType = "header",
                     ContentTemplate = "{PublicationName} | {IssueDate}",
                     IsSystemTemplate = true
                 },
@@ -234,20 +242,20 @@ namespace DailyDeBugle.Data
                     IsSystemTemplate = true
                 }
             );
-            
+
             // Конфигурация для GlobalTextStyle
             modelBuilder.Entity<GlobalTextStyle>(entity =>
             {
                 entity.HasKey(g => g.Id);
-            
+
                 entity.HasOne(g => g.Issue)
                     .WithOne()
                     .HasForeignKey<GlobalTextStyle>(g => g.IssueId)
                     .OnDelete(DeleteBehavior.Cascade);
-            
+
                 entity.HasIndex(g => g.IssueId)
                     .IsUnique();
-            
+
                 // Значения по умолчанию
                 entity.Property(g => g.PrimaryFont).HasDefaultValue("Times New Roman");
                 entity.Property(g => g.HeadingFont).HasDefaultValue("Times New Roman");
@@ -259,23 +267,27 @@ namespace DailyDeBugle.Data
                 entity.Property(g => g.ColumnCount).HasDefaultValue(2);
                 entity.Property(g => g.ColumnGap).HasDefaultValue(1.0);
             });
-            
-            // ДОБАВЛЯЕМ КОНФИГУРАЦИЮ ДЛЯ ADVERTISEMENTBLOCK (если нужно)
+
+            // Конфигурация для рекламных блоков
             modelBuilder.Entity<AdvertisementBlock>(entity =>
             {
-                entity.HasKey(ab => ab.AdvertisementBlockId);
-                
-                entity.Property(ab => ab.Advertiser)
-                    .IsRequired()
-                    .HasMaxLength(100);
-                    
-                entity.Property(ab => ab.Content)
-                    .IsRequired()
-                    .HasMaxLength(1000);
-                    
-                entity.HasMany(ab => ab.LayoutElements)
-                    .WithOne(le => le.AdvertisementBlock)
-                    .HasForeignKey(le => le.AdvertisementBlockId)
+                entity.HasKey(e => e.AdvertisementBlockId);
+                entity.Property(e => e.Advertiser).IsRequired().HasMaxLength(200);
+            });
+
+            // Конфигурация для размещения рекламы
+            modelBuilder.Entity<AdvertisementPlacement>(entity =>
+            {
+                entity.HasKey(e => e.AdvertisementPlacementId);
+
+                entity.HasOne(e => e.Issue)
+                    .WithMany()
+                    .HasForeignKey(e => e.IssueId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.AdvertisementBlock)
+                    .WithMany()
+                    .HasForeignKey(e => e.AdvertisementBlockId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

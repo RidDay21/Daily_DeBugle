@@ -1,248 +1,324 @@
-@page "/issues/{issueId}/text-style"
+@page "/issues/{issueId:int}/text-style"
 @using DailyDeBugle.Services
 @using DailyDeBugle.Models
-@rendermode InteractiveServer
 @inject IGlobalTextStyleService TextStyleService
 @inject IArticleService ArticleService
 @inject IIssueService IssueService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
-@using System.Globalization
+@rendermode InteractiveServer
 
-<PageTitle>Daily Debugle - Типографика</PageTitle>
+<PageTitle>Типографика выпуска: @issue?.IssueNumber</PageTitle>
 
-<div class="text-style-container">
-    <!-- Панель настроек -->
-    <div class="settings-panel">
-        <h3 class="panel-title">Типографика выпуска</h3>
-        
-        <!-- Информация о выпуске -->
-        <div class="issue-info mb-3 p-2 bg-light rounded">
-            <small>
-                <strong>Выпуск:</strong> @(issue?.IssueNumber ?? "Загрузка...")<br>
-                <strong>Статей в выпуске:</strong> @(articles?.Count ?? 0)
-            </small>
+<div class="container-fluid py-4">
+    <!-- Заголовок и навигация -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Типографика выпуска</h2>
+            <p class="text-muted mb-0">
+                Выпуск: @issue?.IssueNumber | 
+                Дата: @issue?.IssueDate.ToString("dd.MM.yyyy") |
+                Статей: @articles?.Count
+            </p>
         </div>
-
-        <!-- Шрифты -->
-        <div class="setting-group">
-            <h5>Шрифты:</h5>
-            
-            <div class="form-field">
-                <label>Основной шрифт:</label>
-                <select @bind="@styles.PrimaryFont" class="form-select">
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Georgia">Georgia</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Courier New">Courier New</option>
-                    <option value="Helvetica">Helvetica</option>
-                    <option value="Garamond">Garamond</option>
-                </select>
-            </div>
-            
-            <div class="form-field">
-                <label>Заголовки:</label>
-                <select @bind="@styles.HeadingFont" class="form-select">
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Georgia">Georgia</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Courier New">Courier New</option>
-                    <option value="Helvetica">Helvetica</option>
-                    <option value="Garamond">Garamond</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Размеры текста -->
-        <div class="setting-group">
-            <h5>Размеры текста (pt):</h5>
-            
-            <div class="form-field">
-                <label>Заголовок H1 (18-48pt):</label>
-                <input type="number" @bind="@styles.H1Size" 
-                       @oninput="@(e => { styles.H1Size = Clamp(Convert.ToInt32(e.Value), 18, 48); })" 
-                       class="form-control" />
-            </div>
-            
-            <div class="form-field">
-                <label>Заголовок H2 (16-36pt):</label>
-                <input type="number" @bind="@styles.H2Size" 
-                       @oninput="@(e => { styles.H2Size = Clamp(Convert.ToInt32(e.Value), 16, 36); })" 
-                       class="form-control" />
-            </div>
-            
-            <div class="form-field">
-                <label>Основной текст (12-18pt):</label>
-                <input type="number" @bind="@styles.BodySize" 
-                       @oninput="@(e => { styles.BodySize = Clamp(Convert.ToInt32(e.Value), 12, 18); })" 
-                       class="form-control" />
-            </div>
-        </div>
-
-        <!-- Междустрочные интервалы -->
-        <div class="setting-group">
-            <h5>Междустрочные интервалы:</h5>
-            
-            <div class="form-field">
-                <label>Основной текст (1.2-2.0):</label>
-                <input type="number" @bind="@styles.BodyLineSpacing" 
-                       @oninput="@(e => { styles.BodyLineSpacing = Clamp(Convert.ToDouble(e.Value?.ToString(), CultureInfo.InvariantCulture), 1.2, 2.0); })" 
-                       class="form-control" step="0.1" />
-            </div>
-            
-            <div class="form-field">
-                <label>Заголовки (1.0-1.8):</label>
-                <input type="number" @bind="@styles.HeadingLineSpacing" 
-                       @oninput="@(e => { styles.HeadingLineSpacing = Clamp(Convert.ToDouble(e.Value?.ToString(), CultureInfo.InvariantCulture), 1.0, 1.8); })" 
-                       class="form-control" step="0.1" />
-            </div>
-        </div>
-
-        <!-- Колонки -->
-        <div class="setting-group">
-            <h5>Колонки</h5>
-            
-            <div class="form-field">
-                <label>Количество колонок:</label>
-                <div class="column-buttons">
-                    @foreach (var col in new[] { 1, 2, 3, 4 })
-                    {
-                        <button class="column-btn @(styles.ColumnCount == col ? "active" : "")"
-                                @onclick="() => ChangeColumnCount(col)">
-                            @col
-                        </button>
-                    }
-                </div>
-            </div>
-            
-            <div class="form-field">
-                <label>Расстояние между колонками (0.5-3.0см):</label>
-                <input type="number" @bind="@styles.ColumnGap" 
-                       @oninput="@(e => { styles.ColumnGap = Clamp(Convert.ToDouble(e.Value?.ToString(), CultureInfo.InvariantCulture), 0.5, 3.0); })" 
-                       class="form-control" step="0.1" />
-            </div>
-        </div>
-
-        <!-- Кнопки управления -->
-        <div class="action-buttons">
-            <button class="btn btn-secondary" @onclick="ResetToDefault">
-                Сбросить настройки
-            </button>
-            <button class="btn btn-primary" @onclick="SaveSettings">
-                Сохранить стиль
-            </button>
-            <button class="btn btn-outline-secondary" @onclick="NavigateBack">
-                Назад
+        <div>
+            <button class="btn btn-outline-secondary me-2" @onclick="NavigateBack">
+                <i class="bi bi-arrow-left me-1"></i> Назад к макету
             </button>
         </div>
     </div>
 
-    <!-- Панель предпросмотра с реальными статьями -->
-    <div class="preview-panel">
-        <h4>Предпросмотр выпуска</h4>
-        
-        <div class="current-settings">
-            <small>Текущие настройки: 
-                Шрифт: @styles.PrimaryFont, 
-                H1: @styles.H1Size pt, 
-                H2: @styles.H2Size pt,
-                Основной: @styles.BodySize pt,
-                Интервал: @Math.Round(styles.BodyLineSpacing, 1),
-                Колонки: @styles.ColumnCount
-            </small>
-        </div>
-
-        @if (articles == null || !articles.Any())
-        {
-            <div class="alert alert-info">
-                В этом выпуске пока нет статей. 
-                <a href="/articles/create" class="alert-link">Создайте первую статью</a>
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
             </div>
-        }
-        else
-        {
-            <div class="preview-content" style="@GetPreviewStyle()">
-                @foreach (var article in articles)
-                {
-                    <div class="article-preview mb-4">
-                        <h1 style="@GetH1Style()">@article.Headline</h1>
-                        
-                        <div class="article-meta" style="font-size: @(styles.BodySize - 2)pt; color: #666; margin-bottom: 15px;">
-                            Автор: @article.Author?.Username | 
-                            Статус: @article.Status |
-                            Создано: @article.CreatedDate.ToString("dd.MM.yyyy")
+            <p class="mt-2">Загрузка типографики выпуска...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Левая колонка: Настройки -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-fonts me-2"></i>Настройки шрифтов</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Основной шрифт -->
+                        <div class="mb-3">
+                            <label class="form-label">Основной шрифт</label>
+                            <select value="@styles.PrimaryFont"
+                                    @onchange="@(e => { styles.PrimaryFont = e.Value?.ToString(); UpdatePreview(); })"
+                                    class="form-select">
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Garamond">Garamond</option>
+                            </select>
                         </div>
-                        
-                        <div style="@GetParagraphStyle()">
-                            @if (article.Content.Length > 500)
+
+                        <!-- Шрифт заголовков -->
+                        <div class="mb-3">
+                            <label class="form-label">Шрифт заголовков</label>
+                            <select value="@styles.HeadingFont"
+                                    @onchange="@(e => { styles.HeadingFont = e.Value?.ToString(); UpdatePreview(); })"
+                                    class="form-select">
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Garamond">Garamond</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Размеры текста -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-textarea-t me-2"></i>Размеры текста (pt)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Заголовок H1</label>
+                                <input type="number" 
+                                       value="@styles.H1Size"
+                                       @oninput="@(e => { 
+                                           if (int.TryParse(e.Value?.ToString(), out int value)) { 
+                                               styles.H1Size = Math.Clamp(value, 18, 48); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="18" max="48" step="1" />
+                                <div class="form-text">18-48pt</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Заголовок H2</label>
+                                <input type="number" 
+                                       value="@styles.H2Size"
+                                       @oninput="@(e => { 
+                                           if (int.TryParse(e.Value?.ToString(), out int value)) { 
+                                               styles.H2Size = Math.Clamp(value, 16, 36); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="16" max="36" step="1" />
+                                <div class="form-text">16-36pt</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Основной текст</label>
+                                <input type="number" 
+                                       value="@styles.BodySize"
+                                       @oninput="@(e => { 
+                                           if (int.TryParse(e.Value?.ToString(), out int value)) { 
+                                               styles.BodySize = Math.Clamp(value, 12, 18); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="12" max="18" step="1" />
+                                <div class="form-text">12-18pt</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Междустрочные интервалы -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-text-indent-left me-2"></i>Междустрочные интервалы</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Основной текст</label>
+                                <input type="number" 
+                                       value="@styles.BodyLineSpacing"
+                                       @oninput="@(e => { 
+                                           if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
+                                               styles.BodyLineSpacing = Math.Clamp(value, 1.2, 2.0); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="1.2" max="2.0" step="0.1" />
+                                <div class="form-text">1.2-2.0</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Заголовки</label>
+                                <input type="number" 
+                                       value="@styles.HeadingLineSpacing"
+                                       @oninput="@(e => { 
+                                           if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
+                                               styles.HeadingLineSpacing = Math.Clamp(value, 1.0, 1.8); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="1.0" max="1.8" step="0.1" />
+                                <div class="form-text">1.0-1.8</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Вместо этого можно добавить информационный блок -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Информация о макете</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <p class="mb-0">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                <strong>Важно:</strong> Количество колонок настраивается в разделе 
+                                <a href="/issues/@issueId/layout" class="alert-link">Макет выпуска</a>. 
+                                Здесь вы настраиваете только типографику (шрифты, размеры, интервалы).
+                            </p>
+                        </div>
+                        <div class="small text-muted">
+                            <i class="bi bi-check-circle me-1"></i> Текущие настройки колонок будут применены автоматически при сохранении макета
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка: Предпросмотр -->
+            <div class="col-md-6">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Предпросмотр</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Текущие настройки -->
+                        <div class="alert alert-info mb-3">
+                            <h6><i class="bi bi-info-circle me-1"></i>Текущие настройки:</h6>
+                            <div class="small">
+                                <div>Основной шрифт: <strong>@styles.PrimaryFont</strong></div>
+                                <div>Шрифт заголовков: <strong>@styles.HeadingFont</strong></div>
+                                <div>H1: <strong>@styles.H1Size pt</strong>, H2: <strong>@styles.H2Size pt</strong></div>
+                                <div>Основной текст: <strong>@styles.BodySize pt</strong></div>
+                                <div>Интервалы: <strong>@styles.BodyLineSpacing</strong> (текст), <strong>@styles.HeadingLineSpacing</strong> (заголовки)</div>
+                            </div>
+                        </div>
+
+                        <!-- Предпросмотр статей -->
+                        <div class="preview-container" style="@GetPreviewStyle()">
+                            @if (articles == null || !articles.Any())
                             {
-                                @article.Content.Substring(0, 500)
-                                <span>...</span>
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    В этом выпуске нет статей для предпросмотра.
+                                </div>
                             }
                             else
                             {
-                                @article.Content
+                                <div class="preview-content">
+                                    @* Показываем только 3 статьи для предпросмотра *@
+                                    @foreach (var article in articles.Take(3))
+                                    {
+                                        <div class="article-preview mb-4">
+                                            <h1 style="@GetH1Style()">@article.Headline</h1>
+                                            
+                                            <div class="article-meta mb-3" style="@GetMetaStyle()">
+                                                <i class="bi bi-person me-1"></i> @article.Author?.Username |
+                                                <i class="bi bi-calendar ms-2 me-1"></i> @article.CreatedDate.ToString("dd.MM.yyyy") |
+                                                <span class="badge @GetStatusBadgeClass(article.Status) ms-2">
+                                                    @article.Status
+                                                </span>
+                                            </div>
+                                            
+                                            <div style="@GetParagraphStyle()">
+                                                @GetArticlePreview(article.Content)
+                                            </div>
+                                            
+                                            @if (article.Content.Length > 200)
+                                            {
+                                                <h2 style="@GetH2Style()" class="mt-4">Пример подзаголовка</h2>
+                                                <div style="@GetParagraphStyle()">
+                                                    Это пример того, как будет выглядеть дополнительный текст 
+                                                    с текущими настройками типографики. Обратите внимание на 
+                                                    шрифт, размер текста и межстрочные интервалы.
+                                                </div>
+                                            }
+                                            
+                                            <hr class="my-4" />
+                                        </div>
+                                    }
+                                </div>
                             }
                         </div>
-                        
-                        @if (!string.IsNullOrEmpty(article.Headline) && article.Headline.Length > 50)
-                        {
-                            <h2 style="@GetH2Style()">Дополнительный раздел</h2>
-                            <div style="@GetParagraphStyle()">
-                                Это пример того, как будет выглядеть подзаголовок и дополнительный текст в вашей статье.
+
+                        <!-- Кнопки действий -->
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-secondary flex-fill" @onclick="ResetToDefault">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Сбросить
+                                </button>
+                                <button class="btn btn-primary flex-fill" @onclick="SaveSettings">
+                                    <i class="bi bi-save me-1"></i> Сохранить
+                                </button>
+                                <button class="btn btn-success flex-fill" @onclick="ApplyToAllArticles">
+                                    <i class="bi bi-check-all me-1"></i> Применить ко всем статьям
+                                </button>
                             </div>
-                        }
+                        </div>
                     </div>
-                    
-                    <hr style="margin: 30px 0;" />
-                }
+                </div>
             </div>
-        }
-    </div>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter]
-    public string issueId { get; set; }
+    public int issueId { get; set; }
 
-    private GlobalTextStyle styles = new GlobalTextStyle();
-    private List<Article> articles = new List<Article>();
+    private GlobalTextStyle styles = new();
+    private List<Article> articles = new();
     private Issue issue;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        if (int.TryParse(issueId, out int id))
+        try
         {
+            isLoading = true;
+            
+            // Загружаем выпуск
+            issue = await IssueService.GetIssueAsync(issueId);
+            if (issue == null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Выпуск с ID {issueId} не найден");
+                Navigation.NavigateTo("/issues");
+                return;
+            }
+
             // Загружаем стили для выпуска
-            styles = await TextStyleService.GetStylesForIssueAsync(id);
-            
+            styles = await TextStyleService.GetStylesForIssueAsync(issueId);
+
             // Загружаем статьи этого выпуска
-            articles = await ArticleService.GetArticlesByIssueAsync(id);
-            
-            // Загружаем информацию о выпуске
-            issue = await IssueService.GetIssueAsync(id);
+            articles = await ArticleService.GetArticlesByIssueAsync(issueId);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка загрузки: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
-    private int Clamp(int value, int min, int max)
+    private void UpdatePreview()
     {
-        if (value < min) return min;
-        if (value > max) return max;
-        return value;
-    }
-
-    private double Clamp(double value, double min, double max)
-    {
-        if (value < min) return min;
-        if (value > max) return max;
-        return value;
-    }
-
-    private void ChangeColumnCount(int count)
-    {
-        styles.ColumnCount = count;
+        // Принудительное обновление предпросмотра
         StateHasChanged();
     }
 
@@ -250,88 +326,129 @@
     {
         try
         {
-            // Сохраняем стили для выпуска
             styles = await TextStyleService.SaveStylesAsync(styles);
-            
-            // Применяем стили ко всем статьям выпуска
-            await TextStyleService.ApplyStylesToIssueAsync(styles.IssueId);
-            
-            await JSRuntime.InvokeVoidAsync("alert", "Настройки типографики успешно сохранены и применены ко всем статьям выпуска!");
+            await JSRuntime.InvokeVoidAsync("alert", "Настройки типографики успешно сохранены!");
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка при сохранении: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка сохранения: {ex.Message}");
+        }
+    }
+
+    private async Task ApplyToAllArticles()
+    {
+        try
+        {
+            await TextStyleService.ApplyStylesToIssueAsync(issueId);
+            await JSRuntime.InvokeVoidAsync("alert", $"Стили применены ко всем статьям выпуска!");
+            
+            // Перезагружаем статьи, чтобы показать обновленные стили
+            articles = await ArticleService.GetArticlesByIssueAsync(issueId);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка применения стилей: {ex.Message}");
         }
     }
 
     private async Task ResetToDefault()
     {
-        styles.PrimaryFont = "Times New Roman";
-        styles.HeadingFont = "Times New Roman";
-        styles.H1Size = 24;
-        styles.H2Size = 20;
-        styles.BodySize = 14;
-        styles.BodyLineSpacing = 1.4;
-        styles.HeadingLineSpacing = 1.2;
-        styles.ColumnCount = 2;
-        styles.ColumnGap = 1.0;
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Сбросить настройки типографики к значениям по умолчанию?"))
+        {
+            styles.PrimaryFont = "Times New Roman";
+            styles.HeadingFont = "Times New Roman";
+            styles.H1Size = 24;
+            styles.H2Size = 20;
+            styles.BodySize = 14;
+            styles.BodyLineSpacing = 1.4;
+            styles.HeadingLineSpacing = 1.2;
+            // ColumnCount и ColumnGap больше не используются
         
-        StateHasChanged();
+            UpdatePreview();
+            await JSRuntime.InvokeVoidAsync("alert", "Настройки сброшены к значениям по умолчанию");
+        }
     }
 
     private void NavigateBack()
     {
-        Navigation.NavigateTo($"/issues/{issueId}");
+        Navigation.NavigateTo($"/issues/{issueId}/layout");
     }
 
+    // Методы для стилей
     private string GetPreviewStyle()
     {
-        return $@"
-            font-family: {styles.PrimaryFont};
-            font-size: {styles.BodySize}pt;
-            line-height: {styles.BodyLineSpacing.ToString(CultureInfo.InvariantCulture)};
-            column-count: {styles.ColumnCount};
-            column-gap: {styles.ColumnGap.ToString(CultureInfo.InvariantCulture)}cm;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            min-height: 400px;
-        ";
+        return $"font-family: {styles.PrimaryFont};" +
+               $"font-size: {styles.BodySize}pt;" +
+               $"line-height: {styles.BodyLineSpacing};" +
+               "background: white;" +
+               "padding: 20px;" +
+               "border: 1px solid #dee2e6;" +
+               "border-radius: 8px;" +
+               "min-height: 500px;" +
+               "max-height: 600px;" +
+               "overflow-y: auto;";
     }
 
     private string GetH1Style()
     {
-        return $@"
-            font-family: {styles.HeadingFont};
-            font-size: {styles.H1Size}pt;
-            line-height: {styles.HeadingLineSpacing.ToString(CultureInfo.InvariantCulture)};
-            color: #2c3e50;
-            margin: 30px 0 20px 0;
-            break-inside: avoid;
-        ";
+        return $"font-family: {styles.HeadingFont};" +
+               $"font-size: {styles.H1Size}pt;" +
+               $"line-height: {styles.HeadingLineSpacing};" +
+               "color: #2c3e50;" +
+               "margin: 0 0 15px 0;" +
+               "padding-bottom: 10px;" +
+               "border-bottom: 2px solid #3498db;" +
+               "break-inside: avoid;";
     }
 
     private string GetH2Style()
     {
-        return $@"
-            font-family: {styles.HeadingFont};
-            font-size: {styles.H2Size}pt;
-            line-height: {styles.HeadingLineSpacing.ToString(CultureInfo.InvariantCulture)};
-            color: #34495e;
-            margin: 25px 0 15px 0;
-            break-inside: avoid;
-        ";
+        return $"font-family: {styles.HeadingFont};" +
+               $"font-size: {styles.H2Size}pt;" +
+               $"line-height: {styles.HeadingLineSpacing};" +
+               "color: #34495e;" +
+               "margin: 20px 0 10px 0;" +
+               "break-inside: avoid;";
     }
 
     private string GetParagraphStyle()
     {
-        return $@"
-            font-family: {styles.PrimaryFont};
-            font-size: {styles.BodySize}pt;
-            line-height: {styles.BodyLineSpacing.ToString(CultureInfo.InvariantCulture)};
-            color: #2c3e50;
-            margin: 15px 0;
-            text-align: justify;
-        ";
+        return $"font-family: {styles.PrimaryFont};" +
+               $"font-size: {styles.BodySize}pt;" +
+               $"line-height: {styles.BodyLineSpacing};" +
+               "color: #2c3e50;" +
+               "margin: 0 0 15px 0;" +
+               "text-align: justify;";
+    }
+
+    private string GetMetaStyle()
+    {
+        return $"font-family: {styles.PrimaryFont};" +
+               $"font-size: {styles.BodySize - 2}pt;" +
+               "color: #7f8c8d;" +
+               "margin-bottom: 15px;";
+    }
+
+    private string GetArticlePreview(string content)
+    {
+        if (string.IsNullOrEmpty(content)) 
+            return "";
+        
+        return content.Length > 300 ? 
+            content.Substring(0, 300) + "..." : 
+            content;
+    }
+
+    private string GetStatusBadgeClass(ArticleStatus status)
+    {
+        return status switch
+        {
+            ArticleStatus.Approved => "bg-success",
+            ArticleStatus.UnderReview => "bg-info",
+            ArticleStatus.RequiresRevision => "bg-warning",
+            ArticleStatus.Draft => "bg-secondary",
+            ArticleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
     }
 }
