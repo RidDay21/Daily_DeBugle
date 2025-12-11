@@ -137,6 +137,45 @@ namespace DailyDeBugle.Services
             _context.LayoutElements.Add(element);
             await _context.SaveChangesAsync();
         }
+        
+        // Размещение части статьи на блоке макета с использованием CurrentYOffset
+        public async Task<LayoutElement> PlaceArticlePartOnLayoutBlockAsync(LayoutBlockInfo blockInfo, int articleId, double height)
+        {
+            // Правильный расчет X позиции: columnIndex * (columnWidth + columnGap)
+            double columnSpacing = blockInfo.ColumnWidth + blockInfo.ColumnGap;
+            double xPosition = blockInfo.ColumnIndex * columnSpacing;
+            
+            // Используем CurrentYOffset для вычисления позиции
+            var position = JsonSerializer.Serialize(new 
+            { 
+                X = xPosition,
+                Y = blockInfo.CurrentYOffset 
+            });
+            
+            var size = JsonSerializer.Serialize(new 
+            { 
+                Width = blockInfo.ColumnWidth, 
+                Height = height 
+            });
+            
+            var element = new LayoutElement
+            {
+                PageLayoutId = blockInfo.PageLayoutId,
+                ArticleId = articleId,
+                Type = ElementType.TextFrame,
+                Position = position,
+                Size = size,
+                CreatedDate = DateTime.Now
+            };
+
+            _context.LayoutElements.Add(element);
+            await _context.SaveChangesAsync();
+            
+            // Обновляем CurrentYOffset для следующего элемента
+            blockInfo.CurrentYOffset += height + 0.5; // Добавляем высоту элемента и отступ
+            
+            return element;
+        }
 
         public async Task RemoveElementFromLayoutAsync(int layoutElementId)
         {

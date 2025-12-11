@@ -9,6 +9,8 @@
 @inject IJSRuntime JS
 @rendermode InteractiveServer
 
+@implements IAsyncDisposable
+
 <PageTitle>Предпросмотр выпуска: @currentIssue?.IssueNumber</PageTitle>
 
 <div class="preview-container">
@@ -91,122 +93,134 @@
                 Страница @currentPageNumber • Подписной индекс 12345
             </div>
 
-            <!-- Основной контент с колонками -->
-            <div class="multi-column-content"
-                 style="
-                     column-count: @currentPageLayout.ColumnCount;
-                     column-gap: @(currentPageLayout.ColumnGap)cm;
-                     column-fill: auto;
-                     height: 25.7cm; /* Высота минус отступы */
-                     ">
+            <!-- Основной контент с автопереносом по колонкам и постраничным делением -->
+            <div id="flow-root">
+                <div class="flow-page"
+                     style="
+                         column-count: @(currentPageLayout.ColumnCount);
+                         column-gap: @(currentPageLayout.ColumnGap)cm;
+                         column-fill: auto;
+                         height: 25.7cm; /* Высота минус отступы */
+                         overflow: hidden;
+                         ">
+                    @{
+                        var orderedArticles = GetArticlesInReadingOrder(currentPageNumber);
+                    }
 
-                <!-- Статьи на этой странице -->
-                @{
-                var articlesOnPage = GetArticlesForPage(currentPageNumber);
-                }
-
-                @foreach (var article in articlesOnPage)
-                {
-                <!-- Статья -->
-                <div class="article-flow" style="break-inside: avoid; margin-bottom: 1cm;">
-                    <h2 style="
-                                    font-family: 'Georgia', serif;
-                                    font-size: 24px;
-                                    font-weight: bold;
+                    @foreach (var article in orderedArticles)
+                    {
+                    <!-- Статья в потоке колонок -->
+                    <article class="article-flow" style="display: block; width: 100%; margin: 0 0 1cm 0;">
+                        <div class="article-head" style="
+                                    break-inside: avoid-column;
+                                    page-break-inside: avoid;
+                                    -webkit-column-break-inside: avoid;
                                     margin-bottom: 0.5cm;
-                                    color: #333;
-                                ">
-                        @article.Headline
-                        @if (article.ContinuedFromArticleId.HasValue)
-                        {
-                        <span style="color: #999; font-size: 10px; margin-left: 0.5cm;">
-                                        (продолжение)
-                                    </span>
-                        }
-                    </h2>
+                                    ">
+                            <h2 style="
+                                            font-family: 'Georgia', serif;
+                                            font-size: 24px;
+                                            font-weight: bold;
+                                            margin-bottom: 0.2cm;
+                                            color: #333;
+                                        ">
+                                @article.Headline
+                                @if (article.ContinuedFromArticleId.HasValue)
+                                {
+                                <span style="color: #999; font-size: 10px; margin-left: 0.5cm;">
+                                                (продолжение)
+                                            </span>
+                                }
+                            </h2>
 
-                    <div style="
-                                    font-style: italic;
-                                    color: #666;
-                                    margin-bottom: 0.5cm;
-                                    font-size: 12px;
-                                    border-bottom: 1px solid #eee;
-                                    padding-bottom: 0.3cm;
-                                ">
-                        Автор: @article.Author?.Username
-                        @if (article.ContinuedOnArticleId.HasValue || article.ContinuedOnPage.HasValue)
-                        {
-                        <span style="float: right; color: #999; font-size: 10px;">
-                                        продолжение следует
-                                    </span>
-                        }
-                    </div>
+                            <div style="
+                                            font-style: italic;
+                                            color: #666;
+                                            margin-bottom: 0.4cm;
+                                            font-size: 12px;
+                                            border-bottom: 1px solid #eee;
+                                            padding-bottom: 0.3cm;
+                                        ">
+                                Автор: @article.Author?.Username
+                                @if (article.ContinuedOnArticleId.HasValue || article.ContinuedOnPage.HasValue)
+                                {
+                                <span style="float: right; color: #999; font-size: 10px;">
+                                                продолжение следует
+                                            </span>
+                                }
+                            </div>
+                        </div>
 
-                    <div style="
-                                    font-family: 'Times New Roman', serif;
-                                    font-size: 14px;
-                                    line-height: 1.4;
-                                    text-align: justify;
-                                ">
-                        @article.Content
-                    </div>
+                        <div class="article-content" style="
+                                        font-family: 'Times New Roman', serif;
+                                        font-size: 14px;
+                                        line-height: 1.4;
+                                        text-align: justify;
+                                        break-inside: auto;
+                                        -webkit-column-break-inside: auto;
+                                        ">
+                            @article.Content
+                        </div>
+                    </article>
+                    }
                 </div>
-                }
-
-                <!-- Рекламные блоки -->
-                @{
-                var adsOnPage = GetAdsForPage(currentPageNumber);
-                }
-
+            </div>
+            
+            <!-- Рекламные блоки (размещаются отдельно) -->
+            var adsOnPage = GetAdsForPage(currentPageNumber);
+            @if (adsOnPage != null && adsOnPage.Any())
+            {
+            <div class="ads-container" style="margin-top: 1cm; display: flex; gap: 1cm; flex-wrap: wrap;">
                 @foreach (var ad in adsOnPage)
                 {
                 <div class="advertisement-flow" style="
-                                break-inside: avoid;
-                                margin: 1cm 0;
-                                padding: 0.5cm;
-                                background: #f9f9f9;
-                                border: 1px solid #ddd;
-                                border-radius: 3px;
-                            ">
-                    <div style="
-                                    font-weight: bold;
-                                    color: #d35400;
-                                    font-size: 12px;
-                                    margin-bottom: 0.3cm;
-                                    text-align: center;
+                                    flex: 1;
+                                    min-width: 200px;
+                                    padding: 0.5cm;
+                                    background: #f9f9f9;
+                                    border: 1px solid #ddd;
+                                    border-radius: 3px;
                                 ">
+                    <div style="
+                                        font-weight: bold;
+                                        color: #d35400;
+                                        font-size: 12px;
+                                        margin-bottom: 0.3cm;
+                                        text-align: center;
+                                    ">
                         РЕКЛАМА
                     </div>
 
                     <div style="
-                                    font-weight: bold;
-                                    font-size: 14px;
-                                    margin-bottom: 0.2cm;
-                                    text-align: center;
-                                ">
+                                        font-weight: bold;
+                                        font-size: 14px;
+                                        margin-bottom: 0.2cm;
+                                        text-align: center;
+                                    ">
                         @ad.Advertiser
                     </div>
 
                     <div style="
-                                    font-size: 12px;
-                                    color: #666;
-                                    text-align: center;
-                                ">
+                                        font-size: 12px;
+                                        color: #666;
+                                        text-align: center;
+                                    ">
                         @ad.Content
                     </div>
 
                     <div style="
-                                    font-size: 10px;
-                                    color: #888;
-                                    margin-top: 0.3cm;
-                                    text-align: center;
-                                    font-style: italic;
-                                ">
+                                        font-size: 10px;
+                                        color: #888;
+                                        margin-top: 0.3cm;
+                                        text-align: center;
+                                        font-style: italic;
+                                    ">
                         Действует с @ad.StartDate.ToString("dd.MM.yy") по @ad.EndDate.ToString("dd.MM.yy")
                     </div>
                 </div>
                 }
             </div>
+            }
             }
             else
             {
@@ -300,6 +314,7 @@ private Issue currentIssue;
 private List<PageLayout> pageLayouts = new();
 private PageLayout currentPageLayout;
 private int currentPageNumber = 1;
+private IJSObjectReference jsModule;
 
 // Кэшированные данные
 private List<Article> allArticles = new();
@@ -308,6 +323,31 @@ private List<AdvertisementBlock> allAds = new();
 protected override async Task OnInitializedAsync()
 {
 await LoadData();
+}
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (currentPageLayout != null)
+    {
+        if (firstRender)
+        {
+            jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/issuePreview.js");
+        }
+
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("paginate");
+        }
+    }
+}
+
+public async ValueTask DisposeAsync()
+{
+    if (jsModule != null)
+    {
+        await jsModule.InvokeVoidAsync("cleanup");
+        await jsModule.DisposeAsync();
+    }
 }
 
 private async Task LoadData()
@@ -407,6 +447,107 @@ var articleIds = layout.LayoutElements
 .ToList();
 
 return allArticles.Where(a => articleIds.Contains(a.ArticleId)).ToList();
+}
+
+// Получаем статьи в порядке чтения (по колонкам слева направо, сверху вниз)
+private List<Article> GetArticlesInReadingOrder(int pageNumber)
+{
+    var layout = pageLayouts.FirstOrDefault(p => p.PageNumber == pageNumber);
+    if (layout == null) return new List<Article>();
+
+    var orderedElements = layout.LayoutElements
+        .Where(le => le.ArticleId.HasValue)
+        .OrderBy(le => GetElementPosition(le).X)
+        .ThenBy(le => GetElementPosition(le).Y)
+        .ToList();
+
+    var orderMap = orderedElements
+        .Select((element, index) => new { element.ArticleId, index })
+        .Where(x => x.ArticleId.HasValue)
+        .ToDictionary(x => x.ArticleId!.Value, x => x.index);
+
+    return allArticles
+        .Where(a => orderMap.ContainsKey(a.ArticleId))
+        .OrderBy(a => orderMap[a.ArticleId])
+        .ToList();
+}
+
+// Получаем статьи для конкретной колонки на странице
+private List<Article> GetArticlesForColumn(int pageNumber, int columnIndex)
+{
+var layout = pageLayouts.FirstOrDefault(p => p.PageNumber == pageNumber);
+if (layout == null) return new List<Article>();
+
+// Получаем элементы в указанной колонке
+var elementsInColumn = GetElementsInColumn(layout, columnIndex)
+.OrderBy(e => GetElementPosition(e).Y)
+.ToList();
+
+var articleIds = elementsInColumn
+.Where(le => le.ArticleId.HasValue)
+.Select(le => le.ArticleId.Value)
+.ToList();
+
+return allArticles.Where(a => articleIds.Contains(a.ArticleId)).ToList();
+}
+
+// Вспомогательные методы для работы с элементами
+private List<LayoutElement> GetElementsInColumn(PageLayout pageLayout, int columnIndex)
+{
+var elements = new List<LayoutElement>();
+
+if (pageLayout == null || columnIndex < 0 || columnIndex >= pageLayout.ColumnCount)
+return elements;
+
+double columnWidth = GetColumnWidth(pageLayout);
+double columnSpacing = columnWidth + pageLayout.ColumnGap;
+double columnStartX = columnIndex * columnSpacing;
+double columnEndX = columnStartX + columnWidth;
+const double tolerance = 0.1;
+
+foreach (var element in pageLayout.LayoutElements)
+{
+var position = GetElementPosition(element);
+if (position.X >= columnStartX - tolerance && position.X < columnEndX + tolerance)
+{
+elements.Add(element);
+}
+}
+
+return elements.OrderBy(e => GetElementPosition(e).Y).ToList();
+}
+
+private (double X, double Y) GetElementPosition(LayoutElement element)
+{
+try
+{
+if (!string.IsNullOrEmpty(element.Position))
+{
+var position = JsonSerializer.Deserialize<Dictionary<string, double>>(element.Position);
+if (position != null)
+{
+double x = position.ContainsKey("X") ? position["X"] : 0;
+double y = position.ContainsKey("Y") ? position["Y"] : 0;
+return (x, y);
+}
+}
+}
+catch
+{
+// Игнорируем ошибки парсинга
+}
+
+return (0, 0);
+}
+
+private double GetColumnWidth(PageLayout pageLayout)
+{
+if (pageLayout == null || pageLayout.ColumnCount == 0)
+return 0;
+
+double totalGaps = (pageLayout.ColumnCount - 1) * pageLayout.ColumnGap;
+double availableWidth = pageLayout.TextAreaWidth - totalGaps;
+return availableWidth / pageLayout.ColumnCount;
 }
 
 // Получаем рекламу для конкретной страницы

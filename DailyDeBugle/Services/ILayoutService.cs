@@ -24,6 +24,7 @@ namespace DailyDeBugle.Services
         Task<bool> ValidateLayoutConfigurationAsync(PageLayoutConfiguration config);
         Task<List<string>> CheckLayoutConflictsAsync(int pageLayoutId);
         Task<List<Template>> GetAvailableTemplatesAsync();
+        Task<LayoutElement> PlaceArticlePartOnLayoutBlockAsync(LayoutBlockInfo blockInfo, int articleId, double height);
     }
 
     // Класс для конфигурации макета страницы
@@ -41,5 +42,16 @@ namespace DailyDeBugle.Services
         public double ImageAreaWidth { get; set; } = 8.0;
         public double ImageAreaHeight { get; set; } = 6.0;
         public int? TemplateId { get; set; }
+    }
+    
+    // Класс для отслеживания информации о блоке макета (колонке)
+    public class LayoutBlockInfo
+    {
+        public int PageLayoutId { get; set; }
+        public int ColumnIndex { get; set; }
+        public double CurrentYOffset { get; set; } = 0.5; // Текущее смещение Y в колонке (начальное значение - базовый отступ)
+        public double ColumnWidth { get; set; }
+        public double ColumnGap { get; set; } // Промежуток между колонками
+        public double AvailableHeight { get; set; }
     }
 }
