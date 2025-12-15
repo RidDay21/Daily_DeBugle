@@ -5,6 +5,7 @@
 @inject IIssueService IssueService
 @inject IArticleService ArticleService
 @inject ILayoutService LayoutService
+@inject IGlobalTextStyleService TextStyleService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @rendermode InteractiveServer
@@ -57,7 +58,7 @@
                     Страница @currentPageNumber из @pageLayouts.Count
                     @if (currentPageLayout != null)
                     {
-                    <span class="badge bg-info ms-2">@currentPageLayout.ColumnCount колонки</span>
+                        <span class="badge bg-info ms-2">@currentPageLayout.ColumnCount колонки</span>
                     }
                 </h5>
             </div>
@@ -84,14 +85,14 @@
 
             @if (currentPageLayout != null)
             {
-            <!-- Колонтитулы -->
-            <div class="header-footer" style="position: absolute; top: 0.5cm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666;">
-                Ежедневный Дибьюгл • Выпуск №@currentIssue?.IssueNumber • @currentIssue?.IssueDate.ToString("dd.MM.yyyy")
-            </div>
+                <!-- Колонтитулы -->
+                <div class="header-footer" style="position: absolute; top: 0.5cm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666;">
+                    Ежедневный Дибьюгл • Выпуск №@currentIssue?.IssueNumber • @currentIssue?.IssueDate.ToString("dd.MM.yyyy")
+                </div>
 
-            <div class="header-footer" style="position: absolute; bottom: 0.5cm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666;">
-                Страница @currentPageNumber • Подписной индекс 12345
-            </div>
+                <div class="header-footer" style="position: absolute; bottom: 0.5cm; left: 0; right: 0; text-align: center; font-size: 10px; color: #666;">
+                    Страница @currentPageNumber • Подписной индекс 12345
+                </div>
 
             <!-- Основной контент с автопереносом по колонкам и постраничным делением -->
             <div id="flow-root">

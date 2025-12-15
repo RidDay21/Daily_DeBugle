@@ -1,106 +1,126 @@
 using DailyDeBugle.Data;
+using DailyDeBugle.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace DailyDeBugle.Services;
-
-public class GlobalTextStyleService : IGlobalTextStyleService
+namespace DailyDeBugle.Services
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ILogger<GlobalTextStyleService> _logger;
-
-    public GlobalTextStyleService(ApplicationDbContext context, ILogger<GlobalTextStyleService> logger)
+    public class GlobalTextStyleService : IGlobalTextStyleService
     {
-        _context = context;
-        _logger = logger;
-    }
+        private readonly ApplicationDbContext _context;
+        private readonly ILogger<GlobalTextStyleService> _logger;
 
-    public async Task<GlobalTextStyle> GetStylesForIssueAsync(int issueId)
-    {
-        try
+        public GlobalTextStyleService(ApplicationDbContext context, ILogger<GlobalTextStyleService> logger)
         {
-            var styles = await _context.GlobalTextStyles
-                .Include(g => g.Issue)
-                .FirstOrDefaultAsync(g => g.IssueId == issueId);
+            _context = context;
+            _logger = logger;
+        }
 
-            if (styles == null)
+        public async Task<GlobalTextStyle> GetStylesForIssueAsync(int issueId)
+        {
+            try
             {
-                _logger.LogInformation($"Creating default GlobalTextStyle for issue {issueId}");
-                
-                styles = new GlobalTextStyle
-                {
-                    IssueId = issueId,
-                    PrimaryFont = "Times New Roman",
-                    HeadingFont = "Times New Roman",
-                    H1Size = 24,
-                    H2Size = 20,
-                    BodySize = 14,
-                    BodyLineSpacing = 1.4,
-                    HeadingLineSpacing = 1.2,
-                    ColumnCount = 2,
-                    ColumnGap = 1.0
-                };
-                
-                _context.GlobalTextStyles.Add(styles);
-                await _context.SaveChangesAsync();
-                
-                // Reload with included Issue
-                styles = await _context.GlobalTextStyles
+                var styles = await _context.GlobalTextStyles
                     .Include(g => g.Issue)
                     .FirstOrDefaultAsync(g => g.IssueId == issueId);
+
+                if (styles == null)
+                {
+                    _logger.LogInformation($"Creating default GlobalTextStyle for issue {issueId}");
+                    
+                    // Проверяем, существует ли выпуск
+                    var issue = await _context.Issues.FindAsync(issueId);
+                    if (issue == null)
+                        throw new ArgumentException($"Issue with ID {issueId} not found");
+                    
+                    styles = new GlobalTextStyle
+                    {
+                        IssueId = issueId,
+                        PrimaryFont = "Times New Roman",
+                        HeadingFont = "Times New Roman",
+                        H1Size = 24,
+                        H2Size = 20,
+                        BodySize = 14,
+                        BodyLineSpacing = 1.4,
+                        HeadingLineSpacing = 1.2
+                    };
+                    
+                    _context.GlobalTextStyles.Add(styles);
+                    await _context.SaveChangesAsync();
+                    
+                    // Reload with included Issue
+                    styles = await _context.GlobalTextStyles
+                        .Include(g => g.Issue)
+                        .FirstOrDefaultAsync(g => g.IssueId == issueId);
+                }
+
+                return styles;
             }
-
-            return styles;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error getting GlobalTextStyle for issue {issueId}");
-            throw;
-        }
-    }
-
-    public async Task<GlobalTextStyle> SaveStylesAsync(GlobalTextStyle styles)
-    {
-        try
-        {
-            var existing = await _context.GlobalTextStyles
-                .FirstOrDefaultAsync(g => g.Id == styles.Id);
-
-            if (existing != null)
+            catch (Exception ex)
             {
-                _context.Entry(existing).CurrentValues.SetValues(styles);
-                existing.UpdatedAt = DateTime.UtcNow;
+                _logger.LogError(ex, $"Error getting GlobalTextStyle for issue {issueId}");
+                throw;
             }
-            else
+        }
+
+        public async Task<GlobalTextStyle> SaveStylesAsync(GlobalTextStyle styles)
+        {
+            try
             {
-                styles.CreatedAt = DateTime.UtcNow;
-                styles.UpdatedAt = DateTime.UtcNow;
-                _context.GlobalTextStyles.Add(styles);
+                var existing = await _context.GlobalTextStyles
+                    .FirstOrDefaultAsync(g => g.Id == styles.Id);
+
+                if (existing != null)
+                {
+                    // Обновляем существующие стили
+                    _context.Entry(existing).CurrentValues.SetValues(styles);
+                    existing.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    // Добавляем новые стили
+                    styles.CreatedAt = DateTime.UtcNow;
+                    styles.UpdatedAt = DateTime.UtcNow;
+                    _context.GlobalTextStyles.Add(styles);
+                }
+
+                await _context.SaveChangesAsync();
+                return styles;
             }
-
-            await _context.SaveChangesAsync();
-            return styles;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error saving GlobalTextStyle for issue {styles.IssueId}");
+                throw;
+            }
         }
-        catch (Exception ex)
+
+        public async Task ApplyStylesToIssueAsync(int issueId)
         {
-            _logger.LogError(ex, $"Error saving GlobalTextStyle for issue {styles.IssueId}");
-            throw;
+            try
+            {
+                var styles = await GetStylesForIssueAsync(issueId);
+                var articles = await _context.Articles
+                    .Where(a => a.IssueId == issueId)
+                    .ToListAsync();
+
+                foreach (var article in articles)
+                {
+                    // Применяем стили к каждой статье
+                    article.FontFamily = styles.PrimaryFont;
+                    article.FontSize = styles.BodySize;
+                    article.LineSpacing = styles.BodyLineSpacing;
+                    
+                    _logger.LogInformation($"Applied styles to article {article.ArticleId}: " +
+                                          $"Font={styles.PrimaryFont}, Size={styles.BodySize}pt");
+                }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"Applied styles to {articles.Count} articles in issue {issueId}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error applying styles to issue {issueId}");
+                throw;
+            }
         }
-    }
-
-    public async Task ApplyStylesToIssueAsync(int issueId)
-    {
-        // Apply styles to all articles in the issue
-        var styles = await GetStylesForIssueAsync(issueId);
-        var articles = await _context.Articles
-            .Where(a => a.IssueId == issueId)
-            .ToListAsync();
-
-        foreach (var article in articles)
-        {
-            // Apply styles to article content
-            _logger.LogInformation($"Applying styles to article {article.ArticleId}");
-        }
-
-        await _context.SaveChangesAsync();
     }
 }
