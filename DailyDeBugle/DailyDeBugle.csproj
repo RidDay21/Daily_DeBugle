@@ -8,21 +8,27 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- Основной пакет EF Core -->
+        <!-- Основные пакеты EF Core 10 -->
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
-        <!-- Поставщик базы данных (PostgreSQL) -->
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
-        <!-- Проекты, работающие с EF Core 10, должны устанавливать пакет InMemory соответствующей версии. -->
+        
+        <!-- Поставщик базы данных (PostgreSQL) для EF Core 10 -->
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+        
+        <!-- InMemory провайдер для EF Core 10 -->
         <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
+        
         <!-- Обязательные пакеты для работы инструментов миграции -->
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.1">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        
+        <!-- System.Drawing.Common -->
         <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
     </ItemGroup>
 
