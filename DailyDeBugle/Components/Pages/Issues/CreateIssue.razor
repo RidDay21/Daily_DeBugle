@@ -57,8 +57,32 @@ else
 
     private async Task HandleValidSubmit()
     {
-        await IssueService.CreateAsync(newIssue);
-        Nav.NavigateTo("/issues");
+        try
+        {
+            // ДОБАВЬТЕ ЭТИ СТРОКИ ДЛЯ ОТЛАДКИ
+            Console.WriteLine($"=== DEBUG ===");
+            Console.WriteLine($"PublicationId: {newIssue.PublicationId}");
+            Console.WriteLine($"IssueNumber: {newIssue.IssueNumber}");
+            Console.WriteLine($"IssueDate: {newIssue.IssueDate}");
+
+            // Проверка что PublicationId не 0
+            if (newIssue.PublicationId == 0)
+            {
+                Console.WriteLine("ERROR: PublicationId is 0 - no publication selected!");
+                // Можно показать сообщение пользователю
+                return;
+            }
+
+            await IssueService.CreateAsync(newIssue);
+            Console.WriteLine("SUCCESS: Issue created!");
+            Nav.NavigateTo("/issues");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            // Можно добавить отображение ошибки пользователю
+        }
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)

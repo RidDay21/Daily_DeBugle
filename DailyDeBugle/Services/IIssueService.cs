@@ -27,5 +27,14 @@ namespace DailyDeBugle.Services
 
         // Получение списка публикаций для выбора при создании выпуска
         Task<List<Publication>> GetPublicationsAsync();
+        
+        Task<Issue> GetFeaturedIssueAsync();
+        Task<List<Issue>> GetRecentIssuesAsync(int count);
+        Task<int> GetTotalIssuesCountAsync();
+        Task<int> GetPublishedIssuesCountAsync();
+        Task<bool> SetAsFeaturedIssueAsync(int issueId);
+        Task DownloadIssueAsPdfAsync(int issueId);
+        
+        Task<bool> RemoveFromFeaturedAsync(int issueId);
     }
 }

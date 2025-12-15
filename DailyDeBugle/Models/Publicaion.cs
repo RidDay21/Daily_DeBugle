@@ -3,6 +3,16 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace DailyDeBugle.Models
 {
+    /// <summary>
+    /// Класс енум для строгой типизации нашей периодичности
+    /// </summary>
+    public enum PublicationFrequency
+    {
+        Daily,
+        Weekly,
+        Monthly
+    }
+
     public class Publication
     {
         public int PublicationId { get; set; }
@@ -13,7 +23,12 @@ namespace DailyDeBugle.Models
 
         [StringLength(1000)]
         public string Description { get; set; } = string.Empty;
-
+        
+        /// <summary>
+        ///Сделал типизацию строгую
+        /// </summary>
+        public PublicationFrequency Frequency { get; set; } 
+        
         public bool IsActive { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 

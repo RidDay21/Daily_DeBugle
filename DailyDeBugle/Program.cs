@@ -5,7 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 // Add services to the container
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -15,11 +18,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
+builder.Services.AddScoped<IHeaderFooterService, HeaderFooterService>();
+builder.Services.AddScoped<IGlobalTextStyleService, GlobalTextStyleService>();
 builder.Services.AddScoped<IIssueService, IssueService>();
+builder.Services.AddScoped<ILayoutService, LayoutService>();
 builder.Services.AddScoped<IArticleService, ArticleService>();
-builder.Services.AddScoped<IUserService, UserService>();
-// builder.Services.AddScoped<ILayoutService, LayoutService>();
-// остальные сервисы
+builder.Services.AddScoped<IUserService, UserService>(); 
+builder.Services.AddScoped<IAdvertisementService, AdvertisementService>();
+builder.Services.AddScoped<ITemplateService, TemplateService>();
+
 
 var app = builder.Build();
 

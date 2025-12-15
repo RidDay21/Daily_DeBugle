@@ -1,4 +1,4 @@
-﻿using DailyDeBugle.Data;
+using DailyDeBugle.Data;
 using DailyDeBugle.Models;
 using Microsoft.EntityFrameworkCore;
 

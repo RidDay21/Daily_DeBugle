@@ -1,9 +1,9 @@
-﻿using DailyDeBugle.Models;
+using DailyDeBugle.Models;
 
 namespace DailyDeBugle.Services
 {
     public interface IUserService
     {
-        Task<List<User>> GetAllAsync();
+        System.Threading.Tasks.Task<System.Collections.Generic.List<User>> GetAllAsync();
     }
 }

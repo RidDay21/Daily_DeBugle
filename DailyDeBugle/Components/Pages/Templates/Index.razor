@@ -1,0 +1,219 @@
+@page "/templates"
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@using DailyDeBugle.Data
+@inject ITemplateService TemplateService
+@inject NavigationManager Navigation
+@inject ApplicationDbContext _context
+@rendermode InteractiveServer
+
+<PageTitle>Управление шаблонами</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Шаблоны макетов</h2>
+            <p class="text-muted mb-0">Создавайте и управляйте шаблонами для быстрой верстки выпусков</p>
+        </div>
+        <a href="/templates/create" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+            Новый шаблон
+        </a>
+    </div>
+
+    @if (templates == null)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+        </div>
+    }
+    else if (!templates.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-file-earmark-text text-muted mb-3" viewBox="0 0 16 16">
+                    <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
+                    <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                </svg>
+                <h5 class="text-muted">Шаблоны не найдены</h5>
+                <p class="text-muted">Создайте свой первый шаблон для быстрой верстки выпусков</p>
+                <a href="/templates/create" class="btn btn-primary">Создать шаблон</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var template in templates)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">@template.Name</h5>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+                                        <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                    </svg>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="/templates/edit/@template.TemplateId">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil me-1" viewBox="0 0 16 16">
+                                                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                                            </svg>
+                                            Редактировать
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" @onclick="() => ConfirmDeleteTemplate(template)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash me-1" viewBox="0 0 16 16">
+                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                            </svg>
+                                            Удалить
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(template.Description))
+                            {
+                                <p class="card-text">@template.Description</p>
+                            }
+                            else
+                            {
+                                <p class="card-text text-muted">Описание отсутствует</p>
+                            }
+                            
+                            <div class="row g-2 mt-3">
+                                <div class="col-6">
+                                    <div class="bg-light p-2 rounded text-center">
+                                        <div class="small text-muted">Колонок</div>
+                                        <div class="fw-bold">@template.DefaultColumnCount</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="bg-light p-2 rounded text-center">
+                                        <div class="small text-muted">Отступы</div>
+                                        <div class="fw-bold">@template.DefaultMarginTop см</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3 small text-muted">
+                                <div>Создан: @template.CreatedAt.ToString("dd.MM.yyyy")</div>
+                                <div>Использован: @(template.PageLayouts?.Count ?? 0) раз</div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <button class="btn btn-sm btn-outline-primary w-100" 
+                                    @onclick="() => ApplyTemplate(template.TemplateId)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                Использовать
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Диалог подтверждения удаления -->
+@if (showDeleteDialog && templateToDelete != null)
+{
+    <div class="modal-backdrop show" style="opacity: 0.5;"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Удаление шаблона</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить шаблон <strong>@templateToDelete.Name</strong>?</p>
+                    <p class="text-muted small">Это действие нельзя будет отменить.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">
+                        Отмена
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteTemplate">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Template> templates = new();
+    private bool showDeleteDialog = false;
+    private Template? templateToDelete = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplates();
+    }
+
+    private async Task LoadTemplates()
+    {
+        templates = await TemplateService.GetTemplatesAsync();
+    }
+
+    private void ConfirmDeleteTemplate(Template template)
+    {
+        templateToDelete = template;
+        showDeleteDialog = true;
+        StateHasChanged();
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteDialog = false;
+        templateToDelete = null;
+    }
+
+    private async Task DeleteTemplate()
+    {
+        if (templateToDelete != null)
+        {
+            try
+            {
+                // Удаляем шаблон из базы данных
+                _context.Templates.Remove(templateToDelete);
+                await _context.SaveChangesAsync();
+                
+                showDeleteDialog = false;
+                templateToDelete = null;
+                await LoadTemplates();
+                
+                // Показываем уведомление об успехе
+                // В реальном приложении можно использовать Toast или Alert
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при удалении шаблона: {ex.Message}");
+                // Показываем сообщение об ошибке
+            }
+        }
+    }
+
+    private async Task ApplyTemplate(int templateId)
+    {
+        // Перенаправляем на страницу выбора выпуска для применения шаблона
+        Navigation.NavigateTo($"/templates/apply/{templateId}");
+    }
+}
