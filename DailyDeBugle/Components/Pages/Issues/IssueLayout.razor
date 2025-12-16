@@ -65,13 +65,6 @@
                     </svg>
                     Добавить страницу
                 </button>
-                <button class="btn btn-outline-warning" @onclick="CheckAndFixOverflow">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle me-1" viewBox="0 0 16 16">
-                        <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/>
-                        <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z"/>
-                    </svg>
-                    Проверить переполнение
-                </button>
                 <button class="btn btn-outline-info" @onclick="NavigateToPreview">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye me-1" viewBox="0 0 16 16">
                         <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
@@ -147,15 +140,50 @@
                                     </div>
                                 </div>
                                 
+                                <!-- Настройки шаблона -->
                                 <div class="col-md-6">
                                     <label class="form-label">Шаблон</label>
-                                    <InputSelect @bind-Value="@selectedTemplateId" class="form-select">
-                                        <option value="">-- Без шаблона --</option>
-                                        @foreach (var template in templates)
+                                    <div class="input-group">
+                                        <InputSelect @bind-Value="@selectedTemplateId" class="form-select">
+                                            <option value="">-- Без шаблона --</option>
+                                            @foreach (var template in templates)
+                                            {
+                                                <option value="@template.TemplateId">
+                                                    @template.Name (@template.DefaultColumnCount колонок)
+                                                </option>
+                                            }
+                                        </InputSelect>
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="ApplyTemplateToCurrentPage"
+                                                disabled="@(!selectedTemplateId.HasValue || selectedTemplateId.Value == 0)">
+                                            Применить
+                                        </button>
+                                    </div>
+                                    @if (selectedTemplateId.HasValue && selectedTemplateId.Value > 0)
+                                    {
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    @onclick="ApplyTemplateToAllPages">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-arrows-angle-expand me-1" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M5.828 1.314a.5.5 0 0 1 .172.686L3.025 7.24a.5.5 0 0 1-.757.06L.44 5.56a.5.5 0 0 1 .707-.707l1.757 1.757 2.475-4.015a.5.5 0 0 1 .686-.172zm4.344 0a.5.5 0 0 0-.172.686L12.975 7.24a.5.5 0 0 0 .757.06l1.827-1.74a.5.5 0 1 0-.707-.707l-1.757 1.757-2.475-4.015a.5.5 0 0 0-.686-.172z"/>
+                                                </svg>
+                                                Применить ко всем страницам
+                                            </button>
+                                        </div>
+                                    }
+                                    
+                                    @if (currentPageLayout?.TemplateId > 0)
+                                    {
+                                        var currentTemplate = templates.FirstOrDefault(t => t.TemplateId == currentPageLayout.TemplateId);
+                                        if (currentTemplate != null)
                                         {
-                                            <option value="@template.TemplateId">@template.Name</option>
+                                            <div class="mt-2 small text-muted">
+                                                <div>Текущий шаблон: <strong>@currentTemplate.Name</strong></div>
+                                                <div>Колонок: @currentTemplate.DefaultColumnCount</div>
+                                                <div>Отступы: @currentTemplate.DefaultMarginTop см</div>
+                                            </div>
                                         }
-                                    </InputSelect>
+                                    }
                                 </div>
                                 
                                 <!-- Кнопки управления -->
@@ -221,7 +249,7 @@
                         <input type="checkbox" class="form-check-input" 
                                checked="@showOnlyApproved" 
                                @onchange="@((e) => { 
-                                              showOnlyApproved = bool.Parse(e.Value?.ToString() ?? "false"); 
+                                              showOnlyApproved = (bool)e.Value; 
                                               UpdateFilteredArticles(); 
                                           })" />
                         <label class="form-check-label">Только одобренные</label>
@@ -583,6 +611,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+        await LoadTemplates();
     }
     
     private void NavigateToIssuesList()
@@ -605,7 +634,6 @@
             {
                 allArticles = await ArticleService.GetArticlesByIssueAsync(issueId);
                 pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
-                templates = await TemplateService.GetTemplatesAsync();
                 
                 UpdateFilteredArticles();
                 await LoadCurrentPageLayout();
@@ -614,6 +642,37 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Ошибка загрузки данных: {ex.Message}");
+        }
+    }
+
+    private async Task LoadTemplates()
+    {
+        try
+        {
+            templates = await TemplateService.GetTemplatesAsync();
+            
+            // Если нет шаблонов, создаем стандартный
+            if (!templates.Any())
+            {
+                var defaultTemplate = new Template
+                {
+                    Name = "Стандартный",
+                    Description = "Стандартный шаблон по умолчанию",
+                    DefaultColumnCount = 2,
+                    DefaultMarginTop = 2.0,
+                    DefaultMarginBottom = 2.0,
+                    DefaultMarginLeft = 2.0,
+                    DefaultMarginRight = 2.0,
+                    DefaultColumnGap = 0.5
+                };
+                
+                await TemplateService.CreateTemplateAsync(defaultTemplate);
+                templates = await TemplateService.GetTemplatesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки шаблонов: {ex.Message}");
         }
     }
 
@@ -665,31 +724,28 @@
     {
         if (layout == null) return;
     
-        // Фиксированные отступы
-        layout.MarginTop = 2.0;
-        layout.MarginBottom = 2.0;
-        layout.MarginLeft = 2.0;
-        layout.MarginRight = 2.0;
-    
         // Текстовая область занимает все пространство между отступами
         layout.TextAreaWidth = PAGE_WIDTH - layout.MarginLeft - layout.MarginRight;
         layout.TextAreaHeight = PAGE_HEIGHT - layout.MarginTop - layout.MarginBottom;
     
-        // Настраиваем промежутки между колонками
-        switch (layout.ColumnCount)
+        // Если ColumnGap не задан (равен 0), устанавливаем по умолчанию
+        if (layout.ColumnGap == 0)
         {
-            case 1:
-                layout.ColumnGap = 0;
-                break;
-            case 2:
-                layout.ColumnGap = 1.0;
-                break;
-            case 3:
-                layout.ColumnGap = 0.7;
-                break;
-            case 4:
-                layout.ColumnGap = 0.5;
-                break;
+            switch (layout.ColumnCount)
+            {
+                case 1:
+                    layout.ColumnGap = 0;
+                    break;
+                case 2:
+                    layout.ColumnGap = 1.0;
+                    break;
+                case 3:
+                    layout.ColumnGap = 0.7;
+                    break;
+                case 4:
+                    layout.ColumnGap = 0.5;
+                    break;
+            }
         }
     
         // Округляем значения
@@ -702,8 +758,11 @@
     
     private async Task NextPage()
     {
-        currentPageNumber++;
-        await LoadCurrentPageLayout();
+        if (currentPageNumber < pageLayouts.Count)
+        {
+            currentPageNumber++;
+            await LoadCurrentPageLayout();
+        }
     }
 
     private async Task PrevPage()
@@ -725,14 +784,108 @@
             LayoutElements = new List<LayoutElement>(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            ColumnCount = 2
+            ColumnCount = 2,
+            MarginTop = 2.0,
+            MarginBottom = 2.0,
+            MarginLeft = 2.0,
+            MarginRight = 2.0,
+            ColumnGap = 0.5
         };
     
-        // Применяем автоматическую настройку колонок
         AdjustColumnsLayout(newPageLayout);
     
         await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
         await LoadData();
+        ShowNotification($"Страница {currentPageNumber} создана.");
+    }
+
+    // Применить шаблон к текущей странице
+    private async Task ApplyTemplateToCurrentPage()
+    {
+        if (selectedTemplateId.HasValue && selectedTemplateId.Value > 0 && currentPageLayout != null)
+        {
+            try
+            {
+                var template = templates.FirstOrDefault(t => t.TemplateId == selectedTemplateId.Value);
+                if (template == null)
+                {
+                    ShowNotification("Шаблон не найден");
+                    return;
+                }
+
+                // Применяем настройки шаблона
+                currentPageLayout.TemplateId = template.TemplateId;
+                currentPageLayout.ColumnCount = template.DefaultColumnCount;
+                currentPageLayout.MarginTop = template.DefaultMarginTop;
+                currentPageLayout.MarginBottom = template.DefaultMarginBottom;
+                currentPageLayout.MarginLeft = template.DefaultMarginLeft;
+                currentPageLayout.MarginRight = template.DefaultMarginRight;
+                currentPageLayout.ColumnGap = template.DefaultColumnGap;
+                
+                // Пересчитываем макет
+                AdjustColumnsLayout(currentPageLayout);
+                
+                // Сохраняем изменения
+                await LayoutService.CreateOrUpdatePageLayoutAsync(currentPageLayout);
+                await LoadData();
+                
+                ShowNotification($"Шаблон '{template.Name}' применен к странице {currentPageNumber}");
+            }
+            catch (Exception ex)
+            {
+                ShowNotification($"Ошибка применения шаблона: {ex.Message}");
+            }
+        }
+        else
+        {
+            ShowNotification("Выберите шаблон для применения");
+        }
+    }
+
+    // Применить шаблон ко всем страницам
+    private async Task ApplyTemplateToAllPages()
+    {
+        if (selectedTemplateId.HasValue && selectedTemplateId.Value > 0)
+        {
+            try
+            {
+                var template = templates.FirstOrDefault(t => t.TemplateId == selectedTemplateId.Value);
+                if (template == null)
+                {
+                    ShowNotification("Шаблон не найден");
+                    return;
+                }
+
+                foreach (var pageLayout in pageLayouts)
+                {
+                    // Применяем настройки шаблона
+                    pageLayout.TemplateId = template.TemplateId;
+                    pageLayout.ColumnCount = template.DefaultColumnCount;
+                    pageLayout.MarginTop = template.DefaultMarginTop;
+                    pageLayout.MarginBottom = template.DefaultMarginBottom;
+                    pageLayout.MarginLeft = template.DefaultMarginLeft;
+                    pageLayout.MarginRight = template.DefaultMarginRight;
+                    pageLayout.ColumnGap = template.DefaultColumnGap;
+                    
+                    // Пересчитываем макет
+                    AdjustColumnsLayout(pageLayout);
+                    
+                    // Сохраняем изменения
+                    await LayoutService.CreateOrUpdatePageLayoutAsync(pageLayout);
+                }
+                
+                await LoadData();
+                ShowNotification($"Шаблон '{template.Name}' применен ко всем страницам выпуска");
+            }
+            catch (Exception ex)
+            {
+                ShowNotification($"Ошибка применения шаблона: {ex.Message}");
+            }
+        }
+        else
+        {
+            ShowNotification("Выберите шаблон для применения");
+        }
     }
 
     private async Task HandlePlaceArticle(Article article)
@@ -801,6 +954,11 @@
             IssueId = issueId,
             PageNumber = newPageNumber,
             ColumnCount = currentPageLayout?.ColumnCount ?? 2,
+            MarginTop = currentPageLayout?.MarginTop ?? 2.0,
+            MarginBottom = currentPageLayout?.MarginBottom ?? 2.0,
+            MarginLeft = currentPageLayout?.MarginLeft ?? 2.0,
+            MarginRight = currentPageLayout?.MarginRight ?? 2.0,
+            ColumnGap = currentPageLayout?.ColumnGap ?? 0.5,
             LayoutElements = new List<LayoutElement>(),
             LayoutSettings = "{}",
             TemplateId = currentPageLayout?.TemplateId ?? 0
@@ -838,110 +996,6 @@
         
         // Возвращаем позицию после последнего элемента с отступом
         return lastPosition.Y + lastSize.Height + 0.5;
-    }
-
-    // Проверить и исправить переполнение страниц
-    private async Task CheckAndFixOverflow()
-    {
-        bool changesMade = false;
-        
-        // Сортируем страницы по номеру
-        var sortedPages = pageLayouts.OrderBy(p => p.PageNumber).ToList();
-        
-        for (int i = 0; i < sortedPages.Count; i++)
-        {
-            var page = sortedPages[i];
-            
-            // Проверяем все колонки на текущей странице
-            for (int col = 0; col < page.ColumnCount; col++)
-            {
-                var elementsInColumn = GetElementsInColumn(page, col);
-                double totalHeight = 0.5; // Начальный отступ
-                
-                foreach (var element in elementsInColumn.OrderBy(e => GetElementPosition(e).Y))
-                {
-                    var size = GetElementSize(element);
-                    
-                    // Проверяем, помещается ли элемент
-                    if (totalHeight + size.Height > page.TextAreaHeight)
-                    {
-                        // Найдем элементы, которые не помещаются
-                        var elementsToMove = elementsInColumn
-                            .Where(e => GetElementPosition(e).Y >= GetElementPosition(element).Y)
-                            .ToList();
-                        
-                        if (!elementsToMove.Any()) continue;
-                        
-                        // Найдем или создадим следующую страницу
-                        PageLayout nextPage;
-                        if (i + 1 < sortedPages.Count)
-                        {
-                            nextPage = sortedPages[i + 1];
-                        }
-                        else
-                        {
-                            // Создаем новую страницу
-                            int newPageNumber = page.PageNumber + 1;
-                            nextPage = new PageLayout
-                            {
-                                IssueId = issueId,
-                                PageNumber = newPageNumber,
-                                ColumnCount = page.ColumnCount,
-                                LayoutElements = new List<LayoutElement>(),
-                                LayoutSettings = "{}",
-                                TemplateId = page.TemplateId
-                            };
-                            
-                            AdjustColumnsLayout(nextPage);
-                            await LayoutService.CreateOrUpdatePageLayoutAsync(nextPage);
-                            changesMade = true;
-                            sortedPages.Add(nextPage);
-                        }
-                        
-                        // Переносим элементы на следующую страницу
-                        double newPageY = 0.5;
-                        foreach (var elementToMove in elementsToMove)
-                        {
-                            // Удаляем элемент со старой страницы
-                            await LayoutService.RemoveElementFromLayoutAsync(elementToMove.LayoutElementId);
-                            
-                            // Добавляем на новую страницу
-                            if (elementToMove.ArticleId.HasValue)
-                            {
-                                var position = JsonSerializer.Serialize(new { X = GetElementPosition(elementToMove).X, Y = newPageY });
-                                var sizeJson = JsonSerializer.Serialize(new { 
-                                    Width = GetElementSize(elementToMove).Width, 
-                                    Height = GetElementSize(elementToMove).Height 
-                                });
-                                
-                                await LayoutService.AddArticleToLayoutAsync(
-                                    nextPage.PageLayoutId,
-                                    elementToMove.ArticleId.Value,
-                                    position,
-                                    sizeJson
-                                );
-                                
-                                newPageY += GetElementSize(elementToMove).Height + 0.5;
-                            }
-                        }
-                        
-                        break; // Переходим к следующей колонке
-                    }
-                    
-                    totalHeight += size.Height + 0.5;
-                }
-            }
-        }
-        
-        if (changesMade)
-        {
-            await LoadData();
-            ShowNotification("Проверка переполнения завершена. Некоторые статьи были перенесены на следующие страницы.");
-        }
-        else
-        {
-            ShowNotification("Переполнение не обнаружено. Все статьи размещены корректно.");
-        }
     }
 
     // Рассчитывает высоту статьи
@@ -1105,6 +1159,11 @@
             IssueId = issueId,
             PageNumber = newPageNumber,
             ColumnCount = currentPageLayout?.ColumnCount ?? 2,
+            MarginTop = currentPageLayout?.MarginTop ?? 2.0,
+            MarginBottom = currentPageLayout?.MarginBottom ?? 2.0,
+            MarginLeft = currentPageLayout?.MarginLeft ?? 2.0,
+            MarginRight = currentPageLayout?.MarginRight ?? 2.0,
+            ColumnGap = currentPageLayout?.ColumnGap ?? 0.5,
             LayoutElements = new List<LayoutElement>(),
             LayoutSettings = "{}",
             TemplateId = 0
