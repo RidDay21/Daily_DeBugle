@@ -6,6 +6,7 @@
 @inject IArticleService ArticleService
 @inject ILayoutService LayoutService
 @inject ITemplateService TemplateService
+@inject IGlobalTextStyleService TextStyleService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
@@ -186,6 +187,11 @@
                                     <div>Рекламных блоков: <strong>@currentPageLayout.LayoutElements.Count(le => le.AdvertisementBlock != null)</strong></div>
                                 </div>
                             </div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <div>Свободно места: <strong>@(GetAvailableHeightOnPage().ToString("F1")) см</strong></div>
+                                </div>
+                            </div>
                         </div>
                         
                         @if (conflicts.Any())
@@ -326,10 +332,21 @@
                                             <div class="d-flex flex-column gap-1">
                                                 @if (currentPageLayout != null)
                                                 {
-                                                    <button class="btn btn-sm btn-outline-primary"
-                                                            @onclick="() => HandlePlaceArticle(article)">
+                                                    var articleHeight = CalculateArticleHeight(article);
+                                                    var availableHeight = GetAvailableHeightOnPage();
+                                                    var canPlace = articleHeight <= availableHeight;
+                                                    
+                                                    <button class="btn btn-sm @(canPlace ? "btn-outline-primary" : "btn-outline-secondary")"
+                                                            @onclick="() => HandlePlaceArticle(article)"
+                                                            disabled="@(!canPlace)"
+                                                            title="@(canPlace ? "Разместить статью" : $"Недостаточно места. Требуется: {articleHeight:F1} см, доступно: {availableHeight:F1} см")">
                                                         Разместить
                                                     </button>
+                                                    
+                                                    @if (!canPlace)
+                                                    {
+                                                        <small class="text-danger text-nowrap">Не помещается</small>
+                                                    }
                                                 }
                                             </div>
                                         </div>
@@ -563,6 +580,7 @@
     private List<PageLayout> pageLayouts = new();
     private List<Template> templates = new();
     private PageLayout currentPageLayout;
+    private GlobalTextStyle currentTextStyle;
     private int? selectedTemplateId;
     private List<string> conflicts = new();
     private int currentPageNumber = 1;
@@ -606,6 +624,7 @@
                 allArticles = await ArticleService.GetArticlesByIssueAsync(issueId);
                 pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
                 templates = await TemplateService.GetTemplatesAsync();
+                currentTextStyle = await TextStyleService.GetStylesForIssueAsync(issueId);
                 
                 UpdateFilteredArticles();
                 await LoadCurrentPageLayout();
@@ -735,236 +754,142 @@
         await LoadData();
     }
 
-    private async Task HandlePlaceArticle(Article article)
-    {
-        if (article == null) return;
-        
-        // Вычисляем высоту статьи
-        double articleHeight = CalculateArticleHeight(article);
-        
-        // Ищем подходящую страницу для статьи
-        var (targetPage, yPosition) = await FindBestPageForArticle(articleHeight);
-        
-        if (targetPage == null)
-        {
-            ShowNotification("Не удалось найти или создать подходящую страницу для статьи");
-            return;
-        }
-        
-        // Размещаем статью на найденной странице
-        double columnWidth = GetColumnWidth(targetPage);
-        double x = 0; // Первая колонка
-        var position = JsonSerializer.Serialize(new { X = x, Y = yPosition });
-        var size = JsonSerializer.Serialize(new { Width = columnWidth, Height = articleHeight });
-        
-        await LayoutService.AddArticleToLayoutAsync(
-            targetPage.PageLayoutId, 
-            article.ArticleId, 
-            position, 
-            size
-        );
-        
-        await LoadData();
-        ShowNotification($"Статья \"{article.Headline}\" размещена на странице {targetPage.PageNumber}");
-    }
-
-    // Найти лучшую страницу для статьи
-    private async Task<(PageLayout page, double yPosition)> FindBestPageForArticle(double articleHeight)
-    {
-        // 1. Сначала пытаемся разместить на текущей странице
-        if (currentPageLayout != null)
-        {
-            double currentY = GetNextAvailableY(currentPageLayout, 0);
-            if (currentY + articleHeight <= currentPageLayout.TextAreaHeight)
-            {
-                return (currentPageLayout, currentY);
-            }
-        }
-        
-        // 2. Ищем среди существующих страниц
-        foreach (var page in pageLayouts.OrderBy(p => p.PageNumber))
-        {
-            if (page.PageNumber == currentPageNumber) continue; // Текущую уже проверяли
-            
-            double y = GetNextAvailableY(page, 0);
-            if (y + articleHeight <= page.TextAreaHeight)
-            {
-                await SwitchToPage(page.PageNumber);
-                return (page, y);
-            }
-        }
-        
-        // 3. Если ни на одной странице не помещается, создаем новую
-        int newPageNumber = pageLayouts.Any() ? pageLayouts.Max(p => p.PageNumber) + 1 : 1;
-        var newPageLayout = new PageLayout
-        {
-            IssueId = issueId,
-            PageNumber = newPageNumber,
-            ColumnCount = currentPageLayout?.ColumnCount ?? 2,
-            LayoutElements = new List<LayoutElement>(),
-            LayoutSettings = "{}",
-            TemplateId = currentPageLayout?.TemplateId ?? 0
-        };
-        
-        // Применяем настройки макета
-        AdjustColumnsLayout(newPageLayout);
-        
-        await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
-        await LoadData();
-        
-        // Переключаемся на новую страницу
-        await SwitchToPage(newPageNumber);
-        
-        return (newPageLayout, GetNextAvailableY(newPageLayout, 0));
-    }
-
-    // Получить следующую доступную Y-позицию в указанной колонке
-    private double GetNextAvailableY(PageLayout pageLayout, int columnIndex)
-    {
-        double baseY = 0.5; // Базовый отступ от верха
-        
-        // Получаем все элементы в указанной колонке
-        var elementsInColumn = GetElementsInColumn(pageLayout, columnIndex);
-        
-        if (!elementsInColumn.Any())
-        {
-            return baseY;
-        }
-        
-        // Находим самый нижний элемент в колонке
-        var lastElement = elementsInColumn.OrderByDescending(e => GetElementPosition(e).Y).First();
-        var lastPosition = GetElementPosition(lastElement);
-        var lastSize = GetElementSize(lastElement);
-        
-        // Возвращаем позицию после последнего элемента с отступом
-        return lastPosition.Y + lastSize.Height + 0.5;
-    }
-
-    // Проверить и исправить переполнение страниц
-    private async Task CheckAndFixOverflow()
-    {
-        bool changesMade = false;
-        
-        // Сортируем страницы по номеру
-        var sortedPages = pageLayouts.OrderBy(p => p.PageNumber).ToList();
-        
-        for (int i = 0; i < sortedPages.Count; i++)
-        {
-            var page = sortedPages[i];
-            
-            // Проверяем все колонки на текущей странице
-            for (int col = 0; col < page.ColumnCount; col++)
-            {
-                var elementsInColumn = GetElementsInColumn(page, col);
-                double totalHeight = 0.5; // Начальный отступ
-                
-                foreach (var element in elementsInColumn.OrderBy(e => GetElementPosition(e).Y))
-                {
-                    var size = GetElementSize(element);
-                    
-                    // Проверяем, помещается ли элемент
-                    if (totalHeight + size.Height > page.TextAreaHeight)
-                    {
-                        // Найдем элементы, которые не помещаются
-                        var elementsToMove = elementsInColumn
-                            .Where(e => GetElementPosition(e).Y >= GetElementPosition(element).Y)
-                            .ToList();
-                        
-                        if (!elementsToMove.Any()) continue;
-                        
-                        // Найдем или создадим следующую страницу
-                        PageLayout nextPage;
-                        if (i + 1 < sortedPages.Count)
-                        {
-                            nextPage = sortedPages[i + 1];
-                        }
-                        else
-                        {
-                            // Создаем новую страницу
-                            int newPageNumber = page.PageNumber + 1;
-                            nextPage = new PageLayout
-                            {
-                                IssueId = issueId,
-                                PageNumber = newPageNumber,
-                                ColumnCount = page.ColumnCount,
-                                LayoutElements = new List<LayoutElement>(),
-                                LayoutSettings = "{}",
-                                TemplateId = page.TemplateId
-                            };
-                            
-                            AdjustColumnsLayout(nextPage);
-                            await LayoutService.CreateOrUpdatePageLayoutAsync(nextPage);
-                            changesMade = true;
-                            sortedPages.Add(nextPage);
-                        }
-                        
-                        // Переносим элементы на следующую страницу
-                        double newPageY = 0.5;
-                        foreach (var elementToMove in elementsToMove)
-                        {
-                            // Удаляем элемент со старой страницы
-                            await LayoutService.RemoveElementFromLayoutAsync(elementToMove.LayoutElementId);
-                            
-                            // Добавляем на новую страницу
-                            if (elementToMove.ArticleId.HasValue)
-                            {
-                                var position = JsonSerializer.Serialize(new { X = GetElementPosition(elementToMove).X, Y = newPageY });
-                                var sizeJson = JsonSerializer.Serialize(new { 
-                                    Width = GetElementSize(elementToMove).Width, 
-                                    Height = GetElementSize(elementToMove).Height 
-                                });
-                                
-                                await LayoutService.AddArticleToLayoutAsync(
-                                    nextPage.PageLayoutId,
-                                    elementToMove.ArticleId.Value,
-                                    position,
-                                    sizeJson
-                                );
-                                
-                                newPageY += GetElementSize(elementToMove).Height + 0.5;
-                            }
-                        }
-                        
-                        break; // Переходим к следующей колонке
-                    }
-                    
-                    totalHeight += size.Height + 0.5;
-                }
-            }
-        }
-        
-        if (changesMade)
-        {
-            await LoadData();
-            ShowNotification("Проверка переполнения завершена. Некоторые статьи были перенесены на следующие страницы.");
-        }
-        else
-        {
-            ShowNotification("Переполнение не обнаружено. Все статьи размещены корректно.");
-        }
-    }
-
-    // Рассчитывает высоту статьи
+    // ТОЧНЫЙ расчет высоты статьи с учетом типографики
     private double CalculateArticleHeight(Article article)
     {
         if (article == null || string.IsNullOrEmpty(article.Content)) 
             return 3.0; // Минимальная высота
         
-        const double charsPerCm = 35.0;
-        const double lineHeightCm = 0.45;
-        const double minHeight = 3.0;
-        const double maxHeight = PAGE_HEIGHT - 4.0;
+        // Параметры типографики
+        double fontSize = currentTextStyle?.BodySize ?? 14.0; // pt
+        double lineSpacing = currentTextStyle?.BodyLineSpacing ?? 1.4;
+        string fontFamily = currentTextStyle?.PrimaryFont ?? "'Times New Roman', serif";
         
-        double estimatedLines = article.Content.Length / charsPerCm;
-        double estimatedHeight = estimatedLines * lineHeightCm;
+        // Ширина колонки в см
+        double columnWidth = currentPageLayout != null 
+            ? GetColumnWidth(currentPageLayout) 
+            : 8.0; // Примерная ширина по умолчанию
         
-        // Добавляем высоту для заголовка и отступов
-        estimatedHeight += 1.0;
+        // Коэффициенты для разных шрифтов
+        double fontWidthFactor = GetFontWidthFactor(fontFamily);
         
-        // Ограничиваем минимальной и максимальной высотой
-        estimatedHeight = Math.Max(minHeight, Math.Min(estimatedHeight, maxHeight));
+        // Базовые метрики для Times New Roman 14pt
+        double baseCharWidth = 0.28; // см на символ для 14pt Times New Roman
+        double baseLineHeight = 0.45; // см на строку для 14pt с межстрочным интервалом 1.4
         
-        return Math.Round(estimatedHeight, 1);
+        // Корректировка на шрифт и размер
+        double charWidth = baseCharWidth * (fontSize / 14.0) * fontWidthFactor;
+        double lineHeight = baseLineHeight * (fontSize / 14.0) * (lineSpacing / 1.4);
+        
+        // Количество символов в строке (округление в меньшую сторону)
+        int charsPerLine = Math.Max(1, (int)(columnWidth / charWidth));
+        
+        // Количество строк в содержании
+        int contentLines = (int)Math.Ceiling((double)article.Content.Length / charsPerLine);
+        
+        // Учитываем:
+        // 1. Заголовок статьи (примерно 2 строки)
+        // 2. Метаданные (автор, дата) - 1 строка
+        // 3. Отступы сверху и снизу статьи (0.5 см каждый = примерно 1 строка)
+        // 4. Отступы между абзацами (примерно 5 абзацев по 0.2 см = 1 строка)
+        
+        int totalLines = contentLines + 2 + 1 + 1 + 1; // +5 дополнительных строк
+        
+        // Общая высота в см
+        double totalHeight = totalLines * lineHeight;
+        
+        // Минимальная и максимальная высота
+        double minHeight = 3.0;
+        double maxHeight = PAGE_HEIGHT - 4.0; // Минус отступы
+        
+        return Math.Round(Math.Max(minHeight, Math.Min(totalHeight, maxHeight)), 1);
+    }
+
+    // Коэффициенты ширины для разных шрифтов
+    private double GetFontWidthFactor(string fontFamily)
+    {
+        if (fontFamily.Contains("Arial") || fontFamily.Contains("Helvetica"))
+            return 0.95; // Уже
+        if (fontFamily.Contains("Georgia"))
+            return 1.05; // Шире
+        if (fontFamily.Contains("Courier") || fontFamily.Contains("monospace"))
+            return 1.2; // Намного шире
+        return 1.0; // Times New Roman - базовая
+    }
+
+    // Получить занятую высоту на странице
+    private double GetOccupiedHeightOnPage(PageLayout pageLayout)
+    {
+        if (pageLayout == null || !pageLayout.LayoutElements.Any())
+            return 0.5; // Базовый отступ сверху
+        
+        double maxBottom = 0;
+        
+        foreach (var element in pageLayout.LayoutElements)
+        {
+            var position = GetElementPosition(element);
+            var size = GetElementSize(element);
+            
+            double elementBottom = position.Y + size.Height;
+            if (elementBottom > maxBottom)
+            {
+                maxBottom = elementBottom;
+            }
+        }
+        
+        // Добавляем отступ между элементами
+        return maxBottom + 0.3;
+    }
+
+    // Получить доступную высоту на странице
+    private double GetAvailableHeightOnPage()
+    {
+        if (currentPageLayout == null) return 0;
+        
+        double occupiedHeight = GetOccupiedHeightOnPage(currentPageLayout);
+        double availableHeight = currentPageLayout.TextAreaHeight - occupiedHeight - 1.0; // -1.0 для нижнего отступа
+        
+        return Math.Max(0, Math.Round(availableHeight, 1));
+    }
+
+    // ОСНОВНОЙ МЕТОД: Размещение статьи на странице с проверкой
+    private async Task HandlePlaceArticle(Article article)
+    {
+        if (article == null || currentPageLayout == null) return;
+        
+        // Рассчитываем точную высоту статьи
+        double articleHeight = CalculateArticleHeight(article);
+        
+        // Получаем доступную высоту на странице
+        double availableHeight = GetAvailableHeightOnPage();
+        
+        // Проверяем, помещается ли статья
+        if (articleHeight <= availableHeight)
+        {
+            // Находим позицию для новой статьи (внизу существующих элементов)
+            double yPosition = GetOccupiedHeightOnPage(currentPageLayout);
+            
+            // Размещаем статью
+            double columnWidth = GetColumnWidth(currentPageLayout);
+            double x = 0; // Первая колонка
+            var position = JsonSerializer.Serialize(new { X = x, Y = yPosition });
+            var size = JsonSerializer.Serialize(new { Width = columnWidth, Height = articleHeight });
+            
+            await LayoutService.AddArticleToLayoutAsync(
+                currentPageLayout.PageLayoutId, 
+                article.ArticleId, 
+                position, 
+                size
+            );
+            
+            await LoadData();
+            ShowNotification($"Статья \"{article.Headline}\" размещена на странице {currentPageLayout.PageNumber}");
+        }
+        else
+        {
+            // Статья не помещается - показываем сообщение
+            ShowNotification($"Статья \"{article.Headline}\" не помещается на страницу. Требуется: {articleHeight:F1} см, доступно: {availableHeight:F1} см. Создайте новую страницу.");
+        }
     }
 
     // Получить элементы в колонке
@@ -1035,6 +960,12 @@
     
         double columnWidth = currentPageLayout?.TextAreaWidth / currentPageLayout?.ColumnCount ?? 5.0;
         return (columnWidth, 3.0);
+    }
+
+    // Проверить и исправить переполнение страниц
+    private async Task CheckAndFixOverflow()
+    {
+        ShowNotification("Функция проверки переполнения отключена. Статьи теперь не добавляются, если не помещаются на страницу.");
     }
 
     private void ValidateLayout(PageLayout layout)

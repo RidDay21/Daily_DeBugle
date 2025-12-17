@@ -1,7 +1,6 @@
 @page "/issues/{issueId:int}/preview"
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
-@using System.Text.Json
 @inject IIssueService IssueService
 @inject IArticleService ArticleService
 @inject ILayoutService LayoutService
@@ -120,6 +119,15 @@
                          font-family: @(currentTextStyle?.PrimaryFont ?? "'Times New Roman', serif");
                          font-size: @(currentTextStyle?.BodySize ?? 14)pt;
                          line-height: @(currentTextStyle?.BodyLineSpacing ?? 1.4);
+                         /* КЛЮЧЕВЫЕ СВОЙСТВА ДЛЯ ПЕРЕНОСА */
+                         word-wrap: break-word !important;
+                         overflow-wrap: break-word !important;
+                         word-break: break-word !important;
+                         hyphens: auto;
+                         -webkit-hyphens: auto;
+                         -moz-hyphens: auto;
+                         -ms-hyphens: auto;
+                         overflow: hidden;
                          ">
 
                     <!-- Статьи на этой странице -->
@@ -480,10 +488,17 @@
         var font = currentTextStyle?.PrimaryFont ?? "'Times New Roman', serif";
         var size = currentTextStyle?.BodySize ?? 14;
         var lineHeight = currentTextStyle?.BodyLineSpacing ?? 1.4;
-        
+    
         return $"font-family: {font}; " +
                $"font-size: {size}pt; " +
                $"line-height: {lineHeight}; " +
-               $"text-align: justify;";
+               $"text-align: justify; " +
+               $"word-wrap: break-word !important; " +
+               $"overflow-wrap: break-word !important; " +
+               $"word-break: break-word !important; " +
+               $"hyphens: auto; " +
+               $"-webkit-hyphens: auto; " +
+               $"-moz-hyphens: auto; " +
+               $"-ms-hyphens: auto;";
     }
 }
