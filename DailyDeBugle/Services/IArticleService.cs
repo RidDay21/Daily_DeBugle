@@ -11,7 +11,7 @@ namespace DailyDeBugle.Services
         Task<Article> CreateArticleAsync(Article article);
         Task<Article> UpdateArticleAsync(Article article);
         Task<List<Article>> GetAllArticlesAsync();
-        Task DeleteArticleAsync(int id);
+        Task<bool> DeleteArticleAsync(int id);
 
         /// <summary>
         /// Получить статьи по статусу (Under Review) 
