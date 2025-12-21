@@ -1,6 +1,4 @@
-using DailyDeBugle.Data;
 using DailyDeBugle.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace DailyDeBugle.Services
 {
@@ -9,6 +7,8 @@ namespace DailyDeBugle.Services
         Task<List<Template>> GetTemplatesAsync();
         Task<Template> GetTemplateByIdAsync(int id);
         Task<Template> CreateTemplateAsync(Template template);
+        Task<Template> UpdateTemplateAsync(Template template); // Добавьте
+        Task DeleteTemplateAsync(int id); // Добавьте
+        Task<int> GetPageLayoutCountForTemplateAsync(int templateId); // Добавьте
     }
-
 }
