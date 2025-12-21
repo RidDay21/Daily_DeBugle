@@ -10,14 +10,15 @@ namespace DailyDeBugle.Services
 
         public IssueService(ApplicationDbContext context)
         {
-            _context = context;
+	        _context = context;
         }
 
         public async Task<List<Issue>> GetAllAsync()
         {
-            return await _context.Issues.Include(i => i.Publication)
-                .OrderByDescending(i => i.IssueDate)
-                .ToListAsync();
+	        return await _context.Issues
+		        .Include(i => i.Publication)
+		        .OrderByDescending(i => i.IssueDate)
+		        .ToListAsync();
         }
 
         public async Task<List<Issue>> GetIssuesAsync(int publicationId)
@@ -104,16 +105,18 @@ namespace DailyDeBugle.Services
         public async Task<Issue> GetFeaturedIssueAsync()
         {
 	        return await _context.Issues
+		        .Include(i => i.Publication)  // ВАЖНО: добавить это
 		        .Include(i => i.Articles)
 		        .Include(i => i.PageLayouts)
 		        .Where(i => i.Status == IssueStatus.Published && i.IsFeatured)
 		        .OrderByDescending(i => i.IssueDate)
 		        .FirstOrDefaultAsync();
         }
-    
+
         public async Task<List<Issue>> GetRecentIssuesAsync(int count)
         {
 	        return await _context.Issues
+		        .Include(i => i.Publication)  // ВАЖНО: добавить это
 		        .Include(i => i.Articles)
 		        .Include(i => i.PageLayouts)
 		        .Where(i => i.Status == IssueStatus.Published)

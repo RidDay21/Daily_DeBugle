@@ -27,6 +27,7 @@ builder.Services.AddServerSideBlazor()
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
 builder.Services.AddScoped<IHeaderFooterService, HeaderFooterService>();

@@ -22,11 +22,7 @@
                     </h1>
                     <p class="lead text-muted">Ваш надежный источник новостей и аналитики в мире технологий</p>
                 </div>
-                <div class="col-md-4 text-end">
-                    <div class="current-date">
-                        <strong>@DateTime.Now.ToString("dddd, dd MMMM yyyy")</strong>
-                        <div class="text-muted">Выпуск №@(latestIssue?.IssueNumber ?? "---")</div>
-                    </div>
+                <div class="col-md-4">
                 </div>
             </div>
         </div>
@@ -41,8 +37,8 @@
                 <div class="card border-0 shadow-lg">
                     <div class="row g-0">
                         <div class="col-md-4">
-                            <div class="featured-cover h-100" 
-                                 style="background-image: url('@GetCoverImageUrl(latestIssue)');">
+                            <div class="card-cover" 
+                                 style="background-image: url('@GetCoverImageUrl(latestIssue)'); height: 150px; background-size: cover; background-position: center; background-repeat: no-repeat;">
                                 <div class="cover-overlay">
                                     <div class="cover-badge">ГЛАВНЫЙ ВЫПУСК</div>
                                 </div>
@@ -143,7 +139,7 @@
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100">
                                 <div class="card-cover" 
-                                     style="background-image: url('@GetCoverImageUrl(issue)'); height: 150px;">
+                                     style="background-image: url('@GetCoverImageUrl(issue)'); height: 150px; background-size: cover; background-position: center; background-repeat: no-repeat;">
                                 </div>
                                 <div class="card-body">
                                     <h5 class="card-title">
@@ -286,15 +282,15 @@
 
     private string GetCoverImageUrl(Issue issue)
     {
+        if (issue == null) 
+            return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+    
+        // Просто возвращаем путь как есть
         if (!string.IsNullOrEmpty(issue.CoverImagePath))
         {
-            // Возвращаем путь к изображению
-            return issue.CoverImagePath.StartsWith("http") 
-                ? issue.CoverImagePath 
-                : $"/images/covers/{issue.CoverImagePath}";
+            return issue.CoverImagePath;
         }
-        
-        // Запасное изображение (базовая градиентная заливка)
+    
         return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
     }
 
