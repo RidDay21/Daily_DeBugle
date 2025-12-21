@@ -199,13 +199,23 @@
                                 @ad.Advertiser
                             </div>
 
-                            <div style="
-                                    font-size: 12px;
-                                    color: #666;
-                                    text-align: center;
-                                ">
-                                @ad.Content
-                            </div>
+                            @if (ad.Type == AdType.Text)
+                            {
+                                <div style="
+                                        font-size: 12px;
+                                        color: #666;
+                                        text-align: center;
+                                    ">
+                                    @ad.Content
+                                </div>
+                            }
+                            else if (ad.Type == AdType.Image && !string.IsNullOrEmpty(ad.Content))
+                            {
+                                <div style="text-align: center; margin: 0.5cm 0;">
+                                    <img src="@ad.Content" alt="@ad.Advertiser" 
+                                         style="max-width: 100%; max-height: 5cm; object-fit: contain;" />
+                                </div>
+                            }
 
                             <div style="
                                     font-size: 10px;
@@ -287,6 +297,16 @@
                                     {
                                         <li class="mb-2">
                                             <strong>@ad.Advertiser</strong>
+                                            <div class="small text-muted">
+                                                @if (ad.Type == AdType.Text)
+                                                {
+                                                    <span>Текстовая реклама</span>
+                                                }
+                                                else if (ad.Type == AdType.Image)
+                                                {
+                                                    <span>Изображение: @System.IO.Path.GetFileName(ad.Content)</span>
+                                                }
+                                            </div>
                                             <div class="small text-muted">Действует до @ad.EndDate.ToString("dd.MM.yyyy")</div>
                                         </li>
                                     }
@@ -337,7 +357,7 @@
                 // Загружаем стили типографики для выпуска
                 currentTextStyle = await TextStyleService.GetStylesForIssueAsync(issueId);
 
-                // Загружаем рекламные блоки
+                // Загружаем реальные рекламные блоки
                 await LoadAdvertisementBlocks();
 
                 await LoadCurrentPageLayout();
@@ -353,30 +373,44 @@
     {
         try
         {
-            // Пока используем заглушку
-            allAds = new List<AdvertisementBlock>
+            // Загружаем макеты страниц для получения размещенной рекламы
+            var layouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+            
+            // Собираем все ID рекламных блоков, которые размещены в выпуске
+            var adIds = new List<int>();
+            foreach (var layout in layouts)
             {
-                new AdvertisementBlock
+                var layoutAdIds = layout.LayoutElements
+                    .Where(le => le.AdvertisementBlockId.HasValue)
+                    .Select(le => le.AdvertisementBlockId.Value)
+                    .ToList();
+                adIds.AddRange(layoutAdIds);
+            }
+            
+            // Убираем дубликаты
+            adIds = adIds.Distinct().ToList();
+            
+            // Загружаем рекламные блоки из базы данных
+            allAds = new List<AdvertisementBlock>();
+            foreach (var adId in adIds)
+            {
+                // Вместо AdService используем LayoutService или прямой доступ к контексту
+                var layoutElements = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+                var adElement = layoutElements
+                    .SelectMany(l => l.LayoutElements)
+                    .FirstOrDefault(le => le.AdvertisementBlockId == adId);
+                
+                if (adElement?.AdvertisementBlock != null)
                 {
-                    AdvertisementBlockId = 1,
-                    Advertiser = "Coffee Shop",
-                    Content = "Лучший кофе в городе! Скидка 20% по промокоду 'GAZETA'",
-                    StartDate = DateTime.Now.AddDays(-7),
-                    EndDate = DateTime.Now.AddDays(30)
-                },
-                new AdvertisementBlock
-                {
-                    AdvertisementBlockId = 2,
-                    Advertiser = "IT Courses",
-                    Content = "Научись программированию за 3 месяца. Гарантия трудоустройства",
-                    StartDate = DateTime.Now.AddDays(-14),
-                    EndDate = DateTime.Now.AddDays(60)
+                    allAds.Add(adElement.AdvertisementBlock);
                 }
-            };
+            }
+            
+            Console.WriteLine($"Загружено {allAds.Count} рекламных блоков для предпросмотра");
         }
-        catch
+        catch (Exception ex)
         {
-            // Если ошибка, создаем пустой список
+            Console.WriteLine($"Ошибка загрузки рекламы для предпросмотра: {ex.Message}");
             allAds = new List<AdvertisementBlock>();
         }
     }
@@ -452,6 +486,18 @@
     private async Task PrintPreview()
     {
         await JS.InvokeVoidAsync("window.print");
+    }
+    
+    private string GetAdFlowStyle(AdvertisementBlock ad, string flowType)
+    {
+        return flowType switch
+        {
+            "Left" => "float: left; margin-right: 0.5cm; margin-bottom: 0.3cm;",
+            "Right" => "float: right; margin-left: 0.5cm; margin-bottom: 0.3cm;",
+            "Top" => "clear: both; margin-bottom: 0.5cm;",
+            "Bottom" => "clear: both; margin-top: 0.5cm;",
+            _ => "clear: both; margin: 0.5cm 0;"
+        };
     }
 
     // Методы для получения стилей
