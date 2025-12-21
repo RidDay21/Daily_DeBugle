@@ -94,11 +94,11 @@
                                        value="@styles.H1Size"
                                        @oninput="@(e => { 
                                            if (int.TryParse(e.Value?.ToString(), out int value)) { 
-                                               styles.H1Size = Math.Clamp(value, 18, 48); 
+                                               styles.H1Size = Math.Clamp(value, 18, 36); 
                                                UpdatePreview(); 
                                            }
                                        })"
-                                       class="form-control" min="18" max="48" step="1" />
+                                       class="form-control" min="18" max="36" step="1" />
                                 <div class="form-text">18-48pt</div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -107,11 +107,11 @@
                                        value="@styles.H2Size"
                                        @oninput="@(e => { 
                                            if (int.TryParse(e.Value?.ToString(), out int value)) { 
-                                               styles.H2Size = Math.Clamp(value, 16, 36); 
+                                               styles.H2Size = Math.Clamp(value, 16, 24); 
                                                UpdatePreview(); 
                                            }
                                        })"
-                                       class="form-control" min="16" max="36" step="1" />
+                                       class="form-control" min="16" max="24" step="1" />
                                 <div class="form-text">16-36pt</div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -120,11 +120,11 @@
                                        value="@styles.BodySize"
                                        @oninput="@(e => { 
                                            if (int.TryParse(e.Value?.ToString(), out int value)) { 
-                                               styles.BodySize = Math.Clamp(value, 12, 18); 
+                                               styles.BodySize = Math.Clamp(value, 12, 16); 
                                                UpdatePreview(); 
                                            }
                                        })"
-                                       class="form-control" min="12" max="18" step="1" />
+                                       class="form-control" min="12" max="16" step="1" />
                                 <div class="form-text">12-18pt</div>
                             </div>
                         </div>
