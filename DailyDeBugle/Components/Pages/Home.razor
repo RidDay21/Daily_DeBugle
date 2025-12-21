@@ -37,11 +37,12 @@
                 <div class="card border-0 shadow-lg">
                     <div class="row g-0">
                         <div class="col-md-4">
-                            <div class="card-cover" 
-                                 style="background-image: url('@GetCoverImageUrl(latestIssue)'); height: 150px; background-size: cover; background-position: center; background-repeat: no-repeat;">
-                                <div class="cover-overlay">
-                                    <div class="cover-badge">ГЛАВНЫЙ ВЫПУСК</div>
-                                </div>
+                            <div class="featured-cover h-100" 
+                                 style="background-image: url('@GetCoverImageUrl(latestIssue)'); 
+                                        background-size: contain; 
+                                        background-position: center; 
+                                        background-repeat: no-repeat;
+                                        background-color: #f8f9fa;">
                             </div>
                         </div>
                         <div class="col-md-8">
@@ -139,7 +140,12 @@
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="card h-100">
                                 <div class="card-cover" 
-                                     style="background-image: url('@GetCoverImageUrl(issue)'); height: 150px; background-size: cover; background-position: center; background-repeat: no-repeat;">
+                                     style="background-image: url('@GetCoverImageUrl(issue)'); 
+                                            height: 150px;
+                                            background-size: contain;
+                                            background-position: center;
+                                            background-repeat: no-repeat;
+                                            background-color: #f8f9fa;">
                                 </div>
                                 <div class="card-body">
                                     <h5 class="card-title">
