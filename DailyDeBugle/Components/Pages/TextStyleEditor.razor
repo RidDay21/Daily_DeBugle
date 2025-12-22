@@ -99,7 +99,7 @@
                                            }
                                        })"
                                        class="form-control" min="18" max="36" step="1" />
-                                <div class="form-text">18-48pt</div>
+                                <div class="form-text">18-36pt</div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Заголовок H2</label>
@@ -112,7 +112,7 @@
                                            }
                                        })"
                                        class="form-control" min="16" max="24" step="1" />
-                                <div class="form-text">16-36pt</div>
+                                <div class="form-text">16-24pt</div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Основной текст</label>
@@ -125,7 +125,7 @@
                                            }
                                        })"
                                        class="form-control" min="12" max="16" step="1" />
-                                <div class="form-text">12-18pt</div>
+                                <div class="form-text">12-16pt</div>
                             </div>
                         </div>
                     </div>
@@ -143,11 +143,11 @@
                                 <input type="number" 
                                        value="@styles.BodyLineSpacing"
                                        @oninput="@(e => { 
-                                           if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
-                                               styles.BodyLineSpacing = Math.Clamp(value, 1.2, 2.0); 
-                                               UpdatePreview(); 
-                                           }
-                                       })"
+                                                     if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
+                                                         styles.BodyLineSpacing = Math.Clamp(value, 1.2, 2.0); 
+                                                         UpdatePreview(); 
+                                                     }
+                                                 })"
                                        class="form-control" min="1.2" max="2.0" step="0.1" />
                                 <div class="form-text">1.2-2.0</div>
                             </div>
@@ -156,34 +156,14 @@
                                 <input type="number" 
                                        value="@styles.HeadingLineSpacing"
                                        @oninput="@(e => { 
-                                           if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
-                                               styles.HeadingLineSpacing = Math.Clamp(value, 1.0, 1.8); 
-                                               UpdatePreview(); 
-                                           }
-                                       })"
+                                                     if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
+                                                         styles.HeadingLineSpacing = Math.Clamp(value, 1.0, 1.8); 
+                                                         UpdatePreview(); 
+                                                     }
+                                                 })"
                                        class="form-control" min="1.0" max="1.8" step="0.1" />
                                 <div class="form-text">1.0-1.8</div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Вместо этого можно добавить информационный блок -->
-                <div class="card mb-4">
-                    <div class="card-header bg-warning">
-                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Информация о макете</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info">
-                            <p class="mb-0">
-                                <i class="bi bi-lightbulb me-2"></i>
-                                <strong>Важно:</strong> Количество колонок настраивается в разделе 
-                                <a href="/issues/@issueId/layout" class="alert-link">Макет выпуска</a>. 
-                                Здесь вы настраиваете только типографику (шрифты, размеры, интервалы).
-                            </p>
-                        </div>
-                        <div class="small text-muted">
-                            <i class="bi bi-check-circle me-1"></i> Текущие настройки колонок будут применены автоматически при сохранении макета
                         </div>
                     </div>
                 </div>
