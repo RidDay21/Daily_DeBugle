@@ -1,0 +1,187 @@
+@page "/ads/create"
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject IAdvertisementService AdService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Создание рекламы</PageTitle>
+
+<div class="container mt-4">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-3">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Новый рекламный блок</h3>
+                </div>
+                
+                <div class="card-body">
+                    <EditForm Model="@newAd" OnValidSubmit="@HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <!-- Рекламодатель -->
+                        <div class="mb-3">
+                            <label class="form-label">Рекламодатель *</label>
+                            <InputText @bind-Value="@newAd.Advertiser" class="form-control" />
+                            <ValidationMessage For="@(() => newAd.Advertiser)" />
+                        </div>
+                        
+                        <!-- Тип рекламы -->
+                        <div class="mb-3">
+                            <label class="form-label">Тип рекламы</label>
+                            <select class="form-select" @bind="@newAd.Type">
+                                <option value="@AdType.Text">Текстовая</option>
+                                <option value="@AdType.Image">Изображение</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Содержимое -->
+                        <div class="mb-3">
+                            <label class="form-label">Содержимое *</label>
+                            
+                            @if (newAd.Type == AdType.Text)
+                            {
+                                <InputTextArea @bind-Value="@newAd.Content" class="form-control" rows="4" />
+                                <div class="form-text">Текст рекламы</div>
+                            }
+                            else
+                            {
+                                <div class="mb-2">
+                                    <InputFile OnChange="@HandleFileSelected" 
+                                               accept=".jpg,.jpeg,.png,.gif" 
+                                               class="form-control" />
+                                </div>
+                                
+                                @if (selectedFile != null)
+                                {
+                                    <div class="alert alert-info p-2 mt-2">
+                                        <small>
+                                            <i class="bi bi-file-earmark-image"></i>
+                                            Выбран файл: @selectedFile.Name 
+                                            (@((selectedFile.Size / 1024f).ToString("0")) KB)
+                                        </small>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <!-- Даты активности -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Дата начала</label>
+                                <InputDate @bind-Value="@newAd.StartDate" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Дата окончания</label>
+                                <InputDate @bind-Value="@newAd.EndDate" class="form-control" />
+                            </div>
+                        </div>
+                        
+                        <!-- Размеры -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Ширина (см)</label>
+                                <InputNumber @bind-Value="@newAd.DefaultWidth" class="form-control" 
+                                           min="1" max="20" step="0.5" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Высота (см)</label>
+                                <InputNumber @bind-Value="@newAd.DefaultHeight" class="form-control" 
+                                           min="1" max="20" step="0.5" />
+                            </div>
+                        </div>
+                        
+                        <!-- Кнопки -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                Создать рекламу
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" 
+                                    @onclick="NavigateToAdsList">
+                                Отмена
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private AdvertisementBlock newAd = new()
+    {
+        StartDate = DateTime.Today,
+        EndDate = DateTime.Today.AddDays(30),
+        Type = AdType.Text,
+        DefaultWidth = 5.0,
+        DefaultHeight = 3.0
+    };
+    
+    private IBrowserFile selectedFile;
+    private string errorMessage = "";
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var uploadsDir = Path.Combine("wwwroot", "uploads", "ads");
+        Directory.CreateDirectory(uploadsDir);
+
+        var filePath = Path.Combine(uploadsDir, file.Name);
+        await using var fs = new FileStream(filePath, FileMode.Create);
+        await file.OpenReadStream().CopyToAsync(fs);
+
+        newAd.Content = $"/uploads/ads/{file.Name}";
+        selectedFile = file;
+        errorMessage = "";
+        Console.WriteLine($"Файл сохранен: {newAd.Content}");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        errorMessage = "";
+        
+        try
+        {
+            Console.WriteLine("=== Создание рекламы ===");
+            Console.WriteLine($"Рекламодатель: {newAd.Advertiser}");
+            Console.WriteLine($"Тип: {newAd.Type}");
+            Console.WriteLine($"Содержимое: {newAd.Content}");
+            
+            // Если это изображение и не загружено
+            if (newAd.Type == AdType.Image && string.IsNullOrEmpty(newAd.Content))
+            {
+                errorMessage = "Для рекламного блока с изображением необходимо выбрать файл";
+                return;
+            }
+            
+            await AdService.CreateAdAsync(newAd);
+            
+            Console.WriteLine("Реклама успешно создана!");
+            Navigation.NavigateTo("/issues");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка: {ex.Message}";
+            Console.WriteLine($"Ошибка: {ex.Message}");
+        }
+    }
+
+    private void NavigateToAdsList()
+    {
+        Navigation.NavigateTo("/issues");
+    }
+    
+    private void ClearError()
+    {
+        errorMessage = "";
+    }
+}

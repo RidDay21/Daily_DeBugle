@@ -139,7 +139,7 @@
                                                                StateHasChanged(); 
                                                            })"
                                                 class="form-control" 
-                                                min="1" max="4" />
+                                                min="2" max="4" />
                                     <div class="form-text">
                                         @if (currentPageLayout != null)
                                         {
@@ -150,13 +150,15 @@
                                 
                                 <div class="col-md-6">
                                     <label class="form-label">Шаблон</label>
-                                    <InputSelect @bind-Value="@selectedTemplateId" class="form-select">
+                                    <select @onchange="ApplyTemplate" class="form-select" value="@(currentPageLayout?.TemplateId?.ToString() ?? "")">
                                         <option value="">-- Без шаблона --</option>
                                         @foreach (var template in templates)
                                         {
-                                            <option value="@template.TemplateId">@template.Name</option>
+                                            <option value="@template.TemplateId" selected="@(currentPageLayout?.TemplateId == template.TemplateId)">
+                                                @template.Name (@template.DefaultColumnCount колонок)
+                                            </option>
                                         }
-                                    </InputSelect>
+                                    </select>
                                 </div>
                                 
                                 <!-- Кнопки управления -->
@@ -660,6 +662,42 @@
         await LoadCurrentPageLayout();
     }
     
+    private async Task ApplyTemplate(ChangeEventArgs e)
+    {
+        if (e.Value != null && !string.IsNullOrEmpty(e.Value.ToString()))
+        {
+            var templateId = int.Parse(e.Value.ToString() ?? "0");
+        
+            if (templateId > 0 && currentPageLayout != null)
+            {
+                var selectedTemplate = templates.FirstOrDefault(t => t.TemplateId == templateId);
+            
+                if (selectedTemplate != null)
+                {
+                    // Применяем только количество колонок из шаблона
+                    currentPageLayout.ColumnCount = selectedTemplate.DefaultColumnCount;
+                    currentPageLayout.TemplateId = templateId;
+                
+                    // Автоматически настраиваем макет
+                    AdjustColumnsLayout();
+                
+                    // Сохраняем изменения
+                    await LayoutService.CreateOrUpdatePageLayoutAsync(currentPageLayout);
+                    await LoadData();
+                
+                    ShowNotification($"Шаблон '{selectedTemplate.Name}' применен. Колонок: {selectedTemplate.DefaultColumnCount}");
+                }
+            }
+            else if (templateId == 0 && currentPageLayout != null)
+            {
+                // Если выбран "Без шаблона"
+                currentPageLayout.TemplateId = null;
+                await LayoutService.CreateOrUpdatePageLayoutAsync(currentPageLayout);
+                ShowNotification("Шаблон отключен");
+            }
+        }
+    }
+    
     private double GetColumnWidth()
     {
         return GetColumnWidth(currentPageLayout);
@@ -1038,7 +1076,7 @@
             ColumnCount = currentPageLayout?.ColumnCount ?? 2,
             LayoutElements = new List<LayoutElement>(),
             LayoutSettings = "{}",
-            TemplateId = 0
+            TemplateId = 1 // ЯВНО УСТАНАВЛИВАЕМ TemplateId = 1
         };
 
         AdjustColumnsLayout(newPageLayout);

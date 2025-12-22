@@ -15,7 +15,9 @@ public class TemplateService : ITemplateService
 
     public async Task<List<Template>> GetTemplatesAsync()
     {
-        return await _context.Templates.ToListAsync();
+        return await _context.Templates
+            .OrderByDescending(t => t.UpdatedAt)
+            .ToListAsync();
     }
 
     public async Task<Template> GetTemplateByIdAsync(int id)
@@ -28,5 +30,31 @@ public class TemplateService : ITemplateService
         _context.Templates.Add(template);
         await _context.SaveChangesAsync();
         return template;
+    }
+
+    // Добавьте эти методы:
+
+    public async Task<Template> UpdateTemplateAsync(Template template)
+    {
+        template.UpdatedAt = DateTime.UtcNow;
+        _context.Templates.Update(template);
+        await _context.SaveChangesAsync();
+        return template;
+    }
+
+    public async Task DeleteTemplateAsync(int id)
+    {
+        var template = await _context.Templates.FindAsync(id);
+        if (template != null)
+        {
+            _context.Templates.Remove(template);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<int> GetPageLayoutCountForTemplateAsync(int templateId)
+    {
+        return await _context.PageLayouts
+            .CountAsync(p => p.TemplateId == templateId);
     }
 }

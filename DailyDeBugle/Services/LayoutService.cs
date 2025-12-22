@@ -17,27 +17,6 @@ namespace DailyDeBugle.Services
         // === Базовые CRUD операции ===
         public async Task CreateOrUpdatePageLayoutAsync(PageLayout layout)
         {
-            // Если TemplateId = 0 или null, находим подходящий шаблон
-            if (layout.TemplateId == 0)
-            {
-                // Пробуем найти существующий шаблон
-                var availableTemplate = await _context.Templates
-                    .OrderBy(t => t.TemplateId)
-                    .FirstOrDefaultAsync();
-        
-                if (availableTemplate != null)
-                {
-                    layout.TemplateId = availableTemplate.TemplateId;
-                }
-                else
-                {
-                    // Если шаблонов вообще нет в базе
-                    // Нужно либо создать шаблон по умолчанию, либо убрать ограничение
-                    throw new InvalidOperationException(
-                        "Не найден ни один шаблон. Создайте хотя бы один шаблон в системе.");
-                }
-            }
-    
             if (layout.PageLayoutId == 0)
             {
                 _context.PageLayouts.Add(layout);
@@ -50,7 +29,6 @@ namespace DailyDeBugle.Services
             await _context.SaveChangesAsync();
         }
 
-        // ДОБАВЛЕН: Метод удаления макета страницы
         public async Task DeletePageLayoutAsync(int pageLayoutId)
         {
             var layout = await _context.PageLayouts
@@ -82,7 +60,7 @@ namespace DailyDeBugle.Services
             return await _context.PageLayouts
                 .Include(pl => pl.LayoutElements)
                 .ThenInclude(le => le.Article)
-                .Include(pl => pl.LayoutElements)  // ДОБАВЬТЕ ЭТОТ БЛОК
+                .Include(pl => pl.LayoutElements)
                 .ThenInclude(le => le.AdvertisementBlock)
                 .Where(pl => pl.IssueId == issueId)
                 .OrderBy(pl => pl.PageNumber)
@@ -169,7 +147,6 @@ namespace DailyDeBugle.Services
         
         public async Task<PageLayout> CreatePageLayoutAsync(PageLayout layout)
         {
-            // ФИКС: Обработка TemplateId
             if (layout.TemplateId == 0)
             {
                 layout.TemplateId = 0;
@@ -189,73 +166,6 @@ namespace DailyDeBugle.Services
                 .ToListAsync();
         }
 
-        public async Task<PageLayout> ConfigurePageLayoutAsync(int pageLayoutId, PageLayoutConfiguration config)
-        {
-            var layout = await _context.PageLayouts.FindAsync(pageLayoutId);
-            if (layout == null)
-                throw new ArgumentException("Page layout not found");
-
-            // Обновляем настройки макета
-            layout.ColumnCount = config.ColumnCount;
-            layout.MarginTop = config.MarginTop;
-            layout.MarginBottom = config.MarginBottom;
-            layout.MarginLeft = config.MarginLeft;
-            layout.MarginRight = config.MarginRight;
-            layout.ColumnGap = config.ColumnGap;
-            layout.TextAreaWidth = config.TextAreaWidth;
-            layout.TextAreaHeight = config.TextAreaHeight;
-            layout.ImageAreaWidth = config.ImageAreaWidth;
-            layout.ImageAreaHeight = config.ImageAreaHeight;
-            
-            // ФИКС: Обработка TemplateId
-            if (config.TemplateId.HasValue && config.TemplateId.Value > 0)
-            {
-                layout.TemplateId = config.TemplateId.Value;
-            }
-            else
-            {
-                layout.TemplateId = 0;
-            }
-
-            layout.UpdatedAt = DateTime.UtcNow;
-
-            // Сохраняем настройки в JSON
-            var layoutSettings = new
-            {
-                config.ColumnCount,
-                config.MarginTop,
-                config.MarginBottom,
-                config.MarginLeft,
-                config.MarginRight,
-                config.ColumnGap,
-                config.TextAreaWidth,
-                config.TextAreaHeight,
-                config.ImageAreaWidth,
-                config.ImageAreaHeight
-            };
-            
-            layout.LayoutSettings = JsonSerializer.Serialize(layoutSettings);
-
-            await _context.SaveChangesAsync();
-            return layout;
-        }
-
-        public async Task<bool> ValidateLayoutConfigurationAsync(PageLayoutConfiguration config)
-        {
-            // Проверяем валидность конфигурации
-            if (config.ColumnCount < 1 || config.ColumnCount > 4)
-                return false;
-
-            if (config.MarginTop < 0 || config.MarginBottom < 0 || 
-                config.MarginLeft < 0 || config.MarginRight < 0)
-                return false;
-
-            if (config.TextAreaWidth <= 0 || config.TextAreaHeight <= 0)
-                return false;
-
-            return true;
-        }
-
         public async Task<List<string>> CheckLayoutConflictsAsync(int pageLayoutId)
         {
             var conflicts = new List<string>();
@@ -269,7 +179,7 @@ namespace DailyDeBugle.Services
                 return conflicts;
             }
 
-            // Проверяем, помещаются ли элементы в новые границы
+            // Проверяем, помещаются ли элементы в границы
             foreach (var element in layout.LayoutElements)
             {
                 try
@@ -315,7 +225,6 @@ namespace DailyDeBugle.Services
 
         public async Task<bool> CheckTextOverflowAsync(LayoutElement element)
         {
-            // Улучшенная проверка из обеих версий
             if (element.ArticleId == null) return false;
             
             var article = await _context.Articles.FindAsync(element.ArticleId);
@@ -340,7 +249,6 @@ namespace DailyDeBugle.Services
             var hasOverflow = await CheckTextOverflowAsync(element);
             if (hasOverflow)
             {
-                // Комбинированный подход: увеличиваем размер и устанавливаем auto-height
                 var size = JsonSerializer.Deserialize<LayoutSize>(element.Size);
                 size.Width += 50;
                 element.Size = JsonSerializer.Serialize(new { Width = size.Width, Height = "auto" });
@@ -364,6 +272,24 @@ namespace DailyDeBugle.Services
                 .Where(a => a.IssueId == issueId && a.Status == ArticleStatus.Approved)
                 .ToListAsync();
         }
+        
+        // Добавим этот метод в LayoutService
+        public async Task AddAdvertisementToLayoutAsync(int pageLayoutId, int advertisementId, string position, string size, string textFlow = "None")
+        {
+            var element = new LayoutElement
+            {
+                PageLayoutId = pageLayoutId,
+                AdvertisementBlockId = advertisementId,
+                Type = ElementType.AdBlock,
+                Position = position,
+                Size = size,
+                TextFlow = textFlow,
+                CreatedDate = DateTime.Now
+            };
+
+            _context.LayoutElements.Add(element);
+            await _context.SaveChangesAsync();
+        }
 
         public async Task<List<Template>> GetTemplatesAsync()
         {
@@ -374,6 +300,13 @@ namespace DailyDeBugle.Services
         {
             return await _context.Templates.ToListAsync();
         }
+
+        public async Task<LayoutElement?> GetLayoutElementAsync(int layoutElementId)
+        {
+            return await _context.LayoutElements
+                .Include(le => le.AdvertisementBlock)
+                .FirstOrDefaultAsync(le => le.LayoutElementId == layoutElementId);
+        }
     }
 
     // Вспомогательные классы для позиционирования
@@ -382,6 +315,7 @@ namespace DailyDeBugle.Services
         public double X { get; set; }
         public double Y { get; set; }
     }
+    
 
     public class LayoutSize
     {

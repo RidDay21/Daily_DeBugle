@@ -21,8 +21,10 @@ namespace DailyDeBugle.Models
         // Внешние ключи
         public int IssueId { get; set; }
         public Issue Issue { get; set; } = null!;
-        public int TemplateId { get; set; }
-        public Template Template { get; set; } = null!;
+
+        public int? TemplateId { get; set; } 
+        
+        public Template? Template { get; set; }
         
         // Навигационные свойства
         public List<LayoutElement> LayoutElements { get; set; } = new();

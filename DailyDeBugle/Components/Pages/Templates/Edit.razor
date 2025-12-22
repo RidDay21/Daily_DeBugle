@@ -1,0 +1,232 @@
+@page "/templates/edit/{templateId:int}"
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject ITemplateService TemplateService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Редактирование шаблона</PageTitle>
+
+<div class="container mt-4">
+    <h2>Редактирование шаблона</h2>
+
+    @if (template == null)
+    {
+        <div class="alert alert-warning">
+            Шаблон не найден
+        </div>
+        <button class="btn btn-outline-secondary" @onclick="NavigateBack">
+            Назад к списку
+        </button>
+    }
+    else
+    {
+        <EditForm Model="@template" OnValidSubmit="@HandleUpdateTemplate">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="row mt-4">
+                <!-- Левая колонка: Основные настройки -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Основные параметры</h5>
+                            <span class="badge bg-secondary">ID: @template.TemplateId</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="templateName" class="form-label">Название шаблона</label>
+                                <InputText id="templateName" @bind-Value="@template.Name" 
+                                         class="form-control" />
+                                <ValidationMessage For="@(() => template.Name)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="templateDescription" class="form-label">Описание</label>
+                                <InputTextArea id="templateDescription" @bind-Value="@template.Description"
+                                             class="form-control" rows="3" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="columnCount" class="form-label">Количество колонок</label>
+                                <InputSelect id="columnCount" @bind-Value="@template.DefaultColumnCount" 
+                                           class="form-select">
+                                    <option value="1">1 колонка</option>
+                                    <option value="2">2 колонки</option>
+                                    <option value="3">3 колонки</option>
+                                    <option value="4">4 колонки</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Правая колонка: Детальные настройки -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Настройки страницы</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>Отступы (см)</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small">Верхний</label>
+                                    <InputNumber @bind-Value="@template.DefaultMarginTop" 
+                                               class="form-control form-control-sm" 
+                                               min="0.5" max="5" step="0.1" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Нижний</label>
+                                    <InputNumber @bind-Value="@template.DefaultMarginBottom" 
+                                               class="form-control form-control-sm" 
+                                               min="0.5" max="5" step="0.1" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Левый</label>
+                                    <InputNumber @bind-Value="@template.DefaultMarginLeft" 
+                                               class="form-control form-control-sm" 
+                                               min="0.5" max="5" step="0.1" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Правый</label>
+                                    <InputNumber @bind-Value="@template.DefaultMarginRight" 
+                                               class="form-control form-control-sm" 
+                                               min="0.5" max="5" step="0.1" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="columnGap" class="form-label">Промежуток между колонками (см)</label>
+                                <InputNumber id="columnGap" @bind-Value="@template.DefaultColumnGap" 
+                                           class="form-control" min="0.1" max="2" step="0.1" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Информация</label>
+                                <div class="small text-muted">
+                                    <div>Создан: @template.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                                    <div>Изменен: @template.UpdatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                                    <div>Используется в: @pageLayoutsCount страницах</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        <span>Сохранение...</span>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                        </svg>
+                        <span>Сохранить изменения</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">
+                    Отмена
+                </button>
+                <button type="button" class="btn btn-danger ms-auto" @onclick="HandleDeleteTemplate" 
+                        disabled="@(pageLayoutsCount > 0)">
+                    @if (pageLayoutsCount > 0)
+                    {
+                        <span title="Нельзя удалить шаблон, который используется">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash me-1" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                            Удалить
+                        </span>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash me-1" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                        </svg>
+                        <span>Удалить шаблон</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int templateId { get; set; }
+
+    private Template template;
+    private int pageLayoutsCount = 0;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplate();
+    }
+
+    private async Task LoadTemplate()
+    {
+        template = await TemplateService.GetTemplateByIdAsync(templateId);
+        
+        if (template != null)
+        {
+            // Подсчитываем количество страниц, использующих этот шаблон
+            pageLayoutsCount = await TemplateService.GetPageLayoutCountForTemplateAsync(templateId);
+        }
+    }
+
+    private async Task HandleUpdateTemplate()
+    {
+        isSaving = true;
+        try
+        {
+            template.UpdatedAt = DateTime.UtcNow;
+            await TemplateService.UpdateTemplateAsync(template);
+            Navigation.NavigateTo("/templates");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка при обновлении шаблона: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleDeleteTemplate()
+    {
+        if (pageLayoutsCount > 0)
+        {
+            return; // Кнопка и так отключена, но на всякий случай
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Вы уверены, что хотите удалить шаблон \"{template.Name}\"?");
+        
+        if (confirmed)
+        {
+            await TemplateService.DeleteTemplateAsync(templateId);
+            Navigation.NavigateTo("/templates");
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/templates");
+    }
+
+    // Добавьте инжект для JSRuntime если его нет
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; }
+}

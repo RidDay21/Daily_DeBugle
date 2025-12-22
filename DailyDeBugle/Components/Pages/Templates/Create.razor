@@ -105,40 +105,6 @@
             </div>
         </div>
 
-        <!-- Предпросмотр -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Предпросмотр шаблона</h5>
-            </div>
-            <div class="card-body">
-                <div class="template-preview">
-                    <div class="preview-header">
-                        <strong>@(string.IsNullOrEmpty(newTemplate.Name) ? "Название шаблона" : newTemplate.Name)</strong>
-                        <small class="text-muted">Колонок: @newTemplate.DefaultColumnCount</small>
-                    </div>
-                    <div class="preview-page" style="height: 200px;">
-                        <div class="page-margins" style="padding: @(newTemplate.DefaultMarginTop)cm @(newTemplate.DefaultMarginRight)cm @(newTemplate.DefaultMarginBottom)cm @(newTemplate.DefaultMarginLeft)cm">
-                            @for (int i = 0; i < newTemplate.DefaultColumnCount; i++)
-                            {
-                                <div class="preview-column" 
-                                     style="width: calc((100% - @((newTemplate.DefaultColumnCount - 1) * newTemplate.DefaultColumnGap)))cm / @newTemplate.DefaultColumnCount);
-                                            margin-right: @(i < newTemplate.DefaultColumnCount - 1 ? newTemplate.DefaultColumnGap + "cm" : "0")">
-                                    <div class="column-content">
-                                        <div class="text-line"></div>
-                                        <div class="text-line" style="width: 80%"></div>
-                                        <div class="text-line"></div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="preview-footer text-muted">
-                        <small>Область текста: @CalculateTextAreaWidth() см × @CalculateTextAreaHeight() см | Ширина колонки: @CalculateColumnWidth() см</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Кнопки действий -->
         <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary" disabled="@isSaving">
@@ -217,25 +183,6 @@
         Navigation.NavigateTo("/templates");
     }
 
-    private double CalculateTextAreaWidth()
-    {
-        const double pageWidth = 21.0; // см, ширина A4
-        return Math.Round(pageWidth - newTemplate.DefaultMarginLeft - newTemplate.DefaultMarginRight, 1);
-    }
-
-    private double CalculateTextAreaHeight()
-    {
-        const double pageHeight = 29.7; // см, высота A4
-        return Math.Round(pageHeight - newTemplate.DefaultMarginTop - newTemplate.DefaultMarginBottom, 1);
-    }
-
-    private double CalculateColumnWidth()
-    {
-        double totalGaps = (newTemplate.DefaultColumnCount - 1) * newTemplate.DefaultColumnGap;
-        double availableWidth = CalculateTextAreaWidth() - totalGaps;
-        double columnWidth = availableWidth / newTemplate.DefaultColumnCount;
-        return Math.Round(columnWidth, 1);
-    }
 }
 
 <style>
