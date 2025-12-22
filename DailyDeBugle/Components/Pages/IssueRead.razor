@@ -58,7 +58,7 @@
                 </h5>
             </div>
             <div class="text-muted small">
-                Размер: Газета (42×29.7 см)
+                Размер: А4 (42×29.7 см)
             </div>
         </div>
     </div>
@@ -220,6 +220,85 @@
                     </div>
                 </div>
             }
+        </div>
+    </div>
+
+    <!-- Панель информации (как в предпросмотре) -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Содержимое страницы @currentPageNumber</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Статьи:</h6>
+                            @{
+                                var articlesList = GetArticlesForPage(currentPageNumber);
+                            }
+
+                            @if (articlesList.Any())
+                            {
+                                <ul class="list-unstyled">
+                                    @foreach (var article in articlesList)
+                                    {
+                                        <li class="mb-2">
+                                            <strong>@article.Headline</strong>
+                                            <div class="small text-muted">@article.Author?.Username • @article.Status</div>
+                                            @if (article.ContinuedFromArticleId.HasValue)
+                                            {
+                                                <div class="small text-info">↑ Продолжение статьи</div>
+                                            }
+                                            @if (article.ContinuedOnArticleId.HasValue || article.ContinuedOnPage.HasValue)
+                                            {
+                                                <div class="small text-warning">↓ Имеет продолжение</div>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Нет статей на этой странице</p>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Рекламные блоки:</h6>
+                            @{
+                                var adsList = GetAdsForPage(currentPageNumber);
+                            }
+
+                            @if (adsList.Any())
+                            {
+                                <ul class="list-unstyled">
+                                    @foreach (var ad in adsList)
+                                    {
+                                        <li class="mb-2">
+                                            <strong>@ad.Advertiser</strong>
+                                            <div class="small text-muted">
+                                                @if (ad.Type == AdType.Text)
+                                                {
+                                                    <span>Текстовая реклама</span>
+                                                }
+                                                else if (ad.Type == AdType.Image)
+                                                {
+                                                    <span>Изображение: @System.IO.Path.GetFileName(ad.Content)</span>
+                                                }
+                                            </div>
+                                            <div class="small text-muted">Действует до @ad.EndDate.ToString("dd.MM.yyyy")</div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Нет рекламы на этой странице</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
