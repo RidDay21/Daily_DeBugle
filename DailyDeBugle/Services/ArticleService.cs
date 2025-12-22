@@ -67,13 +67,75 @@ namespace DailyDeBugle.Services
             return article;
         }
 
-        public async Task DeleteArticleAsync(int id)
+        public async Task<bool> DeleteArticleAsync(int id)
         {
-            var article = await _context.Articles.FindAsync(id);
-            if (article != null)
+            try
             {
+                var article = await _context.Articles
+                    .Include(a => a.Comments)
+                    .Include(a => a.LayoutElements)
+                    .Include(a => a.ArticleParts)
+                    .FirstOrDefaultAsync(a => a.ArticleId == id);
+                
+                if (article == null)
+                {
+                    return false;
+                }
+
+                // Удаляем связанные комментарии
+                if (article.Comments.Any())
+                {
+                    _context.Comments.RemoveRange(article.Comments);
+                }
+                
+                // Удаляем связанные элементы макета
+                if (article.LayoutElements.Any())
+                {
+                    _context.LayoutElements.RemoveRange(article.LayoutElements);
+                }
+                
+                // Удаляем части статьи
+                if (article.ArticleParts.Any())
+                {
+                    _context.ArticleParts.RemoveRange(article.ArticleParts);
+                }
+                
+                // Обнуляем связи с продолжениями
+                if (article.ContinuedFromArticleId.HasValue)
+                {
+                    var originalArticle = await _context.Articles
+                        .FirstOrDefaultAsync(a => a.ArticleId == article.ContinuedFromArticleId.Value);
+                    if (originalArticle != null)
+                    {
+                        originalArticle.HasContinuation = false;
+                        originalArticle.ContinuedOnArticleId = null;
+                    }
+                }
+                
+                if (article.ContinuedOnArticleId.HasValue)
+                {
+                    var continuation = await _context.Articles
+                        .FirstOrDefaultAsync(a => a.ArticleId == article.ContinuedOnArticleId.Value);
+                    if (continuation != null)
+                    {
+                        continuation.ContinuedFromArticleId = null;
+                    }
+                }
+                
+                // Удаляем саму статью
                 _context.Articles.Remove(article);
+                
                 await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting article #{id}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return false;
             }
         }
 
