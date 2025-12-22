@@ -105,7 +105,7 @@ namespace DailyDeBugle.Data
                     .HasDefaultValueSql("NOW()");
             });
 
-            // ВАЖНО: КОНФИГУРАЦИЯ ДЛЯ LAYOUT ELEMENT
+            // ИСПРАВЛЕННАЯ КОНФИГУРАЦИЯ ДЛЯ LAYOUT ELEMENT
             modelBuilder.Entity<LayoutElement>(entity =>
             {
                 entity.HasKey(e => e.LayoutElementId);
@@ -116,11 +116,11 @@ namespace DailyDeBugle.Data
                     .HasForeignKey(e => e.PageLayoutId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // Связь с Article - только ОДНА
+                // ИСПРАВЛЕНО: Связь с Article - каскадное удаление
                 entity.HasOne(e => e.Article)
                     .WithMany()
                     .HasForeignKey(e => e.ArticleId)
-                    .OnDelete(DeleteBehavior.Restrict)
+                    .OnDelete(DeleteBehavior.Cascade)  // Изменено с Restrict на Cascade
                     .IsRequired(false);
 
                 // Связь с AdvertisementBlock - только ОДНА
@@ -142,11 +142,6 @@ namespace DailyDeBugle.Data
                 entity.Property(e => e.Size)
                     .IsRequired();
             });
-
-            modelBuilder.Entity<Article>()
-                .HasOne(a => a.Author)
-                .WithMany(u => u.Articles)
-                .HasForeignKey(a => a.AuthorId);
 
             modelBuilder.Entity<GlobalTextStyle>()
                 .HasOne(g => g.Issue)

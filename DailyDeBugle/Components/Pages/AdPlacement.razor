@@ -118,8 +118,9 @@
                             {
                                 var canPlace = currentPageLayout != null && 
                                              CanPlaceAdOnPage(ad, selectedPageNumber);
+                                var alreadyOnPage = IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber);
                                 
-                                <div class="list-group-item @(canPlace ? "" : "opacity-75")">
+                                <div class="list-group-item @(canPlace && !alreadyOnPage ? "" : "opacity-75")">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
                                             <h6 class="mb-1">@ad.Advertiser</h6>
@@ -157,7 +158,17 @@
                                             @if (currentPageLayout != null)
                                             {
                                                 <div class="small mt-1">
-                                                    @if (canPlace)
+                                                    @if (alreadyOnPage)
+                                                    {
+                                                        <span class="text-warning">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-exclamation-triangle me-1" viewBox="0 0 16 16">
+                                                                <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/>
+                                                                <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z"/>
+                                                            </svg>
+                                                            Уже размещена на странице @selectedPageNumber
+                                                        </span>
+                                                    }
+                                                    else if (canPlace)
                                                     {
                                                         <span class="text-success">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16">
@@ -174,18 +185,25 @@
                                                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                                                 <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
                                                             </svg>
-                                                            Не поместится на страницу @selectedPageNumber
+                                                            @GetPlacementStatusMessage(ad)
                                                         </span>
                                                     }
                                                 </div>
                                             }
                                         </div>
                                         <div>
-                                            <button class="btn btn-sm @(canPlace ? "btn-outline-primary" : "btn-outline-secondary")"
+                                            <button class="btn btn-sm @(canPlace && !alreadyOnPage ? "btn-outline-primary" : "btn-outline-secondary")"
                                                     @onclick="() => AddAdToPage(ad, selectedPageNumber)"
-                                                    disabled="@(!canPlace)"
-                                                    title="@(canPlace ? "Добавить на страницу" : GetPlacementWarning(ad))">
-                                                Добавить на стр. @selectedPageNumber
+                                                    disabled="@(!canPlace || alreadyOnPage)"
+                                                    title="@GetPlacementTooltip(ad)">
+                                                @if (alreadyOnPage)
+                                                {
+                                                    <span>Уже на стр. @selectedPageNumber</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Добавить на стр. @selectedPageNumber</span>
+                                                }
                                             </button>
                                         </div>
                                     </div>
@@ -316,7 +334,7 @@
                                                 <span>Размер: @placement.Width × @placement.Height см</span>
                                             </div>
                                             <div class="small text-muted mt-1">
-                                                Позиция: (@placement.PositionX.ToString("F1"), @placement.PositionY.ToString("F1}")) см
+                                                Позиция: (@placement.PositionX.ToString("F1"), @placement.PositionY.ToString("F1")) см
                                             </div>
                                         </div>
                                         <div>
@@ -373,7 +391,7 @@
     private int totalPages = 1;
 
     // Константы для размеров страницы (А4)
-    private const double PAGE_WIDTH = 21.0;    // см, ширина страницы А4
+    private const double PAGE_WIDTH = 42.0;    // см, ширина страницы А4
     private const double PAGE_HEIGHT = 29.7;   // см, высота страницы А4
 
     protected override async Task OnInitializedAsync()
@@ -450,6 +468,13 @@
         return pageAds.Max(p => p.PositionY + p.Height);
     }
 
+    // Проверка, размещена ли уже реклама на странице
+    private bool IsAdAlreadyOnPage(int adId, int pageNumber)
+    {
+        return placements.Any(p => p.PageNumber == pageNumber && 
+                                  p.AdvertisementBlock.AdvertisementBlockId == adId);
+    }
+
     private async Task AddAdToPage(AdvertisementBlock ad, int pageNumber)
     {
         try
@@ -458,6 +483,13 @@
             if (pageLayout == null)
             {
                 message = $"Сначала создайте макет для страницы {pageNumber}";
+                return;
+            }
+
+            // Проверяем, не размещена ли уже эта реклама на странице
+            if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, pageNumber))
+            {
+                placementWarning = $"Реклама '{ad.Advertiser}' уже размещена на странице {pageNumber}";
                 return;
             }
 
@@ -496,6 +528,12 @@
     {
         if (currentPageLayout == null) return false;
         
+        // Проверяем, не размещена ли уже эта реклама на странице
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, pageNumber))
+        {
+            return false;
+        }
+        
         // Проверяем ширину рекламы
         double columnWidth = GetColumnWidth();
         if (ad.DefaultWidth > columnWidth)
@@ -520,6 +558,12 @@
             return "Макет страницы не создан";
         }
         
+        // Проверяем, не размещена ли уже реклама на странице
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
+        {
+            return $"Реклама '{ad.Advertiser}' уже размещена на этой странице";
+        }
+        
         double columnWidth = GetColumnWidth();
         double availableHeight = GetAvailableHeightOnPage();
         
@@ -540,13 +584,51 @@
             : "Помещается на страницу";
     }
 
+    private string GetPlacementStatusMessage(AdvertisementBlock ad)
+    {
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
+        {
+            return $"Уже на странице {selectedPageNumber}";
+        }
+        
+        if (currentPageLayout == null)
+        {
+            return "Макет страницы не создан";
+        }
+        
+        double columnWidth = GetColumnWidth();
+        double availableHeight = GetAvailableHeightOnPage();
+        
+        if (ad.DefaultWidth > columnWidth)
+        {
+            return $"Слишком широкая ({ad.DefaultWidth} см > {columnWidth:F1} см)";
+        }
+        
+        if (ad.DefaultHeight > availableHeight)
+        {
+            return $"Слишком высокая ({ad.DefaultHeight} см > {availableHeight:F1} см)";
+        }
+        
+        return "Поместится на страницу";
+    }
+
+    private string GetPlacementTooltip(AdvertisementBlock ad)
+    {
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
+        {
+            return "Эта реклама уже размещена на странице. На одной странице может быть только один экземпляр конкретной рекламы.";
+        }
+        
+        return GetPlacementWarning(ad);
+    }
+
     private async Task RemovePlacement(AdvertisementPlacementDto placement)
     {
         try
         {
             await LayoutService.RemoveElementFromLayoutAsync(placement.LayoutElementId);
             await LoadPlacements();
-            message = "Реклама удалена";
+            message = $"Реклама '{placement.AdvertisementBlock.Advertiser}' удалена со страницы {placement.PageNumber}";
         }
         catch (Exception ex)
         {

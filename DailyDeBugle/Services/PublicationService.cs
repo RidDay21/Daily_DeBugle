@@ -77,21 +77,48 @@ namespace DailyDeBugle.Services
             {
                 return; 
             }
-            
+    
+            // 1. Сначала разрываем все связи между статьями
+            var articleIds = publication.Issues
+                .SelectMany(i => i.Articles)
+                .Select(a => a.ArticleId)
+                .ToList();
+    
+            if (articleIds.Any())
+            {
+                // Обнуляем все ссылки на другие статьи в ЭТОЙ ЖЕ публикации
+                await _context.Articles
+                    .Where(a => articleIds.Contains(a.ArticleId))
+                    .ForEachAsync(a => 
+                    {
+                        a.ContinuedOnArticleId = null;
+                        a.ContinuedFromArticleId = null;
+                    });
+        
+                await _context.SaveChangesAsync();
+            }
+    
+            // 2. Теперь удаляем все статьи публикации
             var allArticlesToDelete = publication.Issues
                 .SelectMany(i => i.Articles) 
                 .ToList();
-            
+    
             if (allArticlesToDelete.Any())
             {
                 _context.Articles.RemoveRange(allArticlesToDelete);
             }
+    
+            // 3. Удаляем выпуски
             if (publication.Issues.Any())
             {
                 _context.Issues.RemoveRange(publication.Issues);
             }
-            
+    
+            // 4. Деактивируем или удаляем публикацию
             publication.IsActive = false;
+            // ИЛИ если хочешь удалить полностью:
+            // _context.Publications.Remove(publication);
+    
             await _context.SaveChangesAsync();
         }
     }
