@@ -1,0 +1,129 @@
+@page "/register"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyDeBugle.Services
+@using DailyDeBugle.Models
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@layout Layout.MainLayout
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white text-center">
+                    <h4>Регистрация в Daily DeBugle</h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger small mb-3" />
+                        
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Имя пользователя (минимум 3 символа)</label>
+                            <InputText @bind-Value="registerModel.Username" class="form-control" />
+                            <ValidationMessage For="@(() => registerModel.Username)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText @bind-Value="registerModel.Email" type="email" class="form-control" />
+                            <ValidationMessage For="@(() => registerModel.Email)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Пароль (минимум 6 символов)</label>
+                            <InputText @bind-Value="registerModel.Password" type="password" class="form-control" />
+                            <ValidationMessage For="@(() => registerModel.Password)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Подтверждение пароля</label>
+                            <InputText @bind-Value="registerModel.ConfirmPassword" type="password" class="form-control" />
+                            <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-danger" />
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success" disabled="@isProcessing">
+                                @(isProcessing ? "Регистрация..." : "Зарегистрироваться")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="card-footer text-center">
+                    <p class="mb-0 text-muted small">Вы будете зарегистрированы как читатель</p>
+                    <hr />
+                    <p class="mb-0">Уже есть аккаунт? <a href="/login">Войти</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterModel registerModel = new();
+    private string? errorMessage;
+    private bool isProcessing;
+
+    private async Task HandleRegister()
+    {
+        isProcessing = true;
+        errorMessage = null;
+        Console.WriteLine($"[Auth] Попытка регистрации пользователя: {registerModel.Username}");
+
+        try
+        {
+            if (await UserService.UserExistsAsync(registerModel.Username!))
+            {
+                errorMessage = "Пользователь с таким именем уже существует";
+                Console.WriteLine("[Auth] Ошибка: Пользователь уже существует");
+                return;
+            }
+
+            var newUser = new User
+            {
+                Username = registerModel.Username!,
+                Email = registerModel.Email!,
+                Role = UserRole.Reader // Всегда читатель при регистрации
+            };
+
+            await UserService.RegisterAsync(newUser, registerModel.Password!);
+            Console.WriteLine("[Auth] Пользователь успешно сохранен в БД с ролью Reader");
+            
+            Navigation.NavigateTo("/login?message=RegistrationSuccessful");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка при регистрации: {ex.Message}";
+            Console.WriteLine($"[Auth] Исключение при регистрации: {ex}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    public class RegisterModel
+    {
+        [Required(ErrorMessage = "Введите имя пользователя")]
+        [StringLength(20, MinimumLength = 3, ErrorMessage = "Имя пользователя должно быть от 3 до 20 символов")]
+        public string? Username { get; set; }
+
+        [Required(ErrorMessage = "Введите Email")]
+        [EmailAddress(ErrorMessage = "Некорректный Email")]
+        public string? Email { get; set; }
+
+        [Required(ErrorMessage = "Введите пароль")]
+        [MinLength(6, ErrorMessage = "Пароль должен быть не менее 6 символов")]
+        public string? Password { get; set; }
+
+        [Required(ErrorMessage = "Подтвердите пароль")]
+        [Compare("Password", ErrorMessage = "Пароли не совпадают")]
+        public string? ConfirmPassword { get; set; }
+    }
+}

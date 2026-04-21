@@ -2,6 +2,7 @@ namespace DailyDeBugle.Models
 {
     public enum UserRole
     {
+        Reader,
         Author,
         Editor,
         LayoutDesigner,
