@@ -1,67 +1,73 @@
 @page "/register"
+@attribute [AllowAnonymous]
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using DailyDeBugle.Services
 @using DailyDeBugle.Models
 @inject IUserService UserService
 @inject NavigationManager Navigation
-@layout Layout.MainLayout
+@layout Layout.AuthLayout
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white text-center">
-                    <h4>Регистрация в Daily DeBugle</h4>
+<div class="card">
+    <div class="card-header text-center">
+        <h3 class="mb-1">Регистрация</h3>
+        <p class="text-muted small mb-0">Станьте частью Daily DeBugle</p>
+    </div>
+    <div class="card-body">
+        <EditForm Model="@registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
+            <DataAnnotationsValidator />
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger py-2 small">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
                 </div>
-                <div class="card-body">
-                    <EditForm Model="@registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="text-danger small mb-3" />
-                        
-                        @if (!string.IsNullOrEmpty(errorMessage))
-                        {
-                            <div class="alert alert-danger">@errorMessage</div>
-                        }
+            }
 
-                        <div class="mb-3">
-                            <label class="form-label">Имя пользователя (минимум 3 символа)</label>
-                            <InputText @bind-Value="registerModel.Username" class="form-control" />
-                            <ValidationMessage For="@(() => registerModel.Username)" class="text-danger" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <InputText @bind-Value="registerModel.Email" type="email" class="form-control" />
-                            <ValidationMessage For="@(() => registerModel.Email)" class="text-danger" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Пароль (минимум 6 символов)</label>
-                            <InputText @bind-Value="registerModel.Password" type="password" class="form-control" />
-                            <ValidationMessage For="@(() => registerModel.Password)" class="text-danger" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Подтверждение пароля</label>
-                            <InputText @bind-Value="registerModel.ConfirmPassword" type="password" class="form-control" />
-                            <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-danger" />
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success" disabled="@isProcessing">
-                                @(isProcessing ? "Регистрация..." : "Зарегистрироваться")
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
-                <div class="card-footer text-center">
-                    <p class="mb-0 text-muted small">Вы будете зарегистрированы как читатель</p>
-                    <hr />
-                    <p class="mb-0">Уже есть аккаунт? <a href="/login">Войти</a></p>
-                </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-uppercase text-muted">Имя пользователя</label>
+                <InputText @bind-Value="registerModel.Username" class="form-control" placeholder="username" />
+                <ValidationMessage For="@(() => registerModel.Username)" class="text-danger small" />
             </div>
-        </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-uppercase text-muted">Email</label>
+                <InputText @bind-Value="registerModel.Email" type="email" class="form-control" placeholder="email@example.com" />
+                <ValidationMessage For="@(() => registerModel.Email)" class="text-danger small" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-uppercase text-muted">Пароль</label>
+                <InputText @bind-Value="registerModel.Password" type="password" class="form-control" placeholder="••••••••" />
+                <ValidationMessage For="@(() => registerModel.Password)" class="text-danger small" />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-uppercase text-muted">Подтверждение</label>
+                <InputText @bind-Value="registerModel.ConfirmPassword" type="password" class="form-control" placeholder="••••••••" />
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-danger small" />
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Регистрация...</span>
+                    }
+                    else
+                    {
+                        <span>Создать аккаунт</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    </div>
+    <div class="card-footer bg-light border-top-0 text-center py-3">
+        <p class="mb-0 small text-muted mb-2">Вы будете зарегистрированы как читатель</p>
+        <p class="mb-0 small">
+            Уже есть аккаунт? <a href="/login" class="fw-bold text-decoration-none">Войти</a>
+        </p>
     </div>
 </div>
 
@@ -74,14 +80,12 @@
     {
         isProcessing = true;
         errorMessage = null;
-        Console.WriteLine($"[Auth] Попытка регистрации пользователя: {registerModel.Username}");
 
         try
         {
             if (await UserService.UserExistsAsync(registerModel.Username!))
             {
-                errorMessage = "Пользователь с таким именем уже существует";
-                Console.WriteLine("[Auth] Ошибка: Пользователь уже существует");
+                errorMessage = "Имя пользователя уже занято";
                 return;
             }
 
@@ -89,18 +93,15 @@
             {
                 Username = registerModel.Username!,
                 Email = registerModel.Email!,
-                Role = UserRole.Reader // Всегда читатель при регистрации
+                Role = UserRole.Reader
             };
 
             await UserService.RegisterAsync(newUser, registerModel.Password!);
-            Console.WriteLine("[Auth] Пользователь успешно сохранен в БД с ролью Reader");
-            
             Navigation.NavigateTo("/login?message=RegistrationSuccessful");
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка при регистрации: {ex.Message}";
-            Console.WriteLine($"[Auth] Исключение при регистрации: {ex}");
+            errorMessage = $"Ошибка: {ex.Message}";
         }
         finally
         {
@@ -111,7 +112,7 @@
     public class RegisterModel
     {
         [Required(ErrorMessage = "Введите имя пользователя")]
-        [StringLength(20, MinimumLength = 3, ErrorMessage = "Имя пользователя должно быть от 3 до 20 символов")]
+        [StringLength(20, MinimumLength = 3, ErrorMessage = "Логин: от 3 до 20 символов")]
         public string? Username { get; set; }
 
         [Required(ErrorMessage = "Введите Email")]
@@ -119,7 +120,7 @@
         public string? Email { get; set; }
 
         [Required(ErrorMessage = "Введите пароль")]
-        [MinLength(6, ErrorMessage = "Пароль должен быть не менее 6 символов")]
+        [MinLength(6, ErrorMessage = "Пароль: минимум 6 символов")]
         public string? Password { get; set; }
 
         [Required(ErrorMessage = "Подтвердите пароль")]

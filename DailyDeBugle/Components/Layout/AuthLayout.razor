@@ -1,0 +1,79 @@
+@inherits LayoutComponentBase
+
+<div class="auth-wrapper">
+    <div class="container h-100">
+        <div class="row h-100 align-items-center justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="text-center mb-4">
+                    <a href="/">
+                        <img src="/logo.png" alt="Daily DeBugle" style="height: 70px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+                    </a>
+                </div>
+                <div class="auth-content shadow-lg animate-fade-in">
+                    @Body
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-wrapper {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 2rem 0;
+    }
+
+    .auth-content {
+        background: white;
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Стили для форм внутри AuthLayout */
+    .auth-content .card {
+        border: none;
+    }
+
+    .auth-content .card-header {
+        background: transparent;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 1.5rem;
+    }
+
+    .auth-content .card-body {
+        padding: 2rem;
+    }
+
+    .auth-content .btn {
+        padding: 0.75rem;
+        font-weight: 600;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .auth-content .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .auth-content .form-control {
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid #dee2e6;
+    }
+
+    .auth-content .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    }
+</style>
