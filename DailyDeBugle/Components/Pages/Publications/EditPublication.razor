@@ -1,4 +1,5 @@
 ﻿@page "/publications/edit/{PublicationId:int}"
+@attribute [Authorize(Policy = Policies.ManagePublications)]
 @rendermode InteractiveServer
 @inject DailyDeBugle.Services.IPublicationService PublicationService
 @inject NavigationManager Nav

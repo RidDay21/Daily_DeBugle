@@ -38,7 +38,27 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/login";
         options.Cookie.MaxAge = TimeSpan.FromDays(7);
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Baseline: any authenticated user can view the app shell.
+    options.AddPolicy(DailyDeBugle.Security.Policies.ViewContent, policy =>
+        policy.RequireAuthenticatedUser());
+
+    options.AddPolicy(DailyDeBugle.Security.Policies.WriteArticles, policy =>
+        policy.RequireRole(DailyDeBugle.Security.Roles.Author, DailyDeBugle.Security.Roles.EditorInChief));
+
+    options.AddPolicy(DailyDeBugle.Security.Policies.ReviewArticles, policy =>
+        policy.RequireRole(DailyDeBugle.Security.Roles.Editor, DailyDeBugle.Security.Roles.EditorInChief));
+
+    options.AddPolicy(DailyDeBugle.Security.Policies.LayoutIssue, policy =>
+        policy.RequireRole(DailyDeBugle.Security.Roles.LayoutDesigner, DailyDeBugle.Security.Roles.EditorInChief));
+
+    options.AddPolicy(DailyDeBugle.Security.Policies.ManageIssues, policy =>
+        policy.RequireRole(DailyDeBugle.Security.Roles.EditorInChief));
+
+    options.AddPolicy(DailyDeBugle.Security.Policies.ManagePublications, policy =>
+        policy.RequireRole(DailyDeBugle.Security.Roles.EditorInChief));
+});
 builder.Services.AddCascadingAuthenticationState();
 
 
@@ -57,6 +77,16 @@ builder.Services.AddLogging();
 
 
 var app = builder.Build();
+
+// Dev-only: auto-create database/schema if missing.
+// The project currently has no EF migrations checked in, so without this the app fails
+// when the configured database does not exist yet.
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.EnsureCreatedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
