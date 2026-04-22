@@ -48,14 +48,21 @@ public class ArticleLockService : IArticleLockService
 
     public async Task UnlockArticleAsync(int articleId, int userId)
     {
-        var article = await _context.Articles.FindAsync(articleId);
-        if (article == null || article.LockedByUserId != userId) return;
+        try
+        {
+            var article = await _context.Articles.FindAsync(articleId);
+            if (article == null || article.LockedByUserId != userId) return;
 
-        article.LockedByUserId = null;
-        article.LockedAt = null;
-        await _context.SaveChangesAsync();
+            article.LockedByUserId = null;
+            article.LockedAt = null;
+            await _context.SaveChangesAsync();
 
-        await NotifyLockChanged(articleId, false, null);
+            await NotifyLockChanged(articleId, false, null);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Игнорируем, так как контекст уже мёртв, а блокировку можно снять позже через фоновую очистку
+        }
     }
 
     public async Task<(bool IsLocked, string? LockedByUserName)> GetLockStatusAsync(int articleId)

@@ -157,9 +157,22 @@ namespace DailyDeBugle.Services
             article.Content = editedContent;
             article.Status = ArticleStatus.Approved;
             article.ModifiedDate = DateTime.UtcNow;
-            
-            await _context.SaveChangesAsync();
-            return true;
+    
+            // Снимаем блокировку при утверждении
+            article.LockedByUserId = null;
+            article.LockedAt = null;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                // Логирование ошибки
+                Console.WriteLine($"Error approving article: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<bool> SendForRevisionAsync(int articleId, string comments)

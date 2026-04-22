@@ -1,9 +1,13 @@
+@page "/editor/review"
+@rendermode InteractiveServer
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
-
-@page "/editor/review"
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IArticleService ArticleService
-@rendermode InteractiveServer
+@inject IArticleLockService LockService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
 <PageTitle>DailyDeBugle - Review Articles</PageTitle>
 
@@ -12,7 +16,7 @@
 <!-- Вкладки -->
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
-        <button class="nav-link @(activeTab == "underReview" ? "active" : "")" 
+        <button class="nav-link @(activeTab == "underReview" ? "active" : "")"
                 @onclick="@(() => SwitchTab("underReview"))">
             Under Review
             @if (underReviewCount > 0)
@@ -22,7 +26,7 @@
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link @(activeTab == "drafts" ? "active" : "")" 
+        <button class="nav-link @(activeTab == "drafts" ? "active" : "")"
                 @onclick="@(() => SwitchTab("drafts"))">
             Drafts
             @if (draftsCount > 0)
@@ -32,7 +36,7 @@
         </button>
     </li>
     <li class="nav-item">
-        <button class="nav-link @(activeTab == "all" ? "active" : "")" 
+        <button class="nav-link @(activeTab == "all" ? "active" : "")"
                 @onclick="@(() => SwitchTab("all"))">
             All Articles
             <span class="badge bg-secondary ms-1">@allCount</span>
@@ -62,6 +66,7 @@ else
                     <th>Status</th>
                     <th>Created</th>
                     <th>Issue</th>
+                    <th>Editing</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -93,15 +98,39 @@ else
                             }
                         </td>
                         <td>
+                            @if (article.IsLocked)
+                            {
+                                <span class="badge bg-warning text-dark" title="Редактирует @(article.LockedByUser?.Username ?? "неизвестный")">
+                                    <i class="bi bi-lock-fill"></i> Занято
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Свободно</span>
+                            }
+                        </td>
+                        <td>
                             @if (article.Status == ArticleStatus.UnderReview || article.Status == ArticleStatus.RequiresRevision)
                             {
-                                <a class="btn btn-primary btn-sm" href="/editor/review/@article.ArticleId">
-                                    Review
-                                </a>
+                                var isLockedByOther = article.IsLocked && article.LockedByUserId != currentUserId;
+                                if (isLockedByOther)
+                                {
+                                    <button class="btn btn-primary btn-sm" disabled
+                                            title="Статья редактируется @(article.LockedByUser?.Username ?? "другим пользователем")">
+                                        Review
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-primary btn-sm"
+                                            @onclick="@(() => TryReviewArticle(article))">
+                                        Review
+                                    </button>
+                                }
                             }
                             @if (article.Status == ArticleStatus.Draft)
                             {
-                                <button class="btn btn-outline-primary btn-sm" 
+                                <button class="btn btn-outline-primary btn-sm"
                                         @onclick="@(() => SendToReview(article))">
                                     Send to Review
                                 </button>
@@ -127,15 +156,25 @@ else
     private List<Article> allArticles = new();
     private string activeTab = "underReview";
     private string message = string.Empty;
-    
+    private int currentUserId;
+
     private int underReviewCount = 0;
     private int draftsCount = 0;
     private int allCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
+        currentUserId = await GetCurrentUserIdAsync();
         await LoadAllArticles();
         SwitchTab("underReview");
+    }
+
+    private async Task<int> GetCurrentUserIdAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst("UserId")?.Value;
+        return int.TryParse(userIdClaim, out var id) ? id : 0;
     }
 
     private async Task LoadAllArticles()
@@ -149,7 +188,7 @@ else
     private void SwitchTab(string tab)
     {
         activeTab = tab;
-        
+
         if (allArticles == null) return;
 
         articles = activeTab switch
@@ -159,8 +198,25 @@ else
             "all" => allArticles.ToList(),
             _ => allArticles.Where(a => a.Status == ArticleStatus.UnderReview).ToList()
         };
-        
+
         StateHasChanged();
+    }
+
+    private async Task TryReviewArticle(Article article)
+    {
+        // Пытаемся заблокировать статью
+        var success = await LockService.TryLockArticleAsync(article.ArticleId, currentUserId);
+        if (success)
+        {
+            // Переходим на страницу детального ревью
+            Navigation.NavigateTo($"/editor/review/{article.ArticleId}");
+        }
+        else
+        {
+            message = $"Не удалось заблокировать статью «{article.Headline}». Возможно, её уже редактируют.";
+            await LoadAllArticles(); // обновим список, чтобы отобразить актуальный статус блокировки
+            SwitchTab(activeTab);
+        }
     }
 
     private async Task SendToReview(Article article)
@@ -169,11 +225,11 @@ else
         {
             article.Status = ArticleStatus.UnderReview;
             article.ModifiedDate = DateTime.UtcNow;
-            
+
             await ArticleService.UpdateArticleAsync(article);
             await LoadAllArticles();
             SwitchTab(activeTab);
-            
+
             message = $"Article '{article.Headline}' sent to review successfully!";
         }
         catch (Exception ex)
@@ -187,7 +243,7 @@ else
         return activeTab switch
         {
             "underReview" => "Under Review",
-            "drafts" => "Draft", 
+            "drafts" => "Draft",
             "all" => "All Articles",
             _ => "Under Review"
         };
