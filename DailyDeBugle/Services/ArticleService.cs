@@ -18,6 +18,7 @@ namespace DailyDeBugle.Services
             return await _context.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
+                .Include(a => a.LockedByUser)
                 .OrderByDescending(a => a.CreatedDate)
                 .ToListAsync();
         }

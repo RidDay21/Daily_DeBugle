@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using DailyDeBugle.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +41,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
-
+builder.Services.AddSignalR();
 
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
@@ -52,6 +53,7 @@ builder.Services.AddScoped<IArticleService, ArticleService>();
 builder.Services.AddScoped<IUserService, UserService>(); 
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IAdvertisementService, AdvertisementService>();
+builder.Services.AddScoped<IArticleLockService, ArticleLockService>();
 
 builder.Services.AddLogging();
 
@@ -103,5 +105,7 @@ app.MapGet("/api/auth/signout", async (HttpContext httpContext) =>
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapHub<CollaborationHub>("/collaborationhub");
 
 app.Run();
