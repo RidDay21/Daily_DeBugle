@@ -1,4 +1,4 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand full-width" href="">
             <img src="/logo.png" alt="DaDaBaApp" />
@@ -10,13 +10,11 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
-        <AuthorizeView Roles="Editor,EditorInChief,Reader,LayoutDesigner,Author">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-                </NavLink>
-            </div>
-        </AuthorizeView>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
         
         <AuthorizeView Roles="Admin">
             <div class="nav-item px-3">
@@ -26,17 +24,13 @@
             </div>
         </AuthorizeView>
 
-        <!-- 📰 UC-01: Issues -->
-        <AuthorizeView Roles="Editor,EditorInChief">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="issues">
-                    <span class="bi bi-newspaper-nav-menu" aria-hidden="true"></span> Issues
-                </NavLink>
-            </div>
-        </AuthorizeView>
-
-        <AuthorizeView Roles="Editor,EditorInChief">
-            <!-- 📘 UC-02: Publications -->
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="issues">
+                <span class="bi bi-newspaper-nav-menu" aria-hidden="true"></span> Issues
+            </NavLink>
+        </div>
+        
+        <AuthorizeView Policy="@Policies.ManagePublications">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="publications">
                     <span class="bi bi-journal-nav-menu" aria-hidden="true"></span> Publications
@@ -44,8 +38,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Roles="LayoutDesigner,EditorInChief">
-            <!-- 🎨 UC-09: Templates -->
+        <AuthorizeView Policy="@Policies.LayoutIssue">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="templates">
                     <span class="bi bi-layout-text-sidebar-reverse" aria-hidden="true"></span> Templates
@@ -53,7 +46,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Roles="Editor,EditorInChief">
+        <AuthorizeView Policy="@Policies.ReviewArticles">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="editor/review">
                     <span class="bi bi-pencil-square" aria-hidden="true"></span> Review Articles
@@ -61,7 +54,7 @@
             </div>
         </AuthorizeView>
 
-        <AuthorizeView Roles="Author,Editor,EditorInChief">
+        <AuthorizeView Policy="@Policies.WriteArticles">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="articles">
                     <span class="bi bi-journal-text" aria-hidden="true"></span> Articles

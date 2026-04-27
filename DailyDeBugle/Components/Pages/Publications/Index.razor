@@ -1,4 +1,5 @@
 ﻿@page "/publications"
+@attribute [Authorize(Policy = Policies.ManagePublications)]
 @rendermode InteractiveServer
 @inject DailyDeBugle.Services.IPublicationService PublicationService
 @using DailyDeBugle.Models
