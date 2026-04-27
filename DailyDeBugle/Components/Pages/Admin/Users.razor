@@ -1,0 +1,188 @@
+@page "/admin/users"
+@rendermode InteractiveServer
+@using DailyDeBugle.Services
+@using DailyDeBugle.Models
+@inject IUserService UserService
+@attribute [Authorize(Roles = "Admin")]
+
+<div class="container mt-4">
+    <div class="card shadow-sm border-0 mt-4 overflow-hidden" style="border-radius: 15px;">
+        <div class="card-header bg-white py-4 px-4 border-bottom-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-1 fw-bold text-dark">Управление доступом</h3>
+                    <p class="text-muted small mb-0">Настройка ролей и прав сотрудников редакции</p>
+                </div>
+                <span class="badge rounded-pill bg-primary px-3 py-2">
+                    <i class="bi bi-people-fill me-1"></i> @(users?.Count ?? 0) пользователей
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (users == null)
+            {
+                <div class="p-5 text-center">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2 text-muted">Синхронизация данных...</div>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted uppercase">
+                            <tr>
+                                <th class="ps-4 py-3 small fw-bold" style="width: 40%">Сотрудник</th>
+                                <th class="py-3 small fw-bold" style="width: 30%">Контакты</th>
+                                <th class="pe-4 py-3 small fw-bold text-end" style="width: 30%">Роль в системе</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in users)
+                            {
+                                <tr class="user-row">
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-3 @GetRoleColorClass(user.Role) shadow-sm">
+                                                @user.Username.Substring(0, 1).ToUpper()
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">@user.Username</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;">ID: #@user.UserId</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-secondary small">
+                                            <i class="bi bi-envelope-fill me-2 opacity-50"></i>@user.Email
+                                        </div>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="role-badge-wrapper d-inline-block @GetRoleColorClass(user.Role)">
+                                            <select class="form-select form-select-sm role-select" 
+                                                    value="@user.Role" 
+                                                    @onchange="(e) => OnRoleChanged(user, e)">
+                                                @foreach (UserRole role in Enum.GetValues<UserRole>())
+                                                {
+                                                    <option value="@role">@role</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-sm {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .user-row {
+        transition: background-color 0.2s;
+    }
+
+    .user-row:hover {
+        background-color: #fcfdfe !important;
+    }
+
+    /* Стилизация контейнера селекта под бейдж */
+    .role-badge-wrapper {
+        position: relative;
+        padding: 2px 8px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        min-width: 160px;
+    }
+
+    .role-select {
+        background-color: transparent !important;
+        border: none !important;
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: inherit !important;
+        padding-right: 0 !important;
+        cursor: pointer;
+        text-align: center;
+        text-align-last: center;
+        appearance: none; /* Убираем стандартную стрелку для лучшего центрирования */
+    }
+
+    .role-select:focus {
+        box-shadow: none !important;
+    }
+
+    /* Цветовые схемы */
+    .role-admin { background-color: #ffe5e5; color: #d63031; }
+    .role-chief { background-color: #fff4e0; color: #e67e22; }
+    .role-editor { background-color: #e3f2fd; color: #0984e3; }
+    .role-layout { background-color: #f3e5f5; color: #6c5ce7; }
+    .role-author { background-color: #e8f5e9; color: #27ae60; }
+    .role-reader { background-color: #f5f5f5; color: #636e72; }
+
+    /* Принудительные цвета для аватаров и бейджей */
+    .avatar-sm.role-admin, .role-badge-wrapper.role-admin { background-color: #ffe5e5; color: #d63031; }
+    .avatar-sm.role-chief, .role-badge-wrapper.role-chief { background-color: #fff4e0; color: #e67e22; }
+    .avatar-sm.role-editor, .role-badge-wrapper.role-editor { background-color: #e3f2fd; color: #0984e3; }
+    .avatar-sm.role-layout, .role-badge-wrapper.role-layout { background-color: #f3e5f5; color: #6c5ce7; }
+    .avatar-sm.role-author, .role-badge-wrapper.role-author { background-color: #e8f5e9; color: #27ae60; }
+    .avatar-sm.role-reader, .role-badge-wrapper.role-reader { background-color: #f5f5f5; color: #636e72; }
+</style>
+
+@code {
+    private List<User>? users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        users = await UserService.GetAllAsync();
+    }
+
+    private async Task OnRoleChanged(User user, ChangeEventArgs e)
+    {
+        if (Enum.TryParse<UserRole>(e.Value?.ToString(), out var newRole))
+        {
+            if (user.Role == newRole) return;
+
+            try 
+            {
+                await UserService.UpdateUserRoleAsync(user.UserId, newRole);
+                user.Role = newRole; 
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+
+    private string GetRoleColorClass(UserRole role) => role switch
+    {
+        UserRole.Admin => "role-admin",
+        UserRole.EditorInChief => "role-chief",
+        UserRole.Editor => "role-editor",
+        UserRole.LayoutDesigner => "role-layout",
+        UserRole.Author => "role-author",
+        UserRole.Reader => "role-reader",
+        _ => ""
+    };
+}

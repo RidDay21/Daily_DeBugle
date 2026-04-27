@@ -49,5 +49,15 @@ namespace DailyDeBugle.Services
         {
             return await _context.Users.AnyAsync(u => u.Username == username);
         }
+
+        public async Task UpdateUserRoleAsync(int userId, UserRole newRole)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user != null)
+            {
+                user.Role = newRole;
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

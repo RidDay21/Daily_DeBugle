@@ -6,7 +6,8 @@ namespace DailyDeBugle.Models
         Author,
         Editor,
         LayoutDesigner,
-        EditorInChief
+        EditorInChief,
+        Admin
     }
 
     public enum ArticleStatus

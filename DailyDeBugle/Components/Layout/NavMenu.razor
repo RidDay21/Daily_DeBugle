@@ -10,46 +10,66 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <!-- 📘 UC-02: Publications -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="publications">
-                <span class="bi bi-journal-nav-menu" aria-hidden="true"></span> Publications
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="Editor,EditorInChief,Reader,LayoutDesigner,Author">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                </NavLink>
+            </div>
+        </AuthorizeView>
+        
+        <AuthorizeView Roles="Admin">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/users">
+                    <span class="bi bi-person-badge-fill" aria-hidden="true"></span> Admin Panel
+                </NavLink>
+            </div>
+        </AuthorizeView>
 
         <!-- 📰 UC-01: Issues -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="issues">
-                <span class="bi bi-newspaper-nav-menu" aria-hidden="true"></span> Issues
-            </NavLink>
-        </div>
-        
-        <!-- 🎨 UC-09: Templates -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="templates">
-                <span class="bi bi-layout-text-sidebar-reverse" aria-hidden="true"></span> Templates
-            </NavLink>
-        </div>
-        
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="editor/review">
-                <span class="bi bi-pencil-square" aria-hidden="true"></span> Review Articles
-            </NavLink>
-        </div>
-        
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="articles">
-                <span class="bi bi-journal-text" aria-hidden="true"></span> Articles
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="Editor,EditorInChief">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="issues">
+                    <span class="bi bi-newspaper-nav-menu" aria-hidden="true"></span> Issues
+                </NavLink>
+            </div>
+        </AuthorizeView>
 
-        <hr class="text-white mx-3" />
+        <AuthorizeView Roles="Editor,EditorInChief">
+            <!-- 📘 UC-02: Publications -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="publications">
+                    <span class="bi bi-journal-nav-menu" aria-hidden="true"></span> Publications
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="LayoutDesigner,EditorInChief">
+            <!-- 🎨 UC-09: Templates -->
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="templates">
+                    <span class="bi bi-layout-text-sidebar-reverse" aria-hidden="true"></span> Templates
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Editor,EditorInChief">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="editor/review">
+                    <span class="bi bi-pencil-square" aria-hidden="true"></span> Review Articles
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Author,Editor,EditorInChief">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="articles">
+                    <span class="bi bi-journal-text" aria-hidden="true"></span> Articles
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <hr class="text-white mx-3"/>
 
         <AuthorizeView Context="authContext">
             <Authorized>

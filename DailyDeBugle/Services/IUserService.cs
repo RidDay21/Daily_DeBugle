@@ -9,5 +9,6 @@ namespace DailyDeBugle.Services
         Task<User?> AuthenticateAsync(string username, string password);
         Task<User> RegisterAsync(User user, string password);
         Task<bool> UserExistsAsync(string username);
+        Task UpdateUserRoleAsync(int userId, UserRole newRole);
     }
 }
