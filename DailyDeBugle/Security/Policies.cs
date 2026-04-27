@@ -7,6 +7,7 @@ public static class Roles
     public const string Editor = "Editor";
     public const string LayoutDesigner = "LayoutDesigner";
     public const string EditorInChief = "EditorInChief";
+    public const string Admin = "Admin";
 }
 
 public static class Policies
@@ -17,5 +18,6 @@ public static class Policies
     public const string LayoutIssue = nameof(LayoutIssue);                  // LayoutDesigner + EiC
     public const string ManageIssues = nameof(ManageIssues);                // EiC
     public const string ManagePublications = nameof(ManagePublications);    // EiC
+    public const string AccessAdminPanel = nameof(AccessAdminPanel);        // Admin only
 }
 

@@ -40,9 +40,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization(options =>
 {
-    // Baseline: any authenticated user can view the app shell.
+    // Baseline: everyone except Admin can view the app content.
     options.AddPolicy(DailyDeBugle.Security.Policies.ViewContent, policy =>
-        policy.RequireAuthenticatedUser());
+        policy.RequireAssertion(context => 
+            context.User.Identity?.IsAuthenticated == true && 
+            !context.User.IsInRole(DailyDeBugle.Security.Roles.Admin)));
 
     options.AddPolicy(DailyDeBugle.Security.Policies.WriteArticles, policy =>
         policy.RequireRole(DailyDeBugle.Security.Roles.Author, DailyDeBugle.Security.Roles.EditorInChief));
@@ -58,6 +60,9 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy(DailyDeBugle.Security.Policies.ManagePublications, policy =>
         policy.RequireRole(DailyDeBugle.Security.Roles.EditorInChief));
+
+    options.AddPolicy(DailyDeBugle.Security.Policies.AccessAdminPanel, policy =>
+        policy.RequireRole(DailyDeBugle.Security.Roles.Admin));
 });
 builder.Services.AddCascadingAuthenticationState();
 

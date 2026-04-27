@@ -1,4 +1,5 @@
 @page "/issues/{issueId:int}/read"
+@attribute [Authorize(Policy = Policies.ManageIssues)]
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
 @inject IIssueService IssueService
