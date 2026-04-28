@@ -20,6 +20,7 @@ namespace DailyDeBugle.Data
         public DbSet<HeaderFooterTemplate> HeaderFooterTemplates { get; set; }
         public DbSet<GlobalTextStyle> GlobalTextStyles { get; set; }
         public DbSet<ArticlePart> ArticleParts { get; set; }
+        public DbSet<ArticleImage> ArticleImages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -194,6 +195,19 @@ namespace DailyDeBugle.Data
 
                 entity.Property(a => a.FontFamily)
                     .HasMaxLength(50);
+            });
+
+            modelBuilder.Entity<ArticleImage>(entity =>
+            {
+                entity.HasKey(ai => ai.ArticleImageId);
+
+                entity.HasOne(ai => ai.Article)
+                    .WithMany(a => a.Images)
+                    .HasForeignKey(ai => ai.ArticleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Property(ai => ai.ImagePath).IsRequired().HasMaxLength(500);
+                entity.Property(ai => ai.Caption).HasMaxLength(200);
             });
 
             // КОНФИГУРАЦИЯ ДЛЯ ARTICLEPART

@@ -1,5 +1,5 @@
 @page "/issues/{issueId:int}/read"
-@attribute [Authorize(Policy = Policies.ManageIssues)]
+@attribute [Authorize(Policy = Policies.ViewContent)]
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
 @inject IIssueService IssueService
@@ -142,6 +142,24 @@
                             <div style="@GetContentStyle()">
                                 @article.Content
                             </div>
+
+                            @if (article.Images?.Any() == true)
+                            {
+                                <div class="article-images mt-3">
+                                    @foreach (var img in article.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.ArticleImageId))
+                                    {
+                                        <figure style="break-inside: avoid; margin: 0.5cm 0;">
+                                            <img src="@img.ImagePath" alt="@img.Caption" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+                                            @if (!string.IsNullOrWhiteSpace(img.Caption))
+                                            {
+                                                <figcaption style="font-size: 10px; color: #777; text-align: center; margin-top: 0.2cm;">
+                                                    @img.Caption
+                                                </figcaption>
+                                            }
+                                        </figure>
+                                    }
+                                </div>
+                            }
                         </div>
                     }
 

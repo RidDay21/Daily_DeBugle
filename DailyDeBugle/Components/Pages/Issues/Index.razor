@@ -1,5 +1,5 @@
 ﻿@page "/issues"
-@attribute [Authorize(Policy = Policies.ManageIssues)]
+@attribute [Authorize(Policy = Policies.ViewContent)]
 @rendermode InteractiveServer
 @inject IIssueService IssueService
 @inject NavigationManager NavigationManager
@@ -8,7 +8,9 @@
 
 <h3>Issues</h3>
 
-<a class="btn btn-success mb-3" href="/issues/create">+ New Issue</a>
+<AuthorizeView Policy="@Policies.ManageIssues">
+    <a class="btn btn-success mb-3" href="/issues/create">+ New Issue</a>
+</AuthorizeView>
 
 @if (issues == null)
 {
@@ -55,24 +57,28 @@ else
                     }
                 </td>
                 <td>
-                    @if (issue.Status != IssueStatus.Published)
-                    {
-                        <a href="/issues/edit/@issue.IssueId"
-                           class="btn btn-outline-primary btn-sm me-1"
-                           title="Edit">
-                            <i class="bi bi-pencil"></i> Edit
-                        </a>
-                    }
+                    <AuthorizeView Policy="@Policies.ManageIssues">
+                        @if (issue.Status != IssueStatus.Published)
+                        {
+                            <a href="/issues/edit/@issue.IssueId"
+                               class="btn btn-outline-primary btn-sm me-1"
+                               title="Edit">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        }
 
-                    <button class="btn btn-outline-danger btn-sm"
-                            @onclick="() => ShowDeleteConfirmation(issue)"
-                            title="Delete">
-                        <i class="bi bi-trash"></i> Delete
-                    </button>
-                    <!-- ДОБАВЛЕНА КНОПКА ДЛЯ ПЕРЕХОДА НА ВЕРСТКУ -->
-                    <a class="btn btn-primary btn-sm" href="/issues/@issue.IssueId/layout">
-                        Layout
-                    </a>
+                        <button class="btn btn-outline-danger btn-sm"
+                                @onclick="() => ShowDeleteConfirmation(issue)"
+                                title="Delete">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </AuthorizeView>
+
+                    <AuthorizeView Policy="@Policies.LayoutIssue">
+                        <a class="btn btn-primary btn-sm" href="/issues/@issue.IssueId/layout">
+                            Layout
+                        </a>
+                    </AuthorizeView>
                 </td>
             </tr>
         }

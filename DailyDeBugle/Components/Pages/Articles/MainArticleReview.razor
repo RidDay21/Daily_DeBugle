@@ -2,6 +2,7 @@
 @using DailyDeBugle.Services
 
 @page "/editor/review"
+@attribute [Authorize(Policy = Policies.ReviewArticles)]
 @inject IArticleService ArticleService
 @rendermode InteractiveServer
 

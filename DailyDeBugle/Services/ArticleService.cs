@@ -1,4 +1,5 @@
 using DailyDeBugle.Data;
+using DailyDeBugle.Helpers;
 using DailyDeBugle.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,7 @@ namespace DailyDeBugle.Services
             return await _context.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
+                .Include(a => a.Images)
                 .OrderByDescending(a => a.CreatedDate)
                 .ToListAsync();
         }
@@ -27,6 +29,7 @@ namespace DailyDeBugle.Services
             return await _context.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
+                .Include(a => a.Images)
                 .OrderByDescending(a => a.CreatedDate)
                 .ToListAsync();
         }
@@ -35,6 +38,7 @@ namespace DailyDeBugle.Services
         {
             return await _context.Articles
                 .Include(a => a.Author)
+                .Include(a => a.Images)
                 .Where(a => a.IssueId == issueId)
                 .OrderByDescending(a => a.CreatedDate)
                 .ToListAsync();
@@ -45,6 +49,7 @@ namespace DailyDeBugle.Services
             return await _context.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
+                .Include(a => a.Images)
                 .FirstOrDefaultAsync(a => a.ArticleId == id);
         }
 
@@ -75,6 +80,7 @@ namespace DailyDeBugle.Services
                     .Include(a => a.Comments)
                     .Include(a => a.LayoutElements)
                     .Include(a => a.ArticleParts)
+                    .Include(a => a.Images)
                     .FirstOrDefaultAsync(a => a.ArticleId == id);
                 
                 if (article == null)
@@ -98,6 +104,16 @@ namespace DailyDeBugle.Services
                 if (article.ArticleParts.Any())
                 {
                     _context.ArticleParts.RemoveRange(article.ArticleParts);
+                }
+
+                // Удаляем картинки статьи
+                if (article.Images.Any())
+                {
+                    foreach (var img in article.Images)
+                    {
+                        FileUploadHelper.DeleteFile(img.ImagePath);
+                    }
+                    _context.ArticleImages.RemoveRange(article.Images);
                 }
                 
                 // Обнуляем связи с продолжениями
@@ -143,9 +159,46 @@ namespace DailyDeBugle.Services
         {
             return await _context.Articles
                 .Include(a => a.Author)
+                .Include(a => a.Images)
                 .Where(a => a.Status == status)
                 .OrderByDescending(a => a.CreatedDate)
                 .ToListAsync();
+        }
+
+        public async Task<List<ArticleImage>> GetImagesAsync(int articleId)
+        {
+            return await _context.ArticleImages
+                .Where(i => i.ArticleId == articleId)
+                .OrderBy(i => i.SortOrder)
+                .ThenBy(i => i.ArticleImageId)
+                .ToListAsync();
+        }
+
+        public async Task<ArticleImage> AddImageAsync(int articleId, string imagePath, string? caption = null, int sortOrder = 0)
+        {
+            var image = new ArticleImage
+            {
+                ArticleId = articleId,
+                ImagePath = imagePath,
+                Caption = caption,
+                SortOrder = sortOrder,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.ArticleImages.Add(image);
+            await _context.SaveChangesAsync();
+            return image;
+        }
+
+        public async Task<bool> DeleteImageAsync(int articleImageId)
+        {
+            var image = await _context.ArticleImages.FirstOrDefaultAsync(i => i.ArticleImageId == articleImageId);
+            if (image == null) return false;
+
+            FileUploadHelper.DeleteFile(image.ImagePath);
+            _context.ArticleImages.Remove(image);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> ApproveArticleAsync(int articleId, string editedContent)

@@ -1,4 +1,5 @@
 @page "/editor/review/{articleId:int}"
+@attribute [Authorize(Policy = Policies.ReviewArticles)]
 @inject IArticleService ArticleService
 @inject NavigationManager Navigation
 @using DailyDeBugle.Models
@@ -34,6 +35,27 @@ else
                         <h5>Article Content</h5>
                     </div>
                     <div class="card-body">
+                        @if (article.Images?.Any() == true)
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2">Images</h6>
+                                <div class="row g-2">
+                                    @foreach (var img in article.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.ArticleImageId))
+                                    {
+                                        <div class="col-6">
+                                            <div class="border rounded p-2 bg-light">
+                                                <img src="@img.ImagePath" alt="@img.Caption" style="width: 100%; height: auto; display: block;" />
+                                                @if (!string.IsNullOrWhiteSpace(img.Caption))
+                                                {
+                                                    <div class="small text-muted mt-1">@img.Caption</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
                         <textarea @bind="editedContent" class="form-control" rows="15" 
                                   placeholder="Article content..."></textarea>
                         <div class="mt-2 text-muted small">
