@@ -4,6 +4,7 @@
 @using DailyDeBugle.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@inject IJSRuntime JSRuntime
 @inject IArticleService ArticleService
 @inject IArticleLockService LockService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -48,7 +49,7 @@ else
                     </div>
                     <div class="card-body">
                         <textarea @bind="editedContent" class="form-control" rows="15" 
-                                  placeholder="Article content..." disabled="@isLockedByOther"></textarea>
+                                  placeholder="Article content..."></textarea>
                         <div class="mt-2 text-muted small">
                             Characters: @editedContent.Length
                         </div>
@@ -63,6 +64,12 @@ else
                         <h5>Editor Actions</h5>
                     </div>
                     <div class="card-body">
+                        <!-- Сообщение об ошибке -->
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger py-2 small">@errorMessage</div>
+                        }
+
                         <!-- Одобрить -->
                         <div class="mb-3">
                             <button class="btn btn-success w-100" @onclick="ApproveArticle" disabled="@isProcessing">
@@ -127,23 +134,77 @@ else
     </div>
 }
 
-<!-- Модальные окна без изменений -->
+<!-- Модальное окно для отправки на доработку -->
+@if (showRevisionModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Send Article for Revision</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Comments for Author:</label>
+                        <textarea @bind="revisionComments" class="form-control" rows="4" 
+                                  placeholder="What needs to be improved?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-warning" @onclick="SendForRevision">Send for Revision</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Модальное окно для отклонения -->
+@if (showRejectModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject Article</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Rejection:</label>
+                        <textarea @bind="rejectionReason" class="form-control" rows="4" 
+                                  placeholder="Why is this article being rejected?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="RejectArticle">Reject Article</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter] public int ArticleId { get; set; }
     
     private Article? article;
     private string editedContent = string.Empty;
-    private bool showRevisionModal = false;
-    private bool showRejectModal = false;
     private string revisionComments = string.Empty;
     private string rejectionReason = string.Empty;
+    private string errorMessage = string.Empty;
+    
+    private bool showRevisionModal = false;
+    private bool showRejectModal = false;
+    private bool isInteractive = false;
     private bool isProcessing = false;
+    private bool isLockedByOther = false;
+    private bool lockAcquired = false;
     
     private int currentUserId;
-    private bool isLockedByOther = false;
     private string? lockedByUserName;
-    private bool lockAcquired = false;
+    private System.Threading.Timer? activityTimer;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -165,7 +226,6 @@ else
         var success = await LockService.TryLockArticleAsync(ArticleId, currentUserId);
         if (!success)
         {
-            // Не удалось — значит кто-то перехватил
             isLockedByOther = true;
             var status = await LockService.GetLockStatusAsync(ArticleId);
             lockedByUserName = status.LockedByUserName ?? "другим пользователем";
@@ -174,9 +234,46 @@ else
         {
             lockAcquired = true;
             isLockedByOther = false;
+            // JS-отслеживание запустим в OnAfterRenderAsync
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isInteractive = true;
+            // Если блокировка была успешно захвачена при загрузке, запускаем JS-отслеживание
+            if (lockAcquired)
+            {
+                await InitializeActivityTracking();
+            }
+        }
+    }
+    
+    private async Task InitializeActivityTracking()
+    {
+        // Инициализируем JS-отслеживание активности пользователя
+        await JSRuntime.InvokeVoidAsync("lockActivity.init", DotNetObjectReference.Create(this));
+
+        // Запускаем серверный таймер для периодического продления блокировки
+        activityTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                var hasActivity = await JSRuntime.InvokeAsync<bool>("lockActivity.hasRecentActivity", 120);
+                if (hasActivity)
+                {
+                    try
+                    {
+                        await LockService.RefreshLockAsync(ArticleId, currentUserId);
+                    }
+                    catch { }
+                }
+            });
+        }, null, TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(2));
+    }
+    
     private async Task<int> GetCurrentUserIdAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -189,6 +286,7 @@ else
     {
         if (article == null || isProcessing) return;
         isProcessing = true;
+        errorMessage = string.Empty;
         try
         {
             var success = await ArticleService.ApproveArticleAsync(article.ArticleId, editedContent);
@@ -197,9 +295,15 @@ else
                 await ReleaseLock();
                 Navigation.NavigateTo("/editor/review");
             }
+            else
+            {
+                errorMessage = "Не удалось утвердить статью. Попробуйте позже.";
+                isProcessing = false;
+            }
         }
-        finally
+        catch (Exception ex)
         {
+            errorMessage = $"Ошибка: {ex.Message}";
             isProcessing = false;
         }
     }
@@ -208,6 +312,7 @@ else
     {
         if (article == null || string.IsNullOrWhiteSpace(revisionComments) || isProcessing) return;
         isProcessing = true;
+        errorMessage = string.Empty;
         try
         {
             var success = await ArticleService.SendForRevisionAsync(article.ArticleId, revisionComments);
@@ -217,9 +322,15 @@ else
                 CloseModals();
                 Navigation.NavigateTo("/editor/review");
             }
+            else
+            {
+                errorMessage = "Не удалось отправить на доработку. Попробуйте позже.";
+                isProcessing = false;
+            }
         }
-        finally
+        catch (Exception ex)
         {
+            errorMessage = $"Ошибка: {ex.Message}";
             isProcessing = false;
         }
     }
@@ -228,6 +339,7 @@ else
     {
         if (article == null || string.IsNullOrWhiteSpace(rejectionReason) || isProcessing) return;
         isProcessing = true;
+        errorMessage = string.Empty;
         try
         {
             var success = await ArticleService.RejectArticleAsync(article.ArticleId, rejectionReason);
@@ -237,9 +349,15 @@ else
                 CloseModals();
                 Navigation.NavigateTo("/editor/review");
             }
+            else
+            {
+                errorMessage = "Не удалось отклонить статью. Попробуйте позже.";
+                isProcessing = false;
+            }
         }
-        finally
+        catch (Exception ex)
         {
+            errorMessage = $"Ошибка: {ex.Message}";
             isProcessing = false;
         }
     }
@@ -252,7 +370,10 @@ else
             {
                 await LockService.UnlockArticleAsync(ArticleId, currentUserId);
             }
-            catch { /* игнорируем */ }
+            catch
+            {
+                // Игнорируем ошибку разблокировки — блокировка снимется автоматически через 5 минут
+            }
             finally
             {
                 lockAcquired = false;
@@ -275,6 +396,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        activityTimer?.Dispose();
         await ReleaseLock();
     }
 }

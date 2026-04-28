@@ -71,13 +71,17 @@ else
                     <td>
                         @if (!article.IsLocked || article.LockedByUserId == currentUserId)
                         {
-                            <a class="btn btn-outline-primary btn-sm me-1" href="/articles/review/@article.ArticleId">
-                                <i class="bi bi-pencil"></i> Edit
-                            </a>
+                            @if (article.Status != ArticleStatus.Approved)
+                            {
+                                <a class="btn btn-outline-primary btn-sm me-1" href="/articles/review/@article.ArticleId">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                            }
                         }
                         else
                         {
-                            <button class="btn btn-outline-secondary btn-sm me-1" disabled title="Статья редактируется другим пользователем">
+                            <button class="btn btn-outline-secondary btn-sm me-1" disabled 
+                                    title="Статья редактируется другим пользователем">
                                 <i class="bi bi-pencil"></i> Edit
                             </button>
                         }

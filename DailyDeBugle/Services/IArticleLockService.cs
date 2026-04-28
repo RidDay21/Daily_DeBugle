@@ -6,4 +6,5 @@ public interface IArticleLockService
     Task UnlockArticleAsync(int articleId, int userId);
     Task<(bool IsLocked, string? LockedByUserName)> GetLockStatusAsync(int articleId);
     Task ReleaseAllLocksForUserAsync(int userId);
+    Task RefreshLockAsync(int articleId, int userId);
 }

@@ -100,7 +100,8 @@ public class ArticleLockService : IArticleLockService
 
     private async Task CleanExpiredLocksAsync()
     {
-        var expiration = DateTime.UtcNow.AddMinutes(-5);
+        //У нас стоит таймер на 15 минут.
+        var expiration = DateTime.UtcNow.AddMinutes(-15);
         var expired = await _context.Articles
             .Where(a => a.LockedAt < expiration && a.LockedByUserId != null)
             .ToListAsync();
@@ -119,5 +120,15 @@ public class ArticleLockService : IArticleLockService
     {
         await _hubContext.Clients.Group($"article-{articleId}")
             .SendAsync("ArticleLockChanged", articleId, isLocked, userName);
+    }
+    
+    public async Task RefreshLockAsync(int articleId, int userId)
+    {
+        var article = await _context.Articles.FindAsync(articleId);
+        if (article?.LockedByUserId == userId)
+        {
+            article.LockedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
     }
 }
