@@ -51,3 +51,4 @@ public class ArticleAccessRulesTests
         Assert.True(ArticleAccessRules.CanEditArticleContent(user, article));
     }
 }
+

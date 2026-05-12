@@ -42,3 +42,4 @@ public class AuthorizationPolicyConfigurationTests
         Assert.Equal(expectSuccess, result.Succeeded);
     }
 }
+

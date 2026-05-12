@@ -89,3 +89,4 @@ public class ArticleEditorCommentsAndImagesTests
         Assert.Equal("/uploads/articles/1/x.png", list[0].ImagePath);
     }
 }
+
