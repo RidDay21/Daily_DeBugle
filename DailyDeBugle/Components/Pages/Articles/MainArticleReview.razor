@@ -1,9 +1,12 @@
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
+@using DailyDeBugle.Security
+@using Microsoft.AspNetCore.Components.Authorization
 
 @page "/editor/review"
 @attribute [Authorize(Policy = Policies.ReviewArticles)]
 @inject IArticleService ArticleService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode InteractiveServer
 
 <PageTitle>DailyDeBugle - Review Articles</PageTitle>
@@ -107,9 +110,12 @@ else
                                     Send to Review
                                 </button>
                             }
-                            <a class="btn btn-outline-info btn-sm" href="/articles/edit/@article.ArticleId">
-                                View
-                            </a>
+                            @if (CanEditArticle(article))
+                            {
+                                <a class="btn btn-outline-info btn-sm" href="/articles/edit/@article.ArticleId">
+                                    Редактировать
+                                </a>
+                            }
                         </td>
                     </tr>
                 }
@@ -128,6 +134,7 @@ else
     private List<Article> allArticles = new();
     private string activeTab = "underReview";
     private string message = string.Empty;
+    private System.Security.Claims.ClaimsPrincipal? currentUser;
     
     private int underReviewCount = 0;
     private int draftsCount = 0;
@@ -135,9 +142,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUser = auth.User;
         await LoadAllArticles();
         SwitchTab("underReview");
     }
+
+    private bool CanEditArticle(Article article) =>
+        currentUser != null && ArticleAccessRules.CanEditArticleContent(currentUser, article);
 
     private async Task LoadAllArticles()
     {

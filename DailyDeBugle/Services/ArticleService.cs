@@ -50,6 +50,7 @@ namespace DailyDeBugle.Services
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
                 .Include(a => a.Images)
+                .Include(a => a.Comments)
                 .FirstOrDefaultAsync(a => a.ArticleId == id);
         }
 
@@ -221,7 +222,18 @@ namespace DailyDeBugle.Services
 
             article.Status = ArticleStatus.RequiresRevision;
             article.ModifiedDate = DateTime.UtcNow;
-            
+
+            if (!string.IsNullOrWhiteSpace(comments))
+            {
+                _context.Comments.Add(new Comment
+                {
+                    ArticleId = articleId,
+                    Content = comments.Trim(),
+                    CreatedDate = DateTime.UtcNow,
+                    IsEditorComment = true
+                });
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -233,9 +245,37 @@ namespace DailyDeBugle.Services
 
             article.Status = ArticleStatus.Rejected;
             article.ModifiedDate = DateTime.UtcNow;
-            
+
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                _context.Comments.Add(new Comment
+                {
+                    ArticleId = articleId,
+                    Content = "[Отклонено] " + reason.Trim(),
+                    CreatedDate = DateTime.UtcNow,
+                    IsEditorComment = true
+                });
+            }
+
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<Comment> AddEditorCommentAsync(int articleId, string content)
+        {
+            var article = await _context.Articles.FindAsync(articleId)
+                ?? throw new InvalidOperationException($"Article {articleId} not found");
+
+            var comment = new Comment
+            {
+                ArticleId = articleId,
+                Content = content.Trim(),
+                CreatedDate = DateTime.UtcNow,
+                IsEditorComment = true
+            };
+            _context.Comments.Add(comment);
+            await _context.SaveChangesAsync();
+            return comment;
         }
         
         

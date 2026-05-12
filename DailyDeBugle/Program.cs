@@ -38,32 +38,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/login";
         options.Cookie.MaxAge = TimeSpan.FromDays(7);
     });
-builder.Services.AddAuthorization(options =>
-{
-    // Baseline: everyone except Admin can view the app content.
-    options.AddPolicy(DailyDeBugle.Security.Policies.ViewContent, policy =>
-        policy.RequireAssertion(context => 
-            context.User.Identity?.IsAuthenticated == true && 
-            !context.User.IsInRole(DailyDeBugle.Security.Roles.Admin)));
-
-    options.AddPolicy(DailyDeBugle.Security.Policies.WriteArticles, policy =>
-        policy.RequireRole(DailyDeBugle.Security.Roles.Author, DailyDeBugle.Security.Roles.EditorInChief));
-
-    options.AddPolicy(DailyDeBugle.Security.Policies.ReviewArticles, policy =>
-        policy.RequireRole(DailyDeBugle.Security.Roles.Editor, DailyDeBugle.Security.Roles.EditorInChief));
-
-    options.AddPolicy(DailyDeBugle.Security.Policies.LayoutIssue, policy =>
-        policy.RequireRole(DailyDeBugle.Security.Roles.LayoutDesigner, DailyDeBugle.Security.Roles.EditorInChief));
-
-    options.AddPolicy(DailyDeBugle.Security.Policies.ManageIssues, policy =>
-        policy.RequireRole(DailyDeBugle.Security.Roles.EditorInChief));
-
-    options.AddPolicy(DailyDeBugle.Security.Policies.ManagePublications, policy =>
-        policy.RequireRole(DailyDeBugle.Security.Roles.EditorInChief));
-
-    options.AddPolicy(DailyDeBugle.Security.Policies.AccessAdminPanel, policy =>
-        policy.RequireRole(DailyDeBugle.Security.Roles.Admin));
-});
+builder.Services.AddAuthorization(DailyDeBugle.Security.AuthorizationPolicyConfiguration.Configure);
 builder.Services.AddCascadingAuthenticationState();
 
 

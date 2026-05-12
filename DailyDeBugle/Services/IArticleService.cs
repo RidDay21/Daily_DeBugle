@@ -44,6 +44,8 @@ namespace DailyDeBugle.Services
         /// <returns></returns>
         Task<bool> RejectArticleAsync(int articleId, string reason);
 
+        Task<Comment> AddEditorCommentAsync(int articleId, string content);
+
         Task<List<ArticleImage>> GetImagesAsync(int articleId);
         Task<ArticleImage> AddImageAsync(int articleId, string imagePath, string? caption = null, int sortOrder = 0);
         Task<bool> DeleteImageAsync(int articleImageId);
