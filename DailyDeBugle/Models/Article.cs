@@ -60,6 +60,7 @@ namespace DailyDeBugle.Models
         public List<Comment> Comments { get; set; } = new();
         public List<LayoutElement> LayoutElements { get; set; } = new();
         public List<ArticlePart> ArticleParts { get; set; } = new();
+        public List<ArticleImage> Images { get; set; } = new();
     }
 
     // Класс для части статьи (если разбита на несколько страниц)

@@ -1,17 +1,19 @@
 ﻿@page "/articles/create"
+@attribute [Authorize(Policy = Policies.WriteArticles)]
 @rendermode InteractiveServer 
 @inject DailyDeBugle.Services.IArticleService ArticleService
 @inject DailyDeBugle.Services.IIssueService IssueService
-@inject DailyDeBugle.Services.IUserService UserService
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
+@using DailyDeBugle.Helpers
 
 <h3>Create New Article</h3>
 
-@if (issues == null || users == null)
+@if (issues == null)
 {
     <p>Loading data...</p>
 }
@@ -36,6 +38,19 @@ else
         </div>
 
         <div class="mb-3">
+            <label>Images:</label>
+            <InputFile OnChange="OnImagesSelected" multiple accept="image/*" class="form-control" />
+            @if (!string.IsNullOrEmpty(imagesError))
+            {
+                <div class="text-danger small mt-1">@imagesError</div>
+            }
+            @if (selectedImages.Count > 0)
+            {
+                <div class="small text-muted mt-1">Выбрано файлов: @selectedImages.Count</div>
+            }
+        </div>
+
+        <div class="mb-3">
     		<label>Issue:</label>
             <InputSelect @bind-Value="newArticle.IssueId" class="form-select">
                 <option value="">Select Issue</option>
@@ -49,13 +64,8 @@ else
         
         <div class="mb-3">
             <label>Author:</label>
-            <InputSelect @bind-Value="newArticle.AuthorId" class="form-select">
-                <option value="">Select Author</option>
-                @foreach (var user in users)
-                {
-                    <option value="@user.UserId">@user.Username</option>
-                }
-            </InputSelect>
+            <input class="form-control" value="@currentUsername" disabled />
+            <div class="form-text">Автор проставляется автоматически по текущему пользователю.</div>
             <ValidationMessage For="@(() => newArticle.AuthorId)" />
         </div>
 
@@ -66,12 +76,25 @@ else
 @code {
     private Article newArticle = new();
     private List<Issue>? issues;
-    private List<User>? users;
+    private string currentUsername = string.Empty;
+    private int? currentUserId;
+
+    private readonly List<IBrowserFile> selectedImages = new();
+    private string? imagesError;
 
     protected override async Task OnInitializedAsync()
     {
         issues = await IssueService.GetAllAsync();
-        users = await UserService.GetAllAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        currentUsername = user.Identity?.Name ?? string.Empty;
+        var idClaim = user.FindFirst("UserId")?.Value;
+        if (int.TryParse(idClaim, out var uid))
+        {
+            currentUserId = uid;
+            newArticle.AuthorId = uid;
+        }
     }
 
     private void HandleInvalidSubmit()
@@ -84,7 +107,44 @@ else
         // Проверка перед сохранением
         Console.WriteLine($"[DEBUG] Creating article: AuthorId={newArticle.AuthorId}, IssueId={newArticle.IssueId}, Headline={newArticle.Headline}");
 
-        await ArticleService.CreateArticleAsync(newArticle);
+        if (currentUserId == null)
+        {
+            imagesError = "Не удалось определить текущего пользователя (UserId). Перезайдите в аккаунт.";
+            return;
+        }
+
+        newArticle.AuthorId = currentUserId;
+        var created = await ArticleService.CreateArticleAsync(newArticle);
+
+        // Загрузкка изображения и прикрепление к статье
+        foreach (var file in selectedImages)
+        {
+            var path = await FileUploadHelper.UploadFileAsync(file, $"articles/{created.ArticleId}", maxFileSize: 10 * 1024 * 1024);
+            await ArticleService.AddImageAsync(created.ArticleId, path);
+        }
+
         Nav.NavigateTo("/articles");
+    }
+
+    private void OnImagesSelected(InputFileChangeEventArgs e)
+    {
+        imagesError = null;
+        selectedImages.Clear();
+
+        try
+        {
+            // базовый лимит
+            if (e.GetMultipleFiles().Count > 10)
+            {
+                imagesError = "Можно прикрепить максимум 10 изображений.";
+                return;
+            }
+
+            selectedImages.AddRange(e.GetMultipleFiles(10));
+        }
+        catch (Exception ex)
+        {
+            imagesError = ex.Message;
+        }
     }
 }

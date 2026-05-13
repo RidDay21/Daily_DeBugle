@@ -1,7 +1,10 @@
 ﻿@page "/articles"
+@attribute [Authorize(Policy = Policies.WriteArticles)]
 @rendermode InteractiveServer
 @inject DailyDeBugle.Services.IArticleService ArticleService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using DailyDeBugle.Models
+@using DailyDeBugle.Security
 
 <h3>Articles</h3>
 
@@ -51,10 +54,14 @@ else
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-danger btn-sm" 
-                            @onclick="() => ConfirmDelete(article.ArticleId, article.Headline)">
-                        Delete
-                    </button>
+                    @if (CanEditArticle(article))
+                    {
+                        <a class="btn btn-outline-primary btn-sm me-1" href="/articles/edit/@article.ArticleId">Редактировать</a>
+                        <button class="btn btn-danger btn-sm"
+                                @onclick="() => ConfirmDelete(article.ArticleId, article.Headline)">
+                            Delete
+                        </button>
+                    }
                 </td>
             </tr>
         }
@@ -81,16 +88,21 @@ else
 }
 
 @code {
-    private List<Article>? publications;
     private List<Article>? articles;
+    private System.Security.Claims.ClaimsPrincipal? currentUser;
     
     private int? articleIdToDelete;
     private string? articleHeadlineToDelete;
 
     protected override async Task OnInitializedAsync()
     {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUser = auth.User;
         await LoadArticles();
     }
+
+    private bool CanEditArticle(Article article) =>
+        currentUser != null && ArticleAccessRules.CanEditArticleContent(currentUser, article);
 
     private async Task LoadArticles()
     {

@@ -1,4 +1,5 @@
 @page "/issues/{issueId:int}/layout"
+@attribute [Authorize(Policy = Policies.LayoutIssue)]
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
 @using System.Text.Json
@@ -274,6 +275,12 @@
                                                 <p class="small text-muted mb-1">
                                                     @GetArticlePreview(article.Content)
                                                 </p>
+                                                @if (article.Images?.Any() == true)
+                                                {
+                                                    <div class="small text-muted">
+                                                        Images: @article.Images.Count
+                                                    </div>
+                                                }
                                                 <div class="small text-muted">
                                                     Автор: @article.Author?.Username | 
                                                     Слов: @GetWordCount(article.Content) |
@@ -325,6 +332,12 @@
                                                 <p class="small text-muted mb-1">
                                                     @GetArticlePreview(article.Content)
                                                 </p>
+                                                @if (article.Images?.Any() == true)
+                                                {
+                                                    <div class="small text-muted">
+                                                        Images: @article.Images.Count
+                                                    </div>
+                                                }
                                                 <div class="small text-muted">
                                                     Автор: @article.Author?.Username | 
                                                     Слов: @GetWordCount(article.Content) |

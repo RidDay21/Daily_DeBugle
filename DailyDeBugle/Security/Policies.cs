@@ -13,11 +13,11 @@ public static class Roles
 public static class Policies
 {
     public const string ViewContent = nameof(ViewContent);                  // any authenticated user
-    public const string WriteArticles = nameof(WriteArticles);              // Author + EiC
-    public const string ReviewArticles = nameof(ReviewArticles);            // Editor + EiC
-    public const string LayoutIssue = nameof(LayoutIssue);                  // LayoutDesigner + EiC
-    public const string ManageIssues = nameof(ManageIssues);                // EiC
-    public const string ManagePublications = nameof(ManagePublications);    // EiC
+    public const string WriteArticles = nameof(WriteArticles);              // Author + EiC + Admin
+    public const string ReviewArticles = nameof(ReviewArticles);            // Editor + EiC + Admin
+    public const string LayoutIssue = nameof(LayoutIssue);                  // LayoutDesigner + EiC + Admin
+    public const string ManageIssues = nameof(ManageIssues);                // EiC + Admin
+    public const string ManagePublications = nameof(ManagePublications);    // EiC + Admin
     public const string AccessAdminPanel = nameof(AccessAdminPanel);        // Admin only
 }
 

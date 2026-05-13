@@ -1,4 +1,5 @@
 @page "/editor/review/{articleId:int}"
+@attribute [Authorize(Policy = Policies.ReviewArticles)]
 @inject IArticleService ArticleService
 @inject NavigationManager Navigation
 @using DailyDeBugle.Models
@@ -16,83 +17,94 @@ else
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-8">
-                <!-- Информация о статье -->
                 <div class="card mb-4">
                     <div class="card-header">
                         <h4>@article.Headline</h4>
                         <div class="small text-muted">
-                            By: @article.Author?.Username | 
+                            By: @article.Author?.Username |
                             Created: @article.CreatedDate.ToString("MMM dd, yyyy HH:mm") |
                             Status: <span class="badge bg-warning">@article.Status</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Редактор содержимого -->
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-header">
-                        <h5>Article Content</h5>
+                        <h5 class="mb-0">Текст статьи </h5>
                     </div>
                     <div class="card-body">
-                        <textarea @bind="editedContent" class="form-control" rows="15" 
-                                  placeholder="Article content..."></textarea>
+                        @if (article.Images?.Any() == true)
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2">Изображения</h6>
+                                <div class="row g-2">
+                                    @foreach (var img in article.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.ArticleImageId))
+                                    {
+                                        <div class="col-6">
+                                            <div class="border rounded p-2 bg-light">
+                                                <img src="@img.ImagePath" alt="@img.Caption" style="width: 100%; height: auto; display: block;" />
+                                                @if (!string.IsNullOrWhiteSpace(img.Caption))
+                                                {
+                                                    <div class="small text-muted mt-1">@img.Caption</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">@article.Content</div>
                         <div class="mt-2 text-muted small">
-                            Characters: @editedContent.Length
+                            Символов: @(article.Content?.Length ?? 0)
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <div class="col-md-4">
-                <!-- Панель действий редактора -->
                 <div class="card">
                     <div class="card-header">
-                        <h5>Editor Actions</h5>
+                        <h5>Действия редактора</h5>
                     </div>
                     <div class="card-body">
-                        <!-- Одобрить -->
                         <div class="mb-3">
                             <button class="btn btn-success w-100" @onclick="ApproveArticle">
-                                ✅ Approve Article
+                                Одобрить статью
                             </button>
-                            <div class="form-text">Article will be locked and available for layout</div>
+                            <div class="form-text">Текст статьи не меняется при одобрении.</div>
                         </div>
 
-                        <!-- Отправить на доработку -->
                         <div class="mb-3">
-                            <button class="btn btn-warning w-100" 
+                            <button class="btn btn-warning w-100"
                                     @onclick="() => showRevisionModal = true">
-                                ✏️ Send for Revision
+                                Отправить на доработку
                             </button>
-                            <div class="form-text">Author can make changes based on your comments</div>
                         </div>
 
-                        <!-- Отклонить -->
                         <div class="mb-3">
-                            <button class="btn btn-danger w-100" 
+                            <button class="btn btn-danger w-100"
                                     @onclick="() => showRejectModal = true">
-                                ❌ Reject Article
+                                Отклонить
                             </button>
-                            <div class="form-text">Article will be archived with reason</div>
                         </div>
 
-                        <!-- Навигация -->
                         <div class="mt-4">
                             <button class="btn btn-outline-secondary w-100" @onclick="NavigateBack">
-                                ← Back to Review List
+                                ← К списку
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- История комментариев -->
-                @if (article.Comments?.Any() == true)
-                {
-                    <div class="card mt-4">
-                        <div class="card-header">
-                            <h6>Comments History</h6>
-                        </div>
-                        <div class="card-body">
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6>История комментариев</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (article.Comments?.Any() == true)
+                        {
                             @foreach (var comment in article.Comments.OrderByDescending(c => c.CreatedDate))
                             {
                                 <div class="border-bottom pb-2 mb-2">
@@ -100,66 +112,68 @@ else
                                         @comment.CreatedDate.ToString("MMM dd, HH:mm")
                                         @if (comment.IsEditorComment)
                                         {
-                                            <span class="badge bg-info">Editor</span>
+                                            <span class="badge bg-info">Редактор</span>
                                         }
                                     </div>
-                                    <div>@comment.Content</div>
+                                    <div style="white-space: pre-wrap;">@comment.Content</div>
                                 </div>
                             }
-                        </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted small mb-0">Комментариев пока нет.</p>
+                        }
                     </div>
-                }
+                </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Модальное окно для отправки на доработку -->
 @if (showRevisionModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Send Article for Revision</h5>
+                    <h5 class="modal-title">Отправить на доработку</h5>
                     <button type="button" class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Comments for Author:</label>
-                        <textarea @bind="revisionComments" class="form-control" rows="4" 
-                                  placeholder="What needs to be improved?"></textarea>
+                        <label class="form-label">Комментарий автору:</label>
+                        <textarea @bind="revisionComments" class="form-control" rows="4"
+                                  placeholder="Что нужно исправить?"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
-                    <button type="button" class="btn btn-warning" @onclick="SendForRevision">Send for Revision</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+                    <button type="button" class="btn btn-warning" @onclick="SendForRevision">Отправить</button>
                 </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Модальное окно для отклонения -->
 @if (showRejectModal)
 {
     <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Reject Article</h5>
+                    <h5 class="modal-title">Отклонить статью</h5>
                     <button type="button" class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Reason for Rejection:</label>
-                        <textarea @bind="rejectionReason" class="form-control" rows="4" 
-                                  placeholder="Why is this article being rejected?"></textarea>
+                        <label class="form-label">Причина:</label>
+                        <textarea @bind="rejectionReason" class="form-control" rows="4"
+                                  placeholder="Почему статья отклоняется?"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
-                    <button type="button" class="btn btn-danger" @onclick="RejectArticle">Reject Article</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+                    <button type="button" class="btn btn-danger" @onclick="RejectArticle">Отклонить</button>
                 </div>
             </div>
         </div>
@@ -168,33 +182,29 @@ else
 
 @code {
     [Parameter] public int ArticleId { get; set; }
-    
+
     private Article? article;
-    private string editedContent = string.Empty;
-    private bool showRevisionModal = false;
-    private bool showRejectModal = false;
+    private bool showRevisionModal;
+    private bool showRejectModal;
     private string revisionComments = string.Empty;
     private string rejectionReason = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
+        await ReloadArticle();
+    }
+
+    private async Task ReloadArticle()
+    {
         article = await ArticleService.GetArticleAsync(ArticleId);
-        if (article != null)
-        {
-            editedContent = article.Content;
-        }
     }
 
     private async Task ApproveArticle()
     {
-        if (article != null)
-        {
-            var success = await ArticleService.ApproveArticleAsync(article.ArticleId, editedContent);
-            if (success)
-            {
-                Navigation.NavigateTo("/editor/review");
-            }
-        }
+        if (article == null) return;
+        var success = await ArticleService.ApproveArticleAsync(article.ArticleId, article.Content ?? string.Empty);
+        if (success)
+            Navigation.NavigateTo("/editor/review");
     }
 
     private async Task SendForRevision()
