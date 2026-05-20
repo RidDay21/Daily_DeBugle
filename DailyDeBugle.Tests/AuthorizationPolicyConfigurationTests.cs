@@ -29,6 +29,9 @@ public class AuthorizationPolicyConfigurationTests
     [InlineData(Roles.Admin, Policies.LayoutIssue, true)]
     [InlineData(Roles.Admin, Policies.ManageIssues, true)]
     [InlineData(Roles.Admin, Policies.ManagePublications, true)]
+    [InlineData(Roles.Reader, Policies.CommentOnPublishedIssues, true)]
+    [InlineData(Roles.Author, Policies.CommentOnPublishedIssues, false)]
+    [InlineData(Roles.Admin, Policies.CommentOnPublishedIssues, false)]
     public async Task Role_matches_policy_expectation(string role, string policy, bool expectSuccess)
     {
         await using var sp = BuildServices();

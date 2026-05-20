@@ -2,10 +2,16 @@
 @attribute [Authorize(Policy = Policies.ViewContent)]
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
+@using DailyDeBugle.Security
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
 @inject IIssueService IssueService
 @inject IArticleService ArticleService
 @inject ILayoutService LayoutService
 @inject IGlobalTextStyleService TextStyleService
+@inject IIssueCommentService IssueCommentService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthorizationService AuthorizationService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
@@ -322,6 +328,61 @@
     </div>
 </div>
 
+@if (currentIssue?.Status == IssueStatus.Published)
+{
+    <div class="mt-4 card shadow-sm">
+        <div class="card-body">
+            <h4 class="card-title mb-3">Комментарии читателей</h4>
+
+            @if (canCommentOnIssue)
+            {
+                <div class="mb-4">
+                    <label class="form-label" for="readerComment">Ваш комментарий</label>
+                    <textarea id="readerComment"
+                              class="form-control"
+                              rows="3"
+                              maxlength="2000"
+                              @bind="newCommentText"
+                              placeholder="Напишите, что вы думаете об этом выпуске..."></textarea>
+                    @if (!string.IsNullOrEmpty(commentError))
+                    {
+                        <div class="text-danger small mt-2">@commentError</div>
+                    }
+                    <button class="btn btn-primary mt-2"
+                            disabled="@isSubmittingComment"
+                            @onclick="SubmitCommentAsync">
+                        @(isSubmittingComment ? "Отправка..." : "Отправить комментарий")
+                    </button>
+                </div>
+            }
+            else if (!isAuthenticated)
+            {
+                <p class="text-muted">Войдите в аккаунт, чтобы оставить комментарий.</p>
+            }
+
+            @if (issueComments.Count == 0)
+            {
+                <p class="text-muted mb-0">Пока нет комментариев. Будьте первым!</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var comment in issueComments)
+                    {
+                        <li class="border-bottom py-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <strong>@(comment.User?.Username ?? "Читатель")</strong>
+                                <span class="text-muted small">@comment.CreatedDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                            </div>
+                            <p class="mb-0">@comment.Content</p>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public int issueId { get; set; }
@@ -336,9 +397,35 @@
     private List<Article> allArticles = new();
     private List<AdvertisementBlock> allAds = new();
 
+    private List<IssueComment> issueComments = new();
+    private string newCommentText = string.Empty;
+    private string? commentError;
+    private bool isSubmittingComment;
+    private bool canCommentOnIssue;
+    private bool isAuthenticated;
+    private int? currentUserId;
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadAuthStateAsync();
         await LoadData();
+    }
+
+    private async Task LoadAuthStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAuthenticated = user.Identity?.IsAuthenticated == true;
+
+        if (isAuthenticated)
+        {
+            var authResult = await AuthorizationService.AuthorizeAsync(user, Policies.CommentOnPublishedIssues);
+            canCommentOnIssue = authResult.Succeeded;
+
+            var idClaim = user.FindFirst("UserId")?.Value;
+            if (int.TryParse(idClaim, out var uid))
+                currentUserId = uid;
+        }
     }
 
     private async Task LoadData()
@@ -359,11 +446,52 @@
                 await LoadAdvertisementBlocks();
 
                 await LoadCurrentPageLayout();
+
+                if (currentIssue.Status == IssueStatus.Published)
+                    await LoadCommentsAsync();
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Ошибка загрузки данных: {ex.Message}");
+        }
+    }
+
+    private async Task LoadCommentsAsync()
+    {
+        issueComments = await IssueCommentService.GetCommentsForIssueAsync(issueId);
+    }
+
+    private async Task SubmitCommentAsync()
+    {
+        commentError = null;
+
+        if (!canCommentOnIssue || currentUserId == null)
+        {
+            commentError = "Вы не можете оставлять комментарии к выпускам.";
+            return;
+        }
+
+        if (currentIssue?.Status != IssueStatus.Published)
+        {
+            commentError = "Комментарии доступны только к опубликованным выпускам.";
+            return;
+        }
+
+        isSubmittingComment = true;
+        try
+        {
+            await IssueCommentService.AddReaderCommentAsync(issueId, currentUserId.Value, newCommentText);
+            newCommentText = string.Empty;
+            await LoadCommentsAsync();
+        }
+        catch (Exception ex)
+        {
+            commentError = ex.Message;
+        }
+        finally
+        {
+            isSubmittingComment = false;
         }
     }
 
