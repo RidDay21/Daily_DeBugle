@@ -27,5 +27,8 @@ public static class AuthorizationPolicyConfiguration
 
         options.AddPolicy(Policies.AccessAdminPanel, policy =>
             policy.RequireRole(Roles.Admin));
+
+        options.AddPolicy(Policies.CommentOnPublishedIssues, policy =>
+            policy.RequireRole(Roles.Reader));
     }
 }

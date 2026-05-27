@@ -19,5 +19,6 @@ public static class Policies
     public const string ManageIssues = nameof(ManageIssues);                // EiC + Admin
     public const string ManagePublications = nameof(ManagePublications);    // EiC + Admin
     public const string AccessAdminPanel = nameof(AccessAdminPanel);        // Admin only
+    public const string CommentOnPublishedIssues = nameof(CommentOnPublishedIssues); // Reader only
 }
 
