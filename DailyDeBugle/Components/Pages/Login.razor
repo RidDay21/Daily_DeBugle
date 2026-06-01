@@ -13,8 +13,8 @@
 
 <div class="card">
     <div class="card-header text-center">
-        <h3 class="mb-1">С возвращением</h3>
-        <p class="text-muted small mb-0">Войдите в свой аккаунт редакции</p>
+        <h3 class="mb-1">Welcome Back</h3>
+        <p class="text-muted small mb-0">Login to your account</p>
     </div>
     <div class="card-body">
         <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
@@ -28,7 +28,7 @@
             }
 
             <div class="mb-3">
-                <label class="form-label small fw-bold text-uppercase text-muted">Имя пользователя</label>
+                <label class="form-label small fw-bold text-uppercase text-muted">Username</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
                     <InputText @bind-Value="loginModel.Username" class="form-control border-start-0" placeholder="username" />
@@ -37,7 +37,7 @@
             </div>
 
             <div class="mb-4">
-                <label class="form-label small fw-bold text-uppercase text-muted">Пароль</label>
+                <label class="form-label small fw-bold text-uppercase text-muted">Password</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock"></i></span>
                     <InputText @bind-Value="loginModel.Password" type="password" class="form-control border-start-0" placeholder="••••••••" />
@@ -50,11 +50,11 @@
                     @if (isProcessing)
                     {
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        <span>Вход...</span>
+                        <span>Logging in...</span>
                     }
                     else
                     {
-                        <span>Войти</span>
+                        <span>Login</span>
                     }
                 </button>
             </div>
@@ -62,7 +62,7 @@
     </div>
     <div class="card-footer bg-light border-top-0 text-center py-3">
         <p class="mb-0 small">
-            Нет аккаунта? <a href="/register" class="fw-bold text-decoration-none">Зарегистрироваться</a>
+            No account? <a href="/register" class="fw-bold text-decoration-none">Register</a>
         </p>
     </div>
 </div>
@@ -89,12 +89,12 @@
             }
             else
             {
-                errorMessage = "Неверное имя пользователя или пароль";
+                errorMessage = "Invalid username or password";
             }
         }
         catch (Exception)
         {
-            errorMessage = "Ошибка сервера. Попробуйте позже.";
+            errorMessage = "Server error. Please try again later.";
         }
         finally
         {
@@ -104,10 +104,10 @@
 
     public class LoginModel
     {
-        [Required(ErrorMessage = "Введите имя пользователя")]
+        [Required(ErrorMessage = "Enter username")]
         public string? Username { get; set; }
 
-        [Required(ErrorMessage = "Введите пароль")]
+        [Required(ErrorMessage = "Enter password")]
         public string? Password { get; set; }
     }
 }

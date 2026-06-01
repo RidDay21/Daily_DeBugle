@@ -9,22 +9,22 @@
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
-<PageTitle>Типографика выпуска: @issue?.IssueNumber</PageTitle>
+<PageTitle>Issue Typography: @issue?.IssueNumber</PageTitle>
 
 <div class="container-fluid py-4">
-    <!-- Заголовок и навигация -->
+    <!-- Header and Navigation -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2>Типографика выпуска</h2>
+            <h2>Issue Typography</h2>
             <p class="text-muted mb-0">
-                Выпуск: @issue?.IssueNumber | 
-                Дата: @issue?.IssueDate.ToString("dd.MM.yyyy") |
-                Статей: @articles?.Count
+                Issue: @issue?.IssueNumber | 
+                Date: @issue?.IssueDate.ToString("dd.MM.yyyy") |
+                Articles: @articles?.Count
             </p>
         </div>
         <div>
             <button class="btn btn-outline-secondary me-2" @onclick="NavigateBack">
-                <i class="bi bi-arrow-left me-1"></i> Назад к макету
+                <i class="bi bi-arrow-left me-1"></i> Back to Layout
             </button>
         </div>
     </div>
@@ -33,24 +33,24 @@
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Загрузка...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Загрузка типографики выпуска...</p>
+            <p class="mt-2">Loading issue typography...</p>
         </div>
     }
     else
     {
         <div class="row">
-            <!-- Левая колонка: Настройки -->
+            <!-- Left Column: Settings -->
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-fonts me-2"></i>Настройки шрифтов</h5>
+                        <h5 class="mb-0"><i class="bi bi-fonts me-2"></i>Font Settings</h5>
                     </div>
                     <div class="card-body">
-                        <!-- Основной шрифт -->
+                        <!-- Primary Font -->
                         <div class="mb-3">
-                            <label class="form-label">Основной шрифт</label>
+                            <label class="form-label">Primary Font</label>
                             <select value="@styles.PrimaryFont"
                                     @onchange="@(e => { styles.PrimaryFont = e.Value?.ToString(); UpdatePreview(); })"
                                     class="form-select">
@@ -64,9 +64,9 @@
                             </select>
                         </div>
 
-                        <!-- Шрифт заголовков -->
+                        <!-- Heading Font -->
                         <div class="mb-3">
-                            <label class="form-label">Шрифт заголовков</label>
+                            <label class="form-label">Heading Font</label>
                             <select value="@styles.HeadingFont"
                                     @onchange="@(e => { styles.HeadingFont = e.Value?.ToString(); UpdatePreview(); })"
                                     class="form-select">
@@ -82,15 +82,15 @@
                     </div>
                 </div>
 
-                <!-- Размеры текста -->
+                <!-- Text Sizes -->
                 <div class="card mb-4">
                     <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-textarea-t me-2"></i>Размеры текста (pt)</h5>
+                        <h5 class="mb-0"><i class="bi bi-textarea-t me-2"></i>Text Sizes (pt)</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Заголовок H1</label>
+                                <label class="form-label">Heading H1</label>
                                 <input type="number" 
                                        value="@styles.H1Size"
                                        @oninput="@(e => { 
@@ -103,7 +103,7 @@
                                 <div class="form-text">18-36pt</div>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Заголовок H2</label>
+                                <label class="form-label">Heading H2</label>
                                 <input type="number" 
                                        value="@styles.H2Size"
                                        @oninput="@(e => { 
@@ -116,7 +116,7 @@
                                 <div class="form-text">16-24pt</div>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Основной текст</label>
+                                <label class="form-label">Body Text</label>
                                 <input type="number" 
                                        value="@styles.BodySize"
                                        @oninput="@(e => { 
@@ -132,15 +132,15 @@
                     </div>
                 </div>
 
-                <!-- Междустрочные интервалы -->
+                <!-- Line Spacing -->
                 <div class="card mb-4">
                     <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-text-indent-left me-2"></i>Междустрочные интервалы</h5>
+                        <h5 class="mb-0"><i class="bi bi-text-indent-left me-2"></i>Line Spacing</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Основной текст</label>
+                                <label class="form-label">Body Text</label>
                                 <input type="number" 
                                        value="@styles.BodyLineSpacing"
                                        @oninput="@(e => { 
@@ -153,7 +153,7 @@
                                 <div class="form-text">1.2-2.0</div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Заголовки</label>
+                                <label class="form-label">Headings</label>
                                 <input type="number" 
                                        value="@styles.HeadingLineSpacing"
                                        @oninput="@(e => { 
@@ -170,38 +170,38 @@
                 </div>
             </div>
 
-            <!-- Правая колонка: Предпросмотр -->
+            <!-- Right Column: Preview -->
             <div class="col-md-6">
                 <div class="card sticky-top" style="top: 20px;">
                     <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Предпросмотр</h5>
+                        <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Preview</h5>
                     </div>
                     <div class="card-body">
-                        <!-- Текущие настройки -->
+                        <!-- Current Settings -->
                         <div class="alert alert-info mb-3">
-                            <h6><i class="bi bi-info-circle me-1"></i>Текущие настройки:</h6>
+                            <h6><i class="bi bi-info-circle me-1"></i>Current Settings:</h6>
                             <div class="small">
-                                <div>Основной шрифт: <strong>@styles.PrimaryFont</strong></div>
-                                <div>Шрифт заголовков: <strong>@styles.HeadingFont</strong></div>
+                                <div>Primary Font: <strong>@styles.PrimaryFont</strong></div>
+                                <div>Heading Font: <strong>@styles.HeadingFont</strong></div>
                                 <div>H1: <strong>@styles.H1Size pt</strong>, H2: <strong>@styles.H2Size pt</strong></div>
-                                <div>Основной текст: <strong>@styles.BodySize pt</strong></div>
-                                <div>Интервалы: <strong>@styles.BodyLineSpacing</strong> (текст), <strong>@styles.HeadingLineSpacing</strong> (заголовки)</div>
+                                <div>Body Text: <strong>@styles.BodySize pt</strong></div>
+                                <div>Spacing: <strong>@styles.BodyLineSpacing</strong> (text), <strong>@styles.HeadingLineSpacing</strong> (headings)</div>
                             </div>
                         </div>
 
-                        <!-- Предпросмотр статей -->
+                        <!-- Article Preview -->
                         <div class="preview-container" style="@GetPreviewStyle()">
                             @if (articles == null || !articles.Any())
                             {
                                 <div class="alert alert-warning">
                                     <i class="bi bi-exclamation-triangle me-2"></i>
-                                    В этом выпуске нет статей для предпросмотра.
+                                    There are no articles in this issue to preview.
                                 </div>
                             }
                             else
                             {
                                 <div class="preview-content">
-                                    @* Показываем только 3 статьи для предпросмотра *@
+                                    @* Show only 3 articles for preview *@
                                     @foreach (var article in articles.Take(3))
                                     {
                                         <div class="article-preview mb-4">
@@ -221,11 +221,11 @@
                                             
                                             @if (article.Content.Length > 200)
                                             {
-                                                <h2 style="@GetH2Style()" class="mt-4">Пример подзаголовка</h2>
+                                                <h2 style="@GetH2Style()" class="mt-4">Subheading Example</h2>
                                                 <div style="@GetParagraphStyle()">
-                                                    Это пример того, как будет выглядеть дополнительный текст 
-                                                    с текущими настройками типографики. Обратите внимание на 
-                                                    шрифт, размер текста и межстрочные интервалы.
+                                                    This is an example of how additional text 
+                                                    will look with current typography settings. Notice the 
+                                                    font, text size, and line spacing.
                                                 </div>
                                             }
                                             
@@ -236,17 +236,17 @@
                             }
                         </div>
 
-                        <!-- Кнопки действий -->
+                        <!-- Action Buttons -->
                         <div class="mt-4 pt-3 border-top">
                             <div class="d-flex gap-2">
                                 <button class="btn btn-secondary flex-fill" @onclick="ResetToDefault">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Сбросить
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                                 </button>
                                 <button class="btn btn-primary flex-fill" @onclick="SaveSettings">
-                                    <i class="bi bi-save me-1"></i> Сохранить
+                                    <i class="bi bi-save me-1"></i> Save
                                 </button>
                                 <button class="btn btn-success flex-fill" @onclick="ApplyToAllArticles">
-                                    <i class="bi bi-check-all me-1"></i> Применить ко всем статьям
+                                    <i class="bi bi-check-all me-1"></i> Apply to all articles
                                 </button>
                             </div>
                         </div>
@@ -276,7 +276,7 @@
             issue = await IssueService.GetIssueAsync(issueId);
             if (issue == null)
             {
-                await JSRuntime.InvokeVoidAsync("alert", $"Выпуск с ID {issueId} не найден");
+                await JSRuntime.InvokeVoidAsync("alert", $"Issue with ID {issueId} not found");
                 Navigation.NavigateTo("/issues");
                 return;
             }
@@ -289,7 +289,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка загрузки: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Loading error: {ex.Message}");
         }
         finally
         {
@@ -308,11 +308,11 @@
         try
         {
             styles = await TextStyleService.SaveStylesAsync(styles);
-            await JSRuntime.InvokeVoidAsync("alert", "Настройки типографики успешно сохранены!");
+            await JSRuntime.InvokeVoidAsync("alert", "Typography settings saved successfully!");
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка сохранения: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Save error: {ex.Message}");
         }
     }
 
@@ -321,20 +321,20 @@
         try
         {
             await TextStyleService.ApplyStylesToIssueAsync(issueId);
-            await JSRuntime.InvokeVoidAsync("alert", $"Стили применены ко всем статьям выпуска!");
+            await JSRuntime.InvokeVoidAsync("alert", $"Styles applied to all articles in the issue!");
             
             // Перезагружаем статьи, чтобы показать обновленные стили
             articles = await ArticleService.GetArticlesByIssueAsync(issueId);
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка применения стилей: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Error applying styles: {ex.Message}");
         }
     }
 
     private async Task ResetToDefault()
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Сбросить настройки типографики к значениям по умолчанию?"))
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Reset typography settings to default values?"))
         {
             styles.PrimaryFont = "Times New Roman";
             styles.HeadingFont = "Times New Roman";
@@ -346,7 +346,7 @@
             // ColumnCount и ColumnGap больше не используются
         
             UpdatePreview();
-            await JSRuntime.InvokeVoidAsync("alert", "Настройки сброшены к значениям по умолчанию");
+            await JSRuntime.InvokeVoidAsync("alert", "Settings reset to default values");
         }
     }
 

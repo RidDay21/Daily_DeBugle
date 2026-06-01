@@ -6,12 +6,12 @@ namespace DailyDeBugle.Models
     {
         public int AdvertisementBlockId { get; set; }
         
-        [Required(ErrorMessage = "Укажите рекламодателя")]
-        [StringLength(100, ErrorMessage = "Название не должно превышать 100 символов")]
+        [Required(ErrorMessage = "Please specify the advertiser")]
+        [StringLength(100, ErrorMessage = "The name must not exceed 100 characters")]
         public string Advertiser { get; set; } = string.Empty;
         
-        [Required(ErrorMessage = "Заполните содержание рекламы")]
-        [StringLength(1000, ErrorMessage = "Содержание не должно превышать 1000 символов")]
+        [Required(ErrorMessage = "Please fill in the advertisement content")]
+        [StringLength(1000, ErrorMessage = "The content must not exceed 1000 characters")]
         public string Content { get; set; } = string.Empty;
         
         [Required]
@@ -20,15 +20,15 @@ namespace DailyDeBugle.Models
         [Required]
         public DateTime EndDate { get; set; }
         
-        [Range(1, 10, ErrorMessage = "Ширина должна быть от 1 до 10 см")]
+        [Range(1, 10, ErrorMessage = "The width must be between 1 and 10 cm")]
         public double DefaultWidth { get; set; } = 5.0;
         
-        [Range(1, 10, ErrorMessage = "Высота должна быть от 1 до 10 см")]
+        [Range(1, 10, ErrorMessage = "The height must be between 1 and 10 cm")]
         public double DefaultHeight { get; set; } = 3.0;
         
         public AdType Type { get; set; } = AdType.Text;
         
-        // Навигационные свойства
+        // Navigation properties
         public List<LayoutElement> LayoutElements { get; set; } = new();
     }
 
@@ -45,13 +45,13 @@ namespace DailyDeBugle.Models
         public AdvertisementBlock AdvertisementBlock { get; set; } = null!;
         public int PageNumber { get; set; } = 1;
         
-        // Позиция в пикселях для превью
+        // Position in pixels for preview
         public double PositionX { get; set; }
         public double PositionY { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
         
-        // Настройки обтекания
+        // Text wrap settings
         public string TextFlow { get; set; } = "None"; // "Left", "Right", "None"
         public double Margin { get; set; } = 0.3;
     }

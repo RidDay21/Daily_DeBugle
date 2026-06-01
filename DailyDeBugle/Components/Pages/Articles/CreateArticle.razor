@@ -1,4 +1,4 @@
-﻿@page "/articles/create"
+@page "/articles/create"
 @attribute [Authorize(Policy = Policies.WriteArticles)]
 @rendermode InteractiveServer 
 @inject DailyDeBugle.Services.IArticleService ArticleService
@@ -46,7 +46,7 @@ else
             }
             @if (selectedImages.Count > 0)
             {
-                <div class="small text-muted mt-1">Выбрано файлов: @selectedImages.Count</div>
+                <div class="small text-muted mt-1">Files selected: @selectedImages.Count</div>
             }
         </div>
 
@@ -65,7 +65,7 @@ else
         <div class="mb-3">
             <label>Author:</label>
             <input class="form-control" value="@currentUsername" disabled />
-            <div class="form-text">Автор проставляется автоматически по текущему пользователю.</div>
+            <div class="form-text">Author is automatically set based on the current user.</div>
             <ValidationMessage For="@(() => newArticle.AuthorId)" />
         </div>
 
@@ -104,19 +104,19 @@ else
     
     private async Task HandleValidSubmit()
     {
-        // Проверка перед сохранением
+        // Validation before saving
         Console.WriteLine($"[DEBUG] Creating article: AuthorId={newArticle.AuthorId}, IssueId={newArticle.IssueId}, Headline={newArticle.Headline}");
 
         if (currentUserId == null)
         {
-            imagesError = "Не удалось определить текущего пользователя (UserId). Перезайдите в аккаунт.";
+            imagesError = "Failed to determine current user (UserId). Please log in again.";
             return;
         }
 
         newArticle.AuthorId = currentUserId;
         var created = await ArticleService.CreateArticleAsync(newArticle);
 
-        // Загрузкка изображения и прикрепление к статье
+        // Uploading images and attaching to the article
         foreach (var file in selectedImages)
         {
             var path = await FileUploadHelper.UploadFileAsync(file, $"articles/{created.ArticleId}", maxFileSize: 10 * 1024 * 1024);
@@ -133,10 +133,10 @@ else
 
         try
         {
-            // базовый лимит
+            // Basic limit
             if (e.GetMultipleFiles().Count > 10)
             {
-                imagesError = "Можно прикрепить максимум 10 изображений.";
+                imagesError = "You can attach a maximum of 10 images.";
                 return;
             }
 

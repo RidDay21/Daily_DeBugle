@@ -6,10 +6,10 @@
 @inject NavigationManager Navigation
 
 <div class="container mt-4">
-    <!-- Шапка во всю страницу -->
+    <!-- Full page header -->
     <div class="row">
         <div class="col-12">
-            <h1 class="text-center mb-4">Создание издания</h1>
+            <h1 class="text-center mb-4">Create Publication</h1>
         </div>
     </div>
 
@@ -17,49 +17,49 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        <!-- Название -->
+        <!-- Name -->
         <div class="mb-3">
-            <label for="publicationName" class="form-label">Название:</label>
+            <label for="publicationName" class="form-label">Name:</label>
             <InputText id="publicationName" @bind-Value="newPublication.Name" 
-                      class="form-control" placeholder="введите название" 
+                      class="form-control" placeholder="enter name" 
                       maxlength="50" />
             <ValidationMessage For="@(() => newPublication.Name)" />
-            <div class="form-text">Осталось символов: @(50 - (newPublication.Name?.Length ?? 0))</div>
+            <div class="form-text">Characters remaining: @(50 - (newPublication.Name?.Length ?? 0))</div>
         </div>
 
-        <!-- Описание -->
+        <!-- Description -->
         <div class="mb-3">
-            <label for="publicationDescription" class="form-label">Описание:</label>
+            <label for="publicationDescription" class="form-label">Description:</label>
             <InputTextArea id="publicationDescription" @bind-Value="newPublication.Description" 
                           class="form-control" rows="5" 
-                          placeholder="Введите описание издания..." />
+                          placeholder="Enter publication description..." />
             <ValidationMessage For="@(() => newPublication.Description)" />
         </div>
 
-        <!-- Периодичность -->
+        <!-- Frequency -->
         <div class="mb-4">
-            <label for="publicationFrequency" class="form-label">Периодичность:</label>
+            <label for="publicationFrequency" class="form-label">Frequency:</label>
             <InputSelect id="publicationFrequency" @bind-Value="newPublication.Frequency" 
                          class="form-select">
-                <option value="Daily">Ежедневно</option>
-                <option value="Weekly">Еженедельно</option>
-                <option value="Monthly">Ежемесячно</option>
+                <option value="Daily">Daily</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Monthly">Monthly</option>
             </InputSelect>
         </div>
 
-        <!-- Кнопки -->
+        <!-- Buttons -->
         <div class="d-flex gap-2 justify-content-end">
-            <button type="button" class="btn btn-secondary" @onclick="Cancel">Отменить</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
             <button type="submit" class="btn btn-primary" disabled="@isLoading">
                 @if (isLoading)
                 {
                     <span class="spinner-border spinner-border-sm" role="status"></span>
                 }
-                Сохранить
+                Save
             </button>
         </div>
 
-        <!-- Сообщения об ошибках/успехе -->
+        <!-- Error/Success messages -->
         @if (!string.IsNullOrEmpty(message))
         {
             <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3">
@@ -83,28 +83,28 @@
         
         try
         {
-            // Вызываем сервис для создания публикации
+            // Call the service to create the publication
             await PublicationService.CreatePublicationAsync(newPublication);
             
-            // Успех - показываем сообщение и очищаем форму
-            message = "Публикация успешно создана!";
+            // Success - show message and clear form
+            message = "Publication successfully created!";
             isError = false;
-            newPublication = new Publication(); // Сбрасываем форму
+            newPublication = new Publication(); // Reset form
             
-            // Ждем 2 секунды и возвращаем на главную
+            // Wait 2 seconds and return to home
             await Task.Delay(2000);
             Navigation.NavigateTo("/");
         }
         catch (InvalidOperationException ex)
         {
-            // Ошибка валидации (неуникальное имя)
+            // Validation error (non-unique name)
             message = ex.Message;
             isError = true;
         }
         catch (Exception ex)
         {
-            // Другие ошибки
-            message = $"Ошибка при создании публикации: {ex.Message}";
+            // Other errors
+            message = $"Error creating publication: {ex.Message}";
             isError = true;
         }
         finally

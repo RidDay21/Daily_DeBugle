@@ -8,85 +8,85 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
-<PageTitle>Колонтитулы - Выпуск @issueId</PageTitle>
+<PageTitle>Headers & Footers - Issue @issueId</PageTitle>
 
 <div class="header-footer-container">
     <!-- Панель настроек -->
     <div class="settings-panel">
-        <h3 class="panel-title">Настройка колонтитулов выпуска</h3>
+        <h3 class="panel-title">Configure Issue Headers & Footers</h3>
         
         <!-- Информация о выпуске -->
         <div class="issue-info mb-3 p-2 bg-light rounded">
             <small>
-                <strong>Выпуск:</strong> @(issue?.IssueNumber ?? "Загрузка...")<br>
-                <strong>Дата выпуска:</strong> @(issue?.IssueDate.ToString("dd.MM.yyyy") ?? "Не указана")
+                <strong>Issue:</strong> @(issue?.IssueNumber ?? "Loading...")<br>
+                <strong>Issue Date:</strong> @(issue?.IssueDate.ToString("dd.MM.yyyy") ?? "Not specified")
             </small>
         </div>
 
         <EditForm Model="@settings" OnValidSubmit="@SaveSettings" FormName="header_footer_form">
             <div class="row">
                 <div class="col-md-6">
-                    <h4>Верхний колонтитул</h4>
+                    <h4>Header</h4>
                     
                     <div class="form-check mb-3">
                         <InputCheckbox class="form-check-input" @bind-Value="@settings.HeaderEnabled" />
-                        <label class="form-check-label">Включен</label>
+                        <label class="form-check-label">Enabled</label>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Слева</label>
-                        <InputText class="form-control" @bind-Value="@settings.HeaderLeft" placeholder="Например: {PublicationName}" />
+                        <label class="form-label">Left</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderLeft" placeholder="Example: {PublicationName}" />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">По центру</label>
-                        <InputText class="form-control" @bind-Value="@settings.HeaderCenter" placeholder="Например: Выпуск №{IssueNumber}" />
+                        <label class="form-label">Center</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderCenter" placeholder="Example: Issue #{IssueNumber}" />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Справа</label>
-                        <InputText class="form-control" @bind-Value="@settings.HeaderRight" placeholder="Например: {IssueDate}" />
+                        <label class="form-label">Right</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderRight" placeholder="Example: {IssueDate}" />
                     </div>
                 </div>
 
                 <div class="col-md-6">
-                    <h4>Нижний колонтитул</h4>
+                    <h4>Footer</h4>
                     
                     <div class="form-check mb-3">
                         <InputCheckbox class="form-check-input" @bind-Value="@settings.FooterEnabled" />
-                        <label class="form-check-label">Включен</label>
+                        <label class="form-check-label">Enabled</label>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Слева</label>
-                        <InputText class="form-control" @bind-Value="@settings.FooterLeft" placeholder="Например: Контакт: {ContactEmail}" />
+                        <label class="form-label">Left</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterLeft" placeholder="Example: Contact: {ContactEmail}" />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">По центру</label>
-                        <InputText class="form-control" @bind-Value="@settings.FooterCenter" placeholder="Например: Страница {PageNumber}" />
+                        <label class="form-label">Center</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterCenter" placeholder="Example: Page {PageNumber}" />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Справа</label>
-                        <InputText class="form-control" @bind-Value="@settings.FooterRight" placeholder="Например: {CurrentDate}" />
+                        <label class="form-label">Right</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterRight" placeholder="Example: {CurrentDate}" />
                     </div>
                 </div>
             </div>
 
             <div class="row mt-4">
                 <div class="col-12">
-                    <h5>Доступные переменные</h5>
+                    <h5>Available Variables</h5>
                     <div class="variables-info bg-light p-3 rounded">
                         <small>
-                            <strong>Доступные плейсхолдеры:</strong><br>
-                            <code>{PublicationName}</code> - Название издания<br>
-                            <code>{IssueNumber}</code> - Номер выпуска<br>
-                            <code>{IssueDate}</code> - Дата выпуска<br>
-                            <code>{PageNumber}</code> - Номер страницы<br>
-                            <code>{CurrentDate}</code> - Текущая дата<br>
-                            <code>{ContactEmail}</code> - Контактный email<br>
-                            <code>{TotalPages}</code> - Всего страниц
+                            <strong>Available Placeholders:</strong><br>
+                            <code>{PublicationName}</code> - Publication Name<br>
+                            <code>{IssueNumber}</code> - Issue Number<br>
+                            <code>{IssueDate}</code> - Issue Date<br>
+                            <code>{PageNumber}</code> - Page Number<br>
+                            <code>{CurrentDate}</code> - Current Date<br>
+                            <code>{ContactEmail}</code> - Contact Email<br>
+                            <code>{TotalPages}</code> - Total Pages
                         </small>
                     </div>
                 </div>
@@ -94,10 +94,10 @@
 
             <div class="row mt-4">
                 <div class="col-12">
-                    <h5>Форматирование</h5>
+                    <h5>Formatting</h5>
                     <div class="row">
                         <div class="col-md-4">
-                            <label class="form-label">Шрифт</label>
+                            <label class="form-label">Font</label>
                             <InputSelect class="form-select" @bind-Value="@settings.FontFamily">
                                 <option value="Times New Roman">Times New Roman</option>
                                 <option value="Arial">Arial</option>
@@ -107,16 +107,16 @@
                             </InputSelect>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Размер шрифта (pt)</label>
+                            <label class="form-label">Font size (pt)</label>
                             <InputNumber class="form-control" @bind-Value="@settings.FontSize" />
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Выравнивание</label>
+                            <label class="form-label">Alignment</label>
                             <InputSelect class="form-select" @bind-Value="@settings.Alignment">
-                                <option value="left">Слева</option>
-                                <option value="center">По центру</option>
-                                <option value="right">Справа</option>
-                                <option value="justify">По ширине</option>
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                                <option value="right">Right</option>
+                                <option value="justify">Justify</option>
                             </InputSelect>
                         </div>
                     </div>
@@ -124,25 +124,25 @@
             </div>
 
             <div class="mt-4">
-                <button type="submit" class="btn btn-primary">Сохранить настройки</button>
-                <button type="button" class="btn btn-secondary" @onclick="@ResetToDefault">Сбросить к умолчаниям</button>
-                <button type="button" class="btn btn-outline-secondary" @onclick="@NavigateBack">Назад к выпуску</button>
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <button type="button" class="btn btn-secondary" @onclick="@ResetToDefault">Reset to Defaults</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="@NavigateBack">Back to Issue</button>
             </div>
         </EditForm>
     </div>
 
     <!-- Панель предпросмотра -->
     <div class="preview-panel">
-        <h4>Предпросмотр страниц выпуска</h4>
+        <h4>Issue Page Preview</h4>
         
         <div class="preview-controls mb-3">
-            <label>Страница для предпросмотра:</label>
+            <label>Page for preview:</label>
             <div class="btn-group">
                 @foreach (var pageNum in new[] { 1, 2, 3, 4 })
                 {
                     <button class="btn btn-sm @(currentPreviewPage == pageNum ? "btn-primary" : "btn-outline-primary")"
                             @onclick="() => ChangePreviewPage(pageNum)">
-                        Страница @pageNum
+                        Page @pageNum
                     </button>
                 }
             </div>
@@ -159,15 +159,15 @@
             
             <!-- Основное содержание -->
             <div class="preview-content p-4" style="min-height: 400px;">
-                <h4>Содержание страницы @currentPreviewPage</h4>
-                <p>Это пример содержимого страницы. Здесь может быть текст статей, изображения и другие элементы верстки.</p>
-                <p>Колонтитулы помогают идентифицировать выпуск и обеспечивают навигацию по страницам.</p>
+                <h4>Page content @currentPreviewPage</h4>
+                <p>This is an example of page content. It can include article text, images, and other layout elements.</p>
+                <p>Headers and footers help identify the issue and provide page navigation.</p>
                 
                 @if (currentPreviewPage > 1)
                 {
                     <div>
-                        <h5>Продолжение статьи</h5>
-                        <p>Текст статьи продолжается на этой странице. Колонтитулы помогают читателю ориентироваться в материале.</p>
+                        <h5>Article continuation</h5>
+                        <p>Article text continues on this page. Headers and footers help the reader navigate the material.</p>
                     </div>
                 }
             </div>
@@ -183,10 +183,10 @@
 
         <div class="preview-info mt-3">
             <small class="text-muted">
-                <strong>Текущие настройки:</strong><br>
-                Шрифт: @settings.FontFamily, Размер: @settings.FontSize pt, Выравнивание: @GetAlignmentText(settings.Alignment)<br>
-                Верхний колонтитул: @(settings.HeaderEnabled ? "Включен" : "Отключен") | 
-                Нижний колонтитул: @(settings.FooterEnabled ? "Включен" : "Отключен")
+                <strong>Current Settings:</strong><br>
+                Font: @settings.FontFamily, Size: @settings.FontSize pt, Alignment: @GetAlignmentText(settings.Alignment)<br>
+                Header: @(settings.HeaderEnabled ? "Enabled" : "Disabled") | 
+                Footer: @(settings.FooterEnabled ? "Enabled" : "Disabled")
             </small>
         </div>
     </div>
@@ -229,11 +229,11 @@
             settings = await HeaderFooterService.SaveSettingsAsync(settings);
             await UpdatePreview();
             
-            await JSRuntime.InvokeVoidAsync("alert", "Настройки колонтитулов успешно сохранены для выпуска!");
+            await JSRuntime.InvokeVoidAsync("alert", "Header and footer settings saved successfully for the issue!");
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка при сохранении: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving: {ex.Message}");
         }
     }
 
@@ -244,11 +244,11 @@
             IssueId = int.Parse(issueId),
             HeaderEnabled = true,
             HeaderLeft = "{PublicationName}",
-            HeaderCenter = "Выпуск №{IssueNumber}",
+            HeaderCenter = "Issue #{IssueNumber}",
             HeaderRight = "{IssueDate}",
             FooterEnabled = true,
-            FooterLeft = "Контакт: info@dailydebugle.com",
-            FooterCenter = "Страница {PageNumber} из {TotalPages}",
+            FooterLeft = "Contact: info@dailydebugle.com",
+            FooterCenter = "Page {PageNumber} of {TotalPages}",
             FooterRight = "{CurrentDate}",
             FontFamily = "Times New Roman",
             FontSize = 10,
@@ -258,7 +258,7 @@
         await UpdatePreview();
         StateHasChanged();
         
-        await JSRuntime.InvokeVoidAsync("alert", "Настройки сброшены к значениям по умолчанию!");
+        await JSRuntime.InvokeVoidAsync("alert", "Settings reset to default values!");
     }
 
     private async Task UpdatePreview()
@@ -305,11 +305,11 @@
     {
         return alignment switch
         {
-            "left" => "Слева",
-            "center" => "По центру",
-            "right" => "Справа",
-            "justify" => "По ширине",
-            _ => "По центру"
+            "left" => "Left",
+            "center" => "Center",
+            "right" => "Right",
+            "justify" => "Justify",
+            _ => "Center"
         };
     }
 }

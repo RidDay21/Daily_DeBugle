@@ -6,7 +6,7 @@
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
-<PageTitle>Создание рекламы</PageTitle>
+<PageTitle>Create Advertisement</PageTitle>
 
 <div class="container mt-4">
     @if (!string.IsNullOrEmpty(errorMessage))
@@ -21,37 +21,37 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h3>Новый рекламный блок</h3>
+                    <h3>New Advertisement Block</h3>
                 </div>
                 
                 <div class="card-body">
                     <EditForm Model="@newAd" OnValidSubmit="@HandleValidSubmit">
                         <DataAnnotationsValidator />
                         
-                        <!-- Рекламодатель -->
+                        <!-- Advertiser -->
                         <div class="mb-3">
-                            <label class="form-label">Рекламодатель *</label>
+                            <label class="form-label">Advertiser *</label>
                             <InputText @bind-Value="@newAd.Advertiser" class="form-control" />
                             <ValidationMessage For="@(() => newAd.Advertiser)" />
                         </div>
                         
-                        <!-- Тип рекламы -->
+                        <!-- Advertisement Type -->
                         <div class="mb-3">
-                            <label class="form-label">Тип рекламы</label>
+                            <label class="form-label">Advertisement Type</label>
                             <select class="form-select" @bind="@newAd.Type">
-                                <option value="@AdType.Text">Текстовая</option>
-                                <option value="@AdType.Image">Изображение</option>
+                                <option value="@AdType.Text">Text</option>
+                                <option value="@AdType.Image">Image</option>
                             </select>
                         </div>
                         
-                        <!-- Содержимое -->
+                        <!-- Content -->
                         <div class="mb-3">
-                            <label class="form-label">Содержимое *</label>
+                            <label class="form-label">Content *</label>
                             
                             @if (newAd.Type == AdType.Text)
                             {
                                 <InputTextArea @bind-Value="@newAd.Content" class="form-control" rows="4" />
-                                <div class="form-text">Текст рекламы</div>
+                                <div class="form-text">Advertisement text</div>
                             }
                             else
                             {
@@ -66,7 +66,7 @@
                                     <div class="alert alert-info p-2 mt-2">
                                         <small>
                                             <i class="bi bi-file-earmark-image"></i>
-                                            Выбран файл: @selectedFile.Name 
+                                            Selected file: @selectedFile.Name 
                                             (@((selectedFile.Size / 1024f).ToString("0")) KB)
                                         </small>
                                     </div>
@@ -74,40 +74,40 @@
                             }
                         </div>
                         
-                        <!-- Даты активности -->
+                        <!-- Active Dates -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Дата начала</label>
+                                <label class="form-label">Start Date</label>
                                 <InputDate @bind-Value="@newAd.StartDate" class="form-control" />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Дата окончания</label>
+                                <label class="form-label">End Date</label>
                                 <InputDate @bind-Value="@newAd.EndDate" class="form-control" />
                             </div>
                         </div>
                         
-                        <!-- Размеры -->
+                        <!-- Dimensions -->
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Ширина (см)</label>
+                                <label class="form-label">Width (cm)</label>
                                 <InputNumber @bind-Value="@newAd.DefaultWidth" class="form-control" 
                                            min="1" max="20" step="0.5" />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Высота (см)</label>
+                                <label class="form-label">Height (cm)</label>
                                 <InputNumber @bind-Value="@newAd.DefaultHeight" class="form-control" 
                                            min="1" max="20" step="0.5" />
                             </div>
                         </div>
                         
-                        <!-- Кнопки -->
+                        <!-- Buttons -->
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                Создать рекламу
+                                Create Advertisement
                             </button>
                             <button type="button" class="btn btn-outline-secondary" 
                                     @onclick="NavigateToAdsList">
-                                Отмена
+                                Cancel
                             </button>
                         </div>
                     </EditForm>
@@ -143,7 +143,7 @@
         newAd.Content = $"/uploads/ads/{file.Name}";
         selectedFile = file;
         errorMessage = "";
-        Console.WriteLine($"Файл сохранен: {newAd.Content}");
+        Console.WriteLine($"File saved: {newAd.Content}");
     }
 
     private async Task HandleValidSubmit()
@@ -152,27 +152,27 @@
         
         try
         {
-            Console.WriteLine("=== Создание рекламы ===");
-            Console.WriteLine($"Рекламодатель: {newAd.Advertiser}");
-            Console.WriteLine($"Тип: {newAd.Type}");
-            Console.WriteLine($"Содержимое: {newAd.Content}");
+            Console.WriteLine("=== Creating Advertisement ===");
+            Console.WriteLine($"Advertiser: {newAd.Advertiser}");
+            Console.WriteLine($"Type: {newAd.Type}");
+            Console.WriteLine($"Content: {newAd.Content}");
             
-            // Если это изображение и не загружено
+            // If it's an image and not uploaded
             if (newAd.Type == AdType.Image && string.IsNullOrEmpty(newAd.Content))
             {
-                errorMessage = "Для рекламного блока с изображением необходимо выбрать файл";
+                errorMessage = "A file must be selected for an image advertisement block";
                 return;
             }
             
             await AdService.CreateAdAsync(newAd);
             
-            Console.WriteLine("Реклама успешно создана!");
+            Console.WriteLine("Advertisement successfully created!");
             Navigation.NavigateTo("/issues");
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ошибка: {ex.Message}";
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            errorMessage = $"Error: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 

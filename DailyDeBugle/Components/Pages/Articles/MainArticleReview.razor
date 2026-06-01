@@ -13,7 +13,7 @@
 
 <h3>Article Review Dashboard</h3>
 
-<!-- Вкладки -->
+<!-- Tabs -->
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
         <button class="nav-link @(activeTab == "underReview" ? "active" : "")" 
@@ -113,7 +113,7 @@ else
                             @if (CanEditArticle(article))
                             {
                                 <a class="btn btn-outline-info btn-sm" href="/articles/edit/@article.ArticleId">
-                                    Редактировать
+                                    Edit
                                 </a>
                             }
                         </td>

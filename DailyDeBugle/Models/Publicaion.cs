@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 namespace DailyDeBugle.Models
 {
     /// <summary>
-    /// Класс енум для строгой типизации нашей периодичности
+    /// Enum class for strict typing of our frequency
     /// </summary>
     public enum PublicationFrequency
     {
@@ -25,7 +25,7 @@ namespace DailyDeBugle.Models
         public string Description { get; set; } = string.Empty;
         
         /// <summary>
-        ///Сделал типизацию строгую
+        /// Made the typing strict
         /// </summary>
         public PublicationFrequency Frequency { get; set; } 
         

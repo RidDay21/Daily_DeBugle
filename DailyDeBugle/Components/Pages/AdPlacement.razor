@@ -10,14 +10,14 @@
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
-<PageTitle>Реклама в выпуске: @currentIssue?.IssueNumber</PageTitle>
+<PageTitle>Advertisements in Issue: @currentIssue?.IssueNumber</PageTitle>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3>Добавление рекламы</h3>
+            <h3>Add Advertisements</h3>
             <p class="text-muted mb-0">
-                Выпуск: @currentIssue?.IssueNumber • Страница: 
+                Issue: @currentIssue?.IssueNumber • Page: 
                 <select class="form-select d-inline w-auto mx-2"
                         value="@selectedPageNumber"
                         @onchange="@((ChangeEventArgs e) => OnPageChanged(Convert.ToInt32(e.Value)))">
@@ -30,14 +30,14 @@
                         <option value="1">1</option>
                     }
                 </select>
-                из @totalPages
+                of @totalPages
             </p>
             @if (currentPageLayout != null)
             {
                 <div class="small text-muted">
-                    Колонок: @currentPageLayout.ColumnCount | 
-                    Свободно места: <strong>@GetAvailableHeightOnPage().ToString("F1") см</strong> |
-                    Ширина колонки: <strong>@GetColumnWidth().ToString("F1") см</strong>
+                    Columns: @currentPageLayout.ColumnCount | 
+                    Available space: <strong>@GetAvailableHeightOnPage().ToString("F1") cm</strong> |
+                    Column width: <strong>@GetColumnWidth().ToString("F1") cm</strong>
                 </div>
             }
         </div>
@@ -47,20 +47,20 @@
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                     <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                 </svg>
-                Создать рекламу
+                Create Advertisement
             </a>
             <button class="btn btn-outline-info" @onclick="NavigateToPreview">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye me-1" viewBox="0 0 16 16">
                     <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
                     <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
                 </svg>
-                Предпросмотр
+                Preview
             </button>
             <button class="btn btn-outline-secondary" @onclick="NavigateBack">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-1" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
                 </svg>
-                Назад к верстке
+                Back to Layout
             </button>
             @if (pageLayouts.Count == 0)
             {
@@ -69,7 +69,7 @@
                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                         <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                     </svg>
-                    Создать страницу
+                    Create Page
                 </button>
             }
         </div>
@@ -77,7 +77,7 @@
 
     @if (!string.IsNullOrEmpty(message))
     {
-        <div class="alert @(message.Contains("Ошибка") ? "alert-danger" : "alert-info") alert-dismissible fade show mb-3">
+        <div class="alert @(message.Contains("Error") ? "alert-danger" : "alert-info") alert-dismissible fade show mb-3">
             @message
             <button type="button" class="btn-close" @onclick="ClearMessage"></button>
         </div>
@@ -96,7 +96,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Доступная реклама</h5>
+                    <h5 class="mb-0">Available Advertisements</h5>
                     <span class="badge bg-primary">@availableAds.Count</span>
                 </div>
                 <div class="card-body" style="max-height: 600px; overflow-y: auto;">
@@ -106,9 +106,9 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-megaphone text-muted" viewBox="0 0 16 16">
                                 <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
                             </svg>
-                            <p class="mt-3">Нет доступной рекламы</p>
+                            <p class="mt-3">No available advertisements</p>
                             <a href="/ads/create" class="btn btn-primary btn-sm">
-                                Создать первую рекламу
+                                Create first advertisement
                             </a>
                         </div>
                     }
@@ -128,13 +128,13 @@
                                             <div class="small text-muted mb-2">
                                                 @if (ad.Type == AdType.Image)
                                                 {
-                                                    <span class="badge bg-info me-1">Изображение</span>
+                                                    <span class="badge bg-info me-1">Image</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-secondary me-1">Текст</span>
+                                                    <span class="badge bg-secondary me-1">Text</span>
                                                 }
-                                                <span>До @ad.EndDate.ToString("dd.MM.yy")</span>
+                                                <span>Until @ad.EndDate.ToString("dd.MM.yy")</span>
                                             </div>
                                             
                                             @if (ad.Type == AdType.Text)
@@ -147,13 +147,13 @@
                                                     <img src="@ad.Content" alt="@ad.Advertiser" 
                                                          class="img-thumbnail" style="max-height: 100px; max-width: 100%;" />
                                                     <div class="small text-muted mt-1">
-                                                        Изображение: @Path.GetFileName(ad.Content)
+                                                        Image: @Path.GetFileName(ad.Content)
                                                     </div>
                                                 </div>
                                             }
                                             
                                             <div class="small text-muted">
-                                                Размер: @ad.DefaultWidth × @ad.DefaultHeight см
+                                                Size: @ad.DefaultWidth × @ad.DefaultHeight cm
                                             </div>
                                             
                                             @if (currentPageLayout != null)
@@ -166,7 +166,7 @@
                                                                 <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/>
                                                                 <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z"/>
                                                             </svg>
-                                                            Уже размещена на странице @selectedPageNumber
+                                                            Already placed on page @selectedPageNumber
                                                         </span>
                                                     }
                                                     else if (canPlace)
@@ -176,7 +176,7 @@
                                                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                                                 <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                                                             </svg>
-                                                            Поместится на страницу @selectedPageNumber
+                                                            Will fit on page @selectedPageNumber
                                                         </span>
                                                     }
                                                     else
@@ -199,11 +199,11 @@
                                                     title="@GetPlacementTooltip(ad)">
                                                 @if (alreadyOnPage)
                                                 {
-                                                    <span>Уже на стр. @selectedPageNumber</span>
+                                                    <span>Already on p. @selectedPageNumber</span>
                                                 }
                                                 else
                                                 {
-                                                    <span>Добавить на стр. @selectedPageNumber</span>
+                                                    <span>Add to p. @selectedPageNumber</span>
                                                 }
                                             </button>
                                         </div>
@@ -221,15 +221,15 @@
             <!-- Информация о текущей странице -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <h5 class="mb-0">Страница @selectedPageNumber</h5>
+                    <h5 class="mb-0">Page @selectedPageNumber</h5>
                 </div>
                 <div class="card-body">
                     @if (currentPageLayout == null)
                     {
                         <div class="alert alert-info">
-                            <p>Для страницы @selectedPageNumber еще не создан макет.</p>
+                            <p>For page @selectedPageNumber no layout created yet.</p>
                             <button class="btn btn-primary btn-sm" @onclick="CreatePageLayout">
-                                Создать макет страницы
+                                Create page layout
                             </button>
                         </div>
                     }
@@ -237,23 +237,23 @@
                     {
                         <div class="row">
                             <div class="col-6">
-                                <div class="small text-muted">Колонок:</div>
+                                <div class="small text-muted">Columns:</div>
                                 <div class="h5">@currentPageLayout.ColumnCount</div>
                             </div>
                             <div class="col-6">
-                                <div class="small text-muted">Ширина колонки:</div>
-                                <div class="h5">@GetColumnWidth().ToString("F1") см</div>
+                                <div class="small text-muted">Column width:</div>
+                                <div class="h5">@GetColumnWidth().ToString("F1") cm</div>
                             </div>
                         </div>
                         <div class="row mt-2">
                             <div class="col-6">
-                                <div class="small text-muted">Занято места:</div>
-                                <div class="h5">@GetOccupiedHeightOnPage().ToString("F1") см</div>
+                                <div class="small text-muted">Occupied space:</div>
+                                <div class="h5">@GetOccupiedHeightOnPage().ToString("F1") cm</div>
                             </div>
                             <div class="col-6">
-                                <div class="small text-muted">Свободно места:</div>
+                                <div class="small text-muted">Available space:</div>
                                 <div class="h5 @(GetAvailableHeightOnPage() < 3 ? "text-danger" : "text-success")">
-                                    @GetAvailableHeightOnPage().ToString("F1") см
+                                    @GetAvailableHeightOnPage().ToString("F1") cm
                                 </div>
                             </div>
                         </div>
@@ -270,7 +270,7 @@
                                 </div>
                             </div>
                             <div class="small text-muted text-center mt-1">
-                                Заполнение страницы
+                                Page filling
                             </div>
                         </div>
                     }
@@ -280,7 +280,7 @@
             <!-- Размещенная реклама -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Реклама на странице @selectedPageNumber</h5>
+                    <h5 class="mb-0">Advertisements on page @selectedPageNumber</h5>
                     <div class="btn-group">
                         <button class="btn btn-sm btn-outline-secondary" @onclick="() => ChangePage(-1)"
                                 disabled="@(selectedPageNumber <= 1)">
@@ -289,7 +289,7 @@
                             </svg>
                         </button>
                         <span class="btn btn-sm btn-outline-secondary disabled">
-                            Страница @selectedPageNumber
+                            Page @selectedPageNumber
                         </span>
                         <button class="btn btn-sm btn-outline-secondary" @onclick="() => ChangePage(1)"
                                 disabled="@(selectedPageNumber >= totalPages)">
@@ -311,7 +311,7 @@
                                 <path d="M3 6.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm.5 2.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z"/>
                                 <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v1H1V2a1 1 0 0 1 1-1h12zm1 3v10a1 1 0 0 1-1 1h-2V4h3zm-4 0v11H2a1 1 0 0 1-1-1V4h10z"/>
                             </svg>
-                            <p class="mt-3">Рекламы на этой странице нет</p>
+                            <p class="mt-3">No advertisements on this page</p>
                         </div>
                     }
                     else
@@ -326,16 +326,16 @@
                                             <div class="small text-muted">
                                                 @if (placement.AdvertisementBlock.Type == AdType.Image)
                                                 {
-                                                    <span class="badge bg-info me-1">Изображение</span>
+                                                    <span class="badge bg-info me-1">Image</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-secondary me-1">Текст</span>
+                                                    <span class="badge bg-secondary me-1">Text</span>
                                                 }
-                                                <span>Размер: @placement.Width × @placement.Height см</span>
+                                                <span>Size: @placement.Width × @placement.Height cm</span>
                                             </div>
                                             <div class="small text-muted mt-1">
-                                                Позиция: (@placement.PositionX.ToString("F1"), @placement.PositionY.ToString("F1")) см
+                                                Position: (@placement.PositionX.ToString("F1"), @placement.PositionY.ToString("F1")) cm
                                             </div>
                                         </div>
                                         <div>
@@ -362,11 +362,11 @@
 
                         <div class="mt-3 p-3 bg-light rounded">
                             <div class="small">
-                                <strong>Статистика страницы:</strong>
-                                <div>Рекламных блоков: @pageAds.Count</div>
-                                <div>Изображений: @pageAds.Count(a => a.AdvertisementBlock.Type == AdType.Image)</div>
-                                <div>Текстовых: @pageAds.Count(a => a.AdvertisementBlock.Type == AdType.Text)</div>
-                                <div>Общая занятая высота: @GetAdsOccupiedHeight(selectedPageNumber).ToString("F1") см</div>
+                                <strong>Page statistics:</strong>
+                                <div>Ad blocks: @pageAds.Count</div>
+                                <div>Images: @pageAds.Count(a => a.AdvertisementBlock.Type == AdType.Image)</div>
+                                <div>Text blocks: @pageAds.Count(a => a.AdvertisementBlock.Type == AdType.Text)</div>
+                                <div>Total occupied height: @GetAdsOccupiedHeight(selectedPageNumber).ToString("F1") cm</div>
                             </div>
                         </div>
                     }
@@ -483,14 +483,14 @@
             var pageLayout = pageLayouts.FirstOrDefault(p => p.PageNumber == pageNumber);
             if (pageLayout == null)
             {
-                message = $"Сначала создайте макет для страницы {pageNumber}";
+                message = $"Create layout for page {pageNumber} first";
                 return;
             }
 
             // Проверяем, не размещена ли уже эта реклама на странице
             if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, pageNumber))
             {
-                placementWarning = $"Реклама '{ad.Advertiser}' уже размещена на странице {pageNumber}";
+                placementWarning = $"Ad '{ad.Advertiser}' already placed on page {pageNumber}";
                 return;
             }
 
@@ -517,11 +517,11 @@
             await LayoutService.UpdateLayoutElementAsync(element);
             await LoadPlacements();
             
-            message = $"Реклама '{ad.Advertiser}' добавлена на страницу {pageNumber}";
+            message = $"Ad '{ad.Advertiser}' added to page {pageNumber}";
         }
         catch (Exception ex)
         {
-            message = $"Ошибка: {ex.Message}";
+            message = $"Error: {ex.Message}";
         }
     }
 
@@ -556,13 +556,13 @@
     {
         if (currentPageLayout == null)
         {
-            return "Макет страницы не создан";
+            return "Page layout not created";
         }
         
         // Проверяем, не размещена ли уже реклама на странице
         if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
         {
-            return $"Реклама '{ad.Advertiser}' уже размещена на этой странице";
+            return $"Ad '{ad.Advertiser}' already placed on this page";
         }
         
         double columnWidth = GetColumnWidth();
@@ -572,29 +572,29 @@
         
         if (ad.DefaultWidth > columnWidth)
         {
-            warnings.Add($"ширина ({ad.DefaultWidth} см > {columnWidth:F1} см)");
+            warnings.Add($"width ({ad.DefaultWidth} cm > {columnWidth:F1} cm)");
         }
         
         if (ad.DefaultHeight > availableHeight)
         {
-            warnings.Add($"высота ({ad.DefaultHeight} см > {availableHeight:F1} см)");
+            warnings.Add($"height ({ad.DefaultHeight} cm > {availableHeight:F1} cm)");
         }
         
         return warnings.Any() 
-            ? $"Не помещается: {string.Join(", ", warnings)}" 
-            : "Помещается на страницу";
+            ? $"Does not fit: {string.Join(", ", warnings)}" 
+            : "Fits on page";
     }
 
     private string GetPlacementStatusMessage(AdvertisementBlock ad)
     {
         if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
         {
-            return $"Уже на странице {selectedPageNumber}";
+            return $"Already on page {selectedPageNumber}";
         }
         
         if (currentPageLayout == null)
         {
-            return "Макет страницы не создан";
+            return "Page layout not created";
         }
         
         double columnWidth = GetColumnWidth();
@@ -602,22 +602,22 @@
         
         if (ad.DefaultWidth > columnWidth)
         {
-            return $"Слишком широкая ({ad.DefaultWidth} см > {columnWidth:F1} см)";
+            return $"Too wide ({ad.DefaultWidth} cm > {columnWidth:F1} cm)";
         }
         
         if (ad.DefaultHeight > availableHeight)
         {
-            return $"Слишком высокая ({ad.DefaultHeight} см > {availableHeight:F1} см)";
+            return $"Too high ({ad.DefaultHeight} cm > {availableHeight:F1} cm)";
         }
         
-        return "Поместится на страницу";
+        return "Fits on page";
     }
 
     private string GetPlacementTooltip(AdvertisementBlock ad)
     {
         if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
         {
-            return "Эта реклама уже размещена на странице. На одной странице может быть только один экземпляр конкретной рекламы.";
+            return "This ad is already placed on the page. Only one instance of a specific ad can be on one page.";
         }
         
         return GetPlacementWarning(ad);
@@ -629,11 +629,11 @@
         {
             await LayoutService.RemoveElementFromLayoutAsync(placement.LayoutElementId);
             await LoadPlacements();
-            message = $"Реклама '{placement.AdvertisementBlock.Advertiser}' удалена со страницы {placement.PageNumber}";
+            message = $"Ad '{placement.AdvertisementBlock.Advertiser}' removed from page {placement.PageNumber}";
         }
         catch (Exception ex)
         {
-            message = $"Ошибка: {ex.Message}";
+            message = $"Error: {ex.Message}";
         }
     }
 
@@ -674,11 +674,11 @@
             await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
             await LoadData();
             
-            message = $"Макет страницы {selectedPageNumber} создан";
+            message = $"Layout for page {selectedPageNumber} created";
         }
         catch (Exception ex)
         {
-            message = $"Ошибка: {ex.Message}";
+            message = $"Error: {ex.Message}";
         }
     }
 
@@ -813,7 +813,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка парсинга размера: {ex.Message}");
+            Console.WriteLine($"Error parsing size: {ex.Message}");
         }
     
         double columnWidth = currentPageLayout?.TextAreaWidth / currentPageLayout?.ColumnCount ?? 5.0;

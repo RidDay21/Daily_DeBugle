@@ -10,11 +10,11 @@
         <div class="card-header bg-white py-4 px-4 border-bottom-0">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h3 class="mb-1 fw-bold text-dark">Управление доступом</h3>
-                    <p class="text-muted small mb-0">Настройка ролей и прав сотрудников редакции</p>
+                    <h3 class="mb-1 fw-bold text-dark">Access Management</h3>
+                    <p class="text-muted small mb-0">Editorial team roles and permissions</p>
                 </div>
                 <span class="badge rounded-pill bg-primary px-3 py-2">
-                    <i class="bi bi-people-fill me-1"></i> @(users?.Count ?? 0) пользователей
+                    <i class="bi bi-people-fill me-1"></i> @(users?.Count ?? 0) users
                 </span>
             </div>
         </div>
@@ -23,7 +23,7 @@
             {
                 <div class="p-5 text-center">
                     <div class="spinner-border text-primary" role="status"></div>
-                    <div class="mt-2 text-muted">Синхронизация данных...</div>
+                    <div class="mt-2 text-muted">Synchronizing data...</div>
                 </div>
             }
             else
@@ -32,9 +32,9 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light text-muted uppercase">
                             <tr>
-                                <th class="ps-4 py-3 small fw-bold" style="width: 40%">Сотрудник</th>
-                                <th class="py-3 small fw-bold" style="width: 30%">Контакты</th>
-                                <th class="pe-4 py-3 small fw-bold text-end" style="width: 30%">Роль в системе</th>
+                                <th class="ps-4 py-3 small fw-bold" style="width: 40%">Employee</th>
+                                <th class="py-3 small fw-bold" style="width: 30%">Contacts</th>
+                                <th class="pe-4 py-3 small fw-bold text-end" style="width: 30%">System Role</th>
                             </tr>
                         </thead>
                         <tbody>

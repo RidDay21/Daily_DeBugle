@@ -30,13 +30,13 @@ else
 
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0">Текст статьи </h5>
+                        <h5 class="mb-0">Article Content</h5>
                     </div>
                     <div class="card-body">
                         @if (article.Images?.Any() == true)
                         {
                             <div class="mb-3">
-                                <h6 class="mb-2">Изображения</h6>
+                                <h6 class="mb-2">Images</h6>
                                 <div class="row g-2">
                                     @foreach (var img in article.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.ArticleImageId))
                                     {
@@ -56,7 +56,7 @@ else
 
                         <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">@article.Content</div>
                         <div class="mt-2 text-muted small">
-                            Символов: @(article.Content?.Length ?? 0)
+                            Characters: @(article.Content?.Length ?? 0)
                         </div>
                     </div>
                 </div>
@@ -66,33 +66,33 @@ else
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-header">
-                        <h5>Действия редактора</h5>
+                        <h5>Editor Actions</h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
                             <button class="btn btn-success w-100" @onclick="ApproveArticle">
-                                Одобрить статью
+                                Approve Article
                             </button>
-                            <div class="form-text">Текст статьи не меняется при одобрении.</div>
+                            <div class="form-text">The article text does not change upon approval.</div>
                         </div>
 
                         <div class="mb-3">
                             <button class="btn btn-warning w-100"
                                     @onclick="() => showRevisionModal = true">
-                                Отправить на доработку
+                                Send for Revision
                             </button>
                         </div>
 
                         <div class="mb-3">
                             <button class="btn btn-danger w-100"
                                     @onclick="() => showRejectModal = true">
-                                Отклонить
+                                Reject
                             </button>
                         </div>
 
                         <div class="mt-4">
                             <button class="btn btn-outline-secondary w-100" @onclick="NavigateBack">
-                                ← К списку
+                                ← Back to List
                             </button>
                         </div>
                     </div>
@@ -100,7 +100,7 @@ else
 
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h6>История комментариев</h6>
+                        <h6>Comment History</h6>
                     </div>
                     <div class="card-body">
                         @if (article.Comments?.Any() == true)
@@ -112,7 +112,7 @@ else
                                         @comment.CreatedDate.ToString("MMM dd, HH:mm")
                                         @if (comment.IsEditorComment)
                                         {
-                                            <span class="badge bg-info">Редактор</span>
+                                            <span class="badge bg-info">Editor</span>
                                         }
                                     </div>
                                     <div style="white-space: pre-wrap;">@comment.Content</div>
@@ -121,7 +121,7 @@ else
                         }
                         else
                         {
-                            <p class="text-muted small mb-0">Комментариев пока нет.</p>
+                            <p class="text-muted small mb-0">No comments yet.</p>
                         }
                     </div>
                 </div>
@@ -136,19 +136,19 @@ else
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Отправить на доработку</h5>
+                    <h5 class="modal-title">Send for Revision</h5>
                     <button type="button" class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Комментарий автору:</label>
+                        <label class="form-label">Comment to the author:</label>
                         <textarea @bind="revisionComments" class="form-control" rows="4"
-                                  placeholder="Что нужно исправить?"></textarea>
+                                  placeholder="What needs to be fixed?"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
-                    <button type="button" class="btn btn-warning" @onclick="SendForRevision">Отправить</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-warning" @onclick="SendForRevision">Send</button>
                 </div>
             </div>
         </div>
@@ -161,19 +161,19 @@ else
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Отклонить статью</h5>
+                    <h5 class="modal-title">Reject Article</h5>
                     <button type="button" class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Причина:</label>
+                        <label class="form-label">Reason:</label>
                         <textarea @bind="rejectionReason" class="form-control" rows="4"
-                                  placeholder="Почему статья отклоняется?"></textarea>
+                                  placeholder="Why is the article being rejected?"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
-                    <button type="button" class="btn btn-danger" @onclick="RejectArticle">Отклонить</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="RejectArticle">Reject</button>
                 </div>
             </div>
         </div>

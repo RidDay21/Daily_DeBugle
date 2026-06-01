@@ -11,10 +11,10 @@
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
-<PageTitle>Макет выпуска: @currentIssue?.IssueNumber</PageTitle>
+<PageTitle>Issue Layout: @currentIssue?.IssueNumber</PageTitle>
 
 <div class="layout-container">
-    <!-- Уведомления -->
+    <!-- Notifications -->
     @if (!string.IsNullOrEmpty(notificationMessage))
     {
         <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
@@ -23,14 +23,14 @@
         </div>
     }
 
-    <!-- Шапка с навигацией и управлением -->
+    <!-- Header with navigation and controls -->
     <div class="layout-header mb-4">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h3>Макет выпуска: @currentIssue?.IssueNumber</h3>
+                <h3>Issue Layout: @currentIssue?.IssueNumber</h3>
                 <p class="text-muted mb-0">
-                    Дата выпуска: @currentIssue?.IssueDate.ToString("dd.MM.yyyy") | 
-                    Статус: <span class="badge @GetStatusBadgeClass(currentIssue?.Status ?? IssueStatus.InProgress)">
+                    Issue Date: @currentIssue?.IssueDate.ToString("dd.MM.yyyy") | 
+                    Status: <span class="badge @GetStatusBadgeClass(currentIssue?.Status ?? IssueStatus.InProgress)">
                         @currentIssue?.Status
                     </span>
                 </p>
@@ -40,48 +40,48 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-1" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
                     </svg>
-                    Назад к выпускам
+                    Back to Issues
                 </button>
                 <button class="btn btn-outline-primary" @onclick="NavigateToTextStyle">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-type me-1" viewBox="0 0 16 16">
                         <path d="M2.244 13.081l.943-2.803H6.66l.944 2.803H8.86L5.54 3.75H4.322L1 13.081h1.244zm2.7-7.923L6.34 9.314H3.51l1.4-4.156h.034zm9.146 7.027h.035v.896h1.128V8.125c0-1.51-1.114-2.345-2.646-2.345-1.736 0-2.59.916-2.666 2.174h1.108c.068-.718.595-1.19 1.517-1.19.971 0 1.518.52 1.518 1.464v.731H12.19c-1.647.007-2.522.8-2.522 2.058 0 1.319.957 2.18 2.345 2.18 1.06 0 1.716-.43 2.078-1.011zm-1.763.035c-.752 0-1.456-.397-1.456-1.244 0-.65.424-1.115 1.408-1.115h1.805v.834c0 .896-.752 1.525-1.757 1.525z"/>
                     </svg>
-                    Типографика
+                    Typography
                 </button>
                 <button class="btn btn-outline-success" @onclick="NavigateToHeaderFooter">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-border-top me-1" viewBox="0 0 16 16">
                         <path d="M0 1.5A.5.5 0 0 1 .5 1h15a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-.5.5H.5a.5.5 0 0 1-.5-.5v-13zm1 13h14v-13H1v13z"/>
                     </svg>
-                    Колонтитулы
+                    Header/Footer
                 </button>
                 <a class="btn btn-outline-info" href="/issues/@issueId/ads">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-megaphone me-1" viewBox="0 0 16 16">
                         <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
                     </svg>
-                    Реклама
+                    Ads
                 </a>
                 <button class="btn btn-success" @onclick="HandleAddPage">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                         <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                     </svg>
-                    Добавить страницу
+                    Add Page
                 </button>
                 <button class="btn btn-outline-warning" @onclick="CheckAndFixOverflow">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle me-1" viewBox="0 0 16 16">
                         <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/>
                         <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z"/>
                     </svg>
-                    Проверить переполнение
+                    Check Overflow
                 </button>
                 <button class="btn btn-outline-info" @onclick="NavigateToPreview">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye me-1" viewBox="0 0 16 16">
                         <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
                         <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
                     </svg>
-                    Предпросмотр
+                    Preview
                 </button>
-                <!-- Новая кнопка: Публиковать на главной -->
+                <!-- New button: Publish to homepage -->
                 @if (currentIssue?.Status == IssueStatus.ReadyForPublish || currentIssue?.Status == IssueStatus.Published)
                 {
                     <button class="btn btn-warning" @onclick="PublishToHomepage">
@@ -90,11 +90,11 @@
                         </svg>
                         @if (currentIssue?.IsFeatured == true)
                         {
-                            <span>На главной</span>
+                            <span>Featured</span>
                         }
                         else
                         {
-                            <span>На главную</span>
+                            <span>Set as Featured</span>
                         }
                     </button>
                 }
@@ -102,25 +102,25 @@
         </div>
     </div>
 
-    <!-- Основной контент -->
+    <!-- Main Content -->
     <div class="row">
-        <!-- Левая колонка: Статьи и настройки макета -->
+        <!-- Left Column: Articles and Layout Settings -->
         <div class="col-md-8">
-            <!-- Панель управления макетом текущей страницы -->
+            <!-- Current Page Layout Control Panel -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        Страница @currentPageNumber 
-                        <span class="badge bg-secondary ms-2">Всего страниц: @pageLayouts.Count</span>
+                        Page @currentPageNumber 
+                        <span class="badge bg-secondary ms-2">Total pages: @pageLayouts.Count</span>
                     </h5>
                     <div class="btn-group">
                         <button class="btn btn-sm btn-outline-secondary" 
                                 @onclick="PrevPage" 
                                 disabled="@(currentPageNumber <= 1)">
-                            ← Назад
+                            ← Back
                         </button>
                         <button class="btn btn-sm btn-outline-secondary" @onclick="NextPage">
-                            Вперед →
+                            Forward →
                         </button>
                     </div>
                 </div>
@@ -130,9 +130,9 @@
                     {
                         <EditForm Model="@currentPageLayout" OnValidSubmit="@SaveLayoutConfig">
                             <div class="row g-3">
-                                <!-- Настройки колонок -->
+                                <!-- Column Settings -->
                                 <div class="col-md-6">
-                                    <label class="form-label">Количество колонок</label>
+                                    <label class="form-label">Number of Columns</label>
                                     <InputNumber @bind-Value="@currentPageLayout.ColumnCount" 
                                                 @onchange="@((e) => { 
                                                                currentPageLayout.ColumnCount = Convert.ToInt32(e.Value); 
@@ -144,55 +144,55 @@
                                     <div class="form-text">
                                         @if (currentPageLayout != null)
                                         {
-                                            <span>Ширина колонки: @(GetColumnWidth().ToString("F1")) см</span>
+                                            <span>Column Width: @(GetColumnWidth().ToString("F1")) cm</span>
                                         }
                                     </div>
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <label class="form-label">Шаблон</label>
+                                    <label class="form-label">Template</label>
                                     <select @onchange="ApplyTemplate" class="form-select" value="@(currentPageLayout?.TemplateId?.ToString() ?? "")">
-                                        <option value="">-- Без шаблона --</option>
+                                        <option value="">-- No template --</option>
                                         @foreach (var template in templates)
                                         {
                                             <option value="@template.TemplateId" selected="@(currentPageLayout?.TemplateId == template.TemplateId)">
-                                                @template.Name (@template.DefaultColumnCount колонок)
+                                                @template.Name (@template.DefaultColumnCount columns)
                                             </option>
                                         }
                                     </select>
                                 </div>
                                 
-                                <!-- Кнопки управления -->
+                                <!-- Control Buttons -->
                                 <div class="col-12">
                                     <div class="d-flex gap-2 pt-3 border-top">
                                         <button type="submit" class="btn btn-primary">
-                                            Сохранить настройки
+                                            Save Settings
                                         </button>
                                         <button type="button" class="btn btn-danger" 
                                                 @onclick="() => HandleRemovePage(currentPageLayout)">
-                                            Удалить страницу
+                                            Delete Page
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </EditForm>
                         
-                        <!-- Статистика по текущей странице -->
+                        <!-- Current Page Statistics -->
                         <div class="mt-3 p-3 bg-light rounded">
-                            <h6>Статистика страницы:</h6>
+                            <h6>Page Statistics:</h6>
                             <div class="row">
                                 <div class="col-6">
-                                    <div>Колонок: <strong>@currentPageLayout.ColumnCount</strong></div>
-                                    <div>Статей на странице: <strong>@currentPageLayout.LayoutElements.Count(le => le.Article != null)</strong></div>
+                                    <div>Columns: <strong>@currentPageLayout.ColumnCount</strong></div>
+                                    <div>Articles on page: <strong>@currentPageLayout.LayoutElements.Count(le => le.Article != null)</strong></div>
                                 </div>
                                 <div class="col-6">
-                                    <div>Ширина колонки: <strong>@(GetColumnWidth().ToString("F1")) см</strong></div>
-                                    <div>Рекламных блоков: <strong>@currentPageLayout.LayoutElements.Count(le => le.AdvertisementBlock != null)</strong></div>
+                                    <div>Column Width: <strong>@(GetColumnWidth().ToString("F1")) cm</strong></div>
+                                    <div>Ad blocks: <strong>@currentPageLayout.LayoutElements.Count(le => le.AdvertisementBlock != null)</strong></div>
                                 </div>
                             </div>
                             <div class="row mt-2">
                                 <div class="col-12">
-                                    <div>Свободно места: <strong>@(GetAvailableHeightOnPage().ToString("F1")) см</strong></div>
+                                    <div>Available space: <strong>@(GetAvailableHeightOnPage().ToString("F1")) cm</strong></div>
                                 </div>
                             </div>
                         </div>
@@ -200,7 +200,7 @@
                         @if (conflicts.Any())
                         {
                             <div class="alert alert-warning mt-3">
-                                <h6>Обнаружены конфликты макета:</h6>
+                                <h6>Layout conflicts detected:</h6>
                                 <ul class="mb-0">
                                     @foreach (var conflict in conflicts)
                                     {
@@ -213,19 +213,19 @@
                     else
                     {
                         <div class="alert alert-info">
-                            Нет данных о макете для страницы @currentPageNumber. 
+                            No layout data for page @currentPageNumber. 
                             <button class="btn btn-sm btn-primary" @onclick="InitializePageLayout">
-                                Создать макет
+                                Create Layout
                             </button>
                         </div>
                     }
                 </div>
             </div>
             
-            <!-- Список статей для выпуска -->
+            <!-- List of articles for the issue -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Статьи выпуска</h5>
+                    <h5 class="mb-0">Issue Articles</h5>
                     <div class="form-check mt-2">
                         <input type="checkbox" class="form-check-input" 
                                checked="@showOnlyApproved" 
@@ -233,19 +233,19 @@
                                               showOnlyApproved = bool.Parse(e.Value?.ToString() ?? "false"); 
                                               UpdateFilteredArticles(); 
                                           })" />
-                        <label class="form-check-label">Только одобренные</label>
+                        <label class="form-check-label">Only approved</label>
                     </div>
                 </div>
                 
                 <div class="card-body">
                     @if (!filteredArticles.Any())
                     {
-                        <p class="text-muted">Нет статей для этого выпуска.</p>
+                        <p class="text-muted">No articles for this issue.</p>
                     }
                     else
                     {
-                        <!-- Статьи на текущей странице -->
-                        <h6>Статьи на текущей странице (@currentPageNumber)</h6>
+                        <!-- Articles on current page -->
+                        <h6>Articles on current page (@currentPageNumber)</h6>
                         
                         var placedArticles = currentPageLayout?.LayoutElements?
                             .Where(le => le.Article != null)
@@ -269,7 +269,7 @@
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-check me-1" viewBox="0 0 16 16">
                                                             <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                                                         </svg>
-                                                        На странице @currentPageNumber
+                                                        On page @currentPageNumber
                                                     </span>
                                                 </div>
                                                 <p class="small text-muted mb-1">
@@ -282,9 +282,9 @@
                                                     </div>
                                                 }
                                                 <div class="small text-muted">
-                                                    Автор: @article.Author?.Username | 
-                                                    Слов: @GetWordCount(article.Content) |
-                                                    Высота: @(CalculateArticleHeight(article).ToString("F1")) см
+                                                    Author: @article.Author?.Username | 
+                                                    Words: @GetWordCount(article.Content) |
+                                                    Height: @(CalculateArticleHeight(article).ToString("F1")) cm
                                                 </div>
                                             </div>
                                             <div class="d-flex flex-column gap-1">
@@ -294,7 +294,7 @@
                                                         .First(le => le.ArticleId == article.ArticleId);
                                                     <button class="btn btn-sm btn-outline-danger"
                                                             @onclick="() => HandleRemoveArticleFromPage(currentPageLayout, element)">
-                                                        Убрать
+                                                        Remove
                                                     </button>
                                                 }
                                             </div>
@@ -305,11 +305,11 @@
                         }
                         else
                         {
-                            <p class="text-muted mb-4">На этой странице еще нет статей. Разместите статьи из списка ниже.</p>
+                            <p class="text-muted mb-4">There are no articles on this page yet. Place articles from the list below.</p>
                         }
                         
-                        <!-- Все доступные статьи -->
-                        <h6>Доступные статьи для размещения</h6>
+                        <!-- Available articles for placement -->
+                        <h6>Available articles for placement</h6>
                         
                         var availableArticles = filteredArticles
                             .Where(a => !placedArticles.Any(pa => pa.ArticleId == a.ArticleId))
@@ -339,9 +339,9 @@
                                                     </div>
                                                 }
                                                 <div class="small text-muted">
-                                                    Автор: @article.Author?.Username | 
-                                                    Слов: @GetWordCount(article.Content) |
-                                                    Высота: @(CalculateArticleHeight(article).ToString("F1")) см
+                                                    Author: @article.Author?.Username | 
+                                                    Words: @GetWordCount(article.Content) |
+                                                    Height: @(CalculateArticleHeight(article).ToString("F1")) cm
                                                 </div>
                                             </div>
                                             <div class="d-flex flex-column gap-1">
@@ -354,13 +354,13 @@
                                                     <button class="btn btn-sm @(canPlace ? "btn-outline-primary" : "btn-outline-secondary")"
                                                             @onclick="() => HandlePlaceArticle(article)"
                                                             disabled="@(!canPlace)"
-                                                            title="@(canPlace ? "Разместить статью" : $"Недостаточно места. Требуется: {articleHeight:F1} см, доступно: {availableHeight:F1} см")">
-                                                        Разместить
+                                                            title="@(canPlace ? "Place article" : $"Not enough space. Required: {articleHeight:F1} cm, available: {availableHeight:F1} cm")">
+                                                        Place
                                                     </button>
                                                     
                                                     @if (!canPlace)
                                                     {
-                                                        <small class="text-danger text-nowrap">Не помещается</small>
+                                                        <small class="text-danger text-nowrap">Doesn't fit</small>
                                                     }
                                                 }
                                             </div>
@@ -371,30 +371,30 @@
                         }
                         else
                         {
-                            <p class="text-muted">Нет доступных статей для размещения.</p>
+                            <p class="text-muted">No available articles for placement.</p>
                         }
                     }
                 </div>
             </div>
         </div>
         
-        <!-- Правая колонка: Только текущие страницы -->
+        <!-- Right Column: Current Pages Only -->
         <div class="col-md-4">
-            <!-- Текущие страницы выпуска -->
+            <!-- Current issue pages -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Страницы выпуска</h5>
+                    <h5 class="mb-0">Issue Pages</h5>
                     <button class="btn btn-sm btn-outline-danger" 
                             @onclick="HandleClearAllPages"
                             disabled="@(!pageLayouts.Any())">
-                        Очистить все
+                        Clear All
                     </button>
                 </div>
                 
                 <div class="card-body">
                     @if (!pageLayouts.Any())
                     {
-                        <p class="text-muted">Страницы не добавлены</p>
+                        <p class="text-muted">No pages added</p>
                     }
                     else
                     {
@@ -409,16 +409,16 @@
                                         @onclick="() => SwitchToPage(pageLayout.PageNumber)">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <strong>Страница @pageLayout.PageNumber</strong>
+                                            <strong>Page @pageLayout.PageNumber</strong>
                                             <div class="small">
-                                                <div>Колонок: @pageLayout.ColumnCount</div>
+                                                <div>Columns: @pageLayout.ColumnCount</div>
                                                 @if (articleCount > 0)
                                                 {
-                                                    <div>Статей: @articleCount</div>
+                                                    <div>Articles: @articleCount</div>
                                                 }
                                                 @if (adCount > 0)
                                                 {
-                                                    <div>Рекламы: @adCount</div>
+                                                    <div>Ads: @adCount</div>
                                                 }
                                             </div>
                                         </div>
@@ -433,12 +433,12 @@
                             }
                         </div>
                         
-                        <!-- Общая статистика выпуска -->
+                        <!-- Overall issue statistics -->
                         <div class="mt-3 p-3 bg-light rounded">
-                            <h6>Общая статистика:</h6>
-                            <div>Всего страниц: <strong>@pageLayouts.Count</strong></div>
-                            <div>Всего статей размещено: <strong>@pageLayouts.Sum(p => p.LayoutElements.Count(le => le.Article != null))</strong></div>
-                            <div>Всего рекламных блоков: <strong>@pageLayouts.Sum(p => p.LayoutElements.Count(le => le.AdvertisementBlock != null))</strong></div>
+                            <h6>Overall statistics:</h6>
+                            <div>Total pages: <strong>@pageLayouts.Count</strong></div>
+                            <div>Total articles placed: <strong>@pageLayouts.Sum(p => p.LayoutElements.Count(le => le.Article != null))</strong></div>
+                            <div>Total ad blocks: <strong>@pageLayouts.Sum(p => p.LayoutElements.Count(le => le.AdvertisementBlock != null))</strong></div>
                         </div>
                         
                         <div class="mt-3 pt-3 border-top">
@@ -447,10 +447,10 @@
                                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                     <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                                 </svg>
-                                Сохранить макет
+                                Save Layout
                             </button>
                             
-                            <!-- Кнопка публикации на главной -->
+                            <!-- Button to publish to homepage -->
                             @if (currentIssue?.Status == IssueStatus.ReadyForPublish || currentIssue?.Status == IssueStatus.Published)
                             {
                                 <div class="mt-2">
@@ -462,13 +462,13 @@
                                                     <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
                                                 </svg>
                                                 <div>
-                                                    <strong>Выпуск на главной</strong>
-                                                    <div class="small">Этот выпуск отображается на главной странице</div>
+                                                    <strong>Issue is featured</strong>
+                                                    <div class="small">This issue is displayed on the home page</div>
                                                 </div>
                                             </div>
                                         </div>
                                         <button class="btn btn-outline-warning w-100" @onclick="RemoveFromHomepage">
-                                            Убрать с главной
+                                            Remove from Homepage
                                         </button>
                                     }
                                     else
@@ -477,7 +477,7 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-house-door-fill me-1" viewBox="0 0 16 16">
                                                 <path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5z"/>
                                             </svg>
-                                            Опубликовать на главной
+                                            Publish to Homepage
                                         </button>
                                     }
                                 </div>
@@ -485,7 +485,7 @@
                             
                             <div class="mt-2 text-center">
                                 <small class="text-muted">
-                                    Для визуального просмотра используйте кнопку "Предпросмотр"
+                                    For visual preview use the "Preview" button
                                 </small>
                             </div>
                         </div>
@@ -493,10 +493,10 @@
                 </div>
             </div>
             
-            <!-- Панель публикации -->
+            <!-- Publication Panel -->
             <div class="card mt-3">
                 <div class="card-header">
-                    <h6 class="mb-0">Публикация выпуска</h6>
+                    <h6 class="mb-0">Issue Publication</h6>
                 </div>
                 <div class="card-body">
                     <div class="publication-checklist">
@@ -515,7 +515,7 @@
                                     </svg>
                                 }
                             </span>
-                            <span class="checklist-text">Есть утвержденные статьи</span>
+                            <span class="checklist-text">Approved articles exist</span>
                         </div>
                         <div class="checklist-item @(pageLayouts.Any() ? "completed" : "")">
                             <span class="checklist-status">
@@ -532,7 +532,7 @@
                                     </svg>
                                 }
                             </span>
-                            <span class="checklist-text">Макет создан</span>
+                            <span class="checklist-text">Layout created</span>
                         </div>
                         <div class="checklist-item @(currentIssue?.Status == IssueStatus.ReadyForPublish || currentIssue?.Status == IssueStatus.Published ? "completed" : "")">
                             <span class="checklist-status">
@@ -549,7 +549,7 @@
                                     </svg>
                                 }
                             </span>
-                            <span class="checklist-text">Готов к публикации</span>
+                            <span class="checklist-text">Ready for publication</span>
                         </div>
                         <div class="checklist-item @(currentIssue?.IsFeatured == true ? "completed" : "")">
                             <span class="checklist-status">
@@ -566,17 +566,17 @@
                                     </svg>
                                 }
                             </span>
-                            <span class="checklist-text">Размещен на главной</span>
+                            <span class="checklist-text">Placed on homepage</span>
                         </div>
                     </div>
                     
                     <div class="mt-3 small text-muted">
-                        <strong>Как опубликовать:</strong>
+                        <strong>How to publish:</strong>
                         <ol class="mb-0">
-                            <li>Утвердите статьи (статус "Approved")</li>
-                            <li>Создайте макет (добавьте страницы)</li>
-                            <li>Сохраните макет (статус станет "ReadyForPublish")</li>
-                            <li>Нажмите "Опубликовать на главной"</li>
+                            <li>Approve articles (status "Approved")</li>
+                            <li>Create layout (add pages)</li>
+                            <li>Save layout (status will become "ReadyForPublish")</li>
+                            <li>Click "Publish to Homepage"</li>
                         </ol>
                     </div>
                 </div>
@@ -601,15 +601,15 @@
     private int currentPageNumber = 1;
     private bool showOnlyApproved = false;
     
-    // Константы для размеров страницы (А4)
-    private const double PAGE_WIDTH = 42.0;    // см, ширина страницы А4
-    private const double PAGE_HEIGHT = 29.7;   // см, высота страницы А4
-    private const double MIN_MARGIN = 0.5;     // минимальный отступ
-    private const double MAX_MARGIN = 5.0;     // максимальный отступ
-    private const double MIN_COLUMN_WIDTH = 4.0; // минимальная ширина колонки
-    private const double MAX_COLUMN_GAP = 2.0;  // максимальный промежуток между колонками
+    // Constants for page sizes (A4)
+    private const double PAGE_WIDTH = 42.0;    // cm, A4 landscape width
+    private const double PAGE_HEIGHT = 29.7;   // cm, A4 landscape height
+    private const double MIN_MARGIN = 0.5;     
+    private const double MAX_MARGIN = 5.0;     
+    private const double MIN_COLUMN_WIDTH = 4.0; 
+    private const double MAX_COLUMN_GAP = 2.0;  
     
-    // Ошибки валидации макета
+    // Layout validation errors
     private List<string> layoutErrors = new();
     private string? notificationMessage = null;
 
@@ -647,7 +647,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка загрузки данных: {ex.Message}");
+            Console.WriteLine($"Error loading data: {ex.Message}");
         }
     }
 
@@ -687,26 +687,26 @@
             
                 if (selectedTemplate != null)
                 {
-                    // Применяем только количество колонок из шаблона
+                    // Apply only column count from template
                     currentPageLayout.ColumnCount = selectedTemplate.DefaultColumnCount;
                     currentPageLayout.TemplateId = templateId;
                 
-                    // Автоматически настраиваем макет
+                    // Auto-adjust layout
                     AdjustColumnsLayout();
                 
-                    // Сохраняем изменения
+                    // Save changes
                     await LayoutService.CreateOrUpdatePageLayoutAsync(currentPageLayout);
                     await LoadData();
                 
-                    ShowNotification($"Шаблон '{selectedTemplate.Name}' применен. Колонок: {selectedTemplate.DefaultColumnCount}");
+                    ShowNotification($"Template '{selectedTemplate.Name}' applied. Columns: {selectedTemplate.DefaultColumnCount}");
                 }
             }
             else if (templateId == 0 && currentPageLayout != null)
             {
-                // Если выбран "Без шаблона"
+                // If "No template" selected
                 currentPageLayout.TemplateId = null;
                 await LayoutService.CreateOrUpdatePageLayoutAsync(currentPageLayout);
-                ShowNotification("Шаблон отключен");
+                ShowNotification("Template disabled");
             }
         }
     }
@@ -735,17 +735,17 @@
     {
         if (layout == null) return;
     
-        // Фиксированные отступы
+        // Fixed margins
         layout.MarginTop = 2.0;
         layout.MarginBottom = 2.0;
         layout.MarginLeft = 2.0;
         layout.MarginRight = 2.0;
     
-        // Текстовая область занимает все пространство между отступами
+        // Text area takes all space between margins
         layout.TextAreaWidth = PAGE_WIDTH - layout.MarginLeft - layout.MarginRight;
         layout.TextAreaHeight = PAGE_HEIGHT - layout.MarginTop - layout.MarginBottom;
     
-        // Настраиваем промежутки между колонками
+        // Adjust column gaps
         switch (layout.ColumnCount)
         {
             case 1:
@@ -762,7 +762,7 @@
                 break;
         }
     
-        // Округляем значения
+        // Round values
         layout.TextAreaWidth = Math.Round(layout.TextAreaWidth, 1);
         layout.TextAreaHeight = Math.Round(layout.TextAreaHeight, 1);
         layout.ColumnGap = Math.Round(layout.ColumnGap, 1);
@@ -798,81 +798,79 @@
             ColumnCount = 2
         };
     
-        // Применяем автоматическую настройку колонок
+        // Apply auto column adjustment
         AdjustColumnsLayout(newPageLayout);
     
         await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
         await LoadData();
     }
 
-    // ТОЧНЫЙ расчет высоты статьи с учетом типографики
+    // Accurate calculation of article height considering typography
     private double CalculateArticleHeight(Article article)
     {
         if (article == null || string.IsNullOrEmpty(article.Content)) 
-            return 3.0; // Минимальная высота
+            return 3.0; // Minimum height
         
-        // Параметры типографики
+        // Typography parameters
         double fontSize = currentTextStyle?.BodySize ?? 14.0; // pt
         double lineSpacing = currentTextStyle?.BodyLineSpacing ?? 1.4;
         string fontFamily = currentTextStyle?.PrimaryFont ?? "'Times New Roman', serif";
         
-        // Ширина колонки в см
+        // Column width in cm
         double columnWidth = currentPageLayout != null 
             ? GetColumnWidth(currentPageLayout) 
-            : 8.0; // Примерная ширина по умолчанию
+            : 8.0; 
         
-        // Коэффициенты для разных шрифтов
+        // Font width factors
         double fontWidthFactor = GetFontWidthFactor(fontFamily);
         
-        // Базовые метрики для Times New Roman 14pt
-        double baseCharWidth = 0.28; // см на символ для 14pt Times New Roman
-        double baseLineHeight = 0.45; // см на строку для 14pt с межстрочным интервалом 1.4
+        // Base metrics for Times New Roman 14pt
+        double baseCharWidth = 0.28; 
+        double baseLineHeight = 0.45; 
         
-        // Корректировка на шрифт и размер
+        // Adjust for font and size
         double charWidth = baseCharWidth * (fontSize / 14.0) * fontWidthFactor;
         double lineHeight = baseLineHeight * (fontSize / 14.0) * (lineSpacing / 1.4);
         
-        // Количество символов в строке (округление в меньшую сторону)
+        // Chars per line (rounded down)
         int charsPerLine = Math.Max(1, (int)(columnWidth / charWidth));
         
-        // Количество строк в содержании
+        // Lines in content
         int contentLines = (int)Math.Ceiling((double)article.Content.Length / charsPerLine);
         
-        // Учитываем:
-        // 1. Заголовок статьи (примерно 2 строки)
-        // 2. Метаданные (автор, дата) - 1 строка
-        // 3. Отступы сверху и снизу статьи (0.5 см каждый = примерно 1 строка)
-        // 4. Отступы между абзацами (примерно 5 абзацев по 0.2 см = 1 строка)
+        // Consider:
+        // 1. Headline (approx 2 lines)
+        // 2. Metadata (author, date) - 1 line
+        // 3. Top/bottom margins (0.5 cm each = approx 1 line)
+        // 4. Paragraph spacings (approx 5 paragraphs @ 0.2 cm = 1 line)
         
-        int totalLines = contentLines + 2 + 1 + 1 + 1; // +5 дополнительных строк
+        int totalLines = contentLines + 2 + 1 + 1 + 1; 
         
-        // Общая высота в см
+        // Total height in cm
         double totalHeight = totalLines * lineHeight;
         
-        // Минимальная и максимальная высота
+        // Min/max height
         double minHeight = 3.0;
-        double maxHeight = PAGE_HEIGHT - 4.0; // Минус отступы
+        double maxHeight = PAGE_HEIGHT - 4.0; 
         
         return Math.Round(Math.Max(minHeight, Math.Min(totalHeight, maxHeight)), 1);
     }
 
-    // Коэффициенты ширины для разных шрифтов
     private double GetFontWidthFactor(string fontFamily)
     {
         if (fontFamily.Contains("Arial") || fontFamily.Contains("Helvetica"))
-            return 0.95; // Уже
+            return 0.95; 
         if (fontFamily.Contains("Georgia"))
-            return 1.05; // Шире
+            return 1.05; 
         if (fontFamily.Contains("Courier") || fontFamily.Contains("monospace"))
-            return 1.2; // Намного шире
-        return 1.0; // Times New Roman - базовая
+            return 1.2; 
+        return 1.0; 
     }
 
-    // Получить занятую высоту на странице
     private double GetOccupiedHeightOnPage(PageLayout pageLayout)
     {
         if (pageLayout == null || !pageLayout.LayoutElements.Any())
-            return 0.5; // Базовый отступ сверху
+            return 0.5; // Base top margin
         
         double maxBottom = 0;
         
@@ -888,41 +886,31 @@
             }
         }
         
-        // Добавляем отступ между элементами
         return maxBottom + 0.3;
     }
 
-    // Получить доступную высоту на странице
     private double GetAvailableHeightOnPage()
     {
         if (currentPageLayout == null) return 0;
         
         double occupiedHeight = GetOccupiedHeightOnPage(currentPageLayout);
-        double availableHeight = currentPageLayout.TextAreaHeight - occupiedHeight - 1.0; // -1.0 для нижнего отступа
+        double availableHeight = currentPageLayout.TextAreaHeight - occupiedHeight - 1.0; 
         
         return Math.Max(0, Math.Round(availableHeight, 1));
     }
 
-    // ОСНОВНОЙ МЕТОД: Размещение статьи на странице с проверкой
     private async Task HandlePlaceArticle(Article article)
     {
         if (article == null || currentPageLayout == null) return;
         
-        // Рассчитываем точную высоту статьи
         double articleHeight = CalculateArticleHeight(article);
-        
-        // Получаем доступную высоту на странице
         double availableHeight = GetAvailableHeightOnPage();
         
-        // Проверяем, помещается ли статья
         if (articleHeight <= availableHeight)
         {
-            // Находим позицию для новой статьи (внизу существующих элементов)
             double yPosition = GetOccupiedHeightOnPage(currentPageLayout);
-            
-            // Размещаем статью
             double columnWidth = GetColumnWidth(currentPageLayout);
-            double x = 0; // Первая колонка
+            double x = 0; 
             var position = JsonSerializer.Serialize(new { X = x, Y = yPosition });
             var size = JsonSerializer.Serialize(new { Width = columnWidth, Height = articleHeight });
             
@@ -934,16 +922,14 @@
             );
             
             await LoadData();
-            ShowNotification($"Статья \"{article.Headline}\" размещена на странице {currentPageLayout.PageNumber}");
+            ShowNotification($"Article \"{article.Headline}\" placed on page {currentPageLayout.PageNumber}");
         }
         else
         {
-            // Статья не помещается - показываем сообщение
-            ShowNotification($"Статья \"{article.Headline}\" не помещается на страницу. Требуется: {articleHeight:F1} см, доступно: {availableHeight:F1} см. Создайте новую страницу.");
+            ShowNotification($"Article \"{article.Headline}\" doesn't fit on the page. Required: {articleHeight:F1} cm, available: {availableHeight:F1} cm. Create a new page.");
         }
     }
 
-    // Получить элементы в колонке
     private List<LayoutElement> GetElementsInColumn(PageLayout pageLayout, int columnIndex)
     {
         var elements = new List<LayoutElement>();
@@ -985,7 +971,7 @@
         }
         catch
         {
-            // Игнорируем ошибки парсинга
+            // Ignore parsing errors
         }
     
         return (0, 0);
@@ -1006,17 +992,16 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка парсинга размера: {ex.Message}");
+            Console.WriteLine($"Error parsing size: {ex.Message}");
         }
     
         double columnWidth = currentPageLayout?.TextAreaWidth / currentPageLayout?.ColumnCount ?? 5.0;
         return (columnWidth, 3.0);
     }
 
-    // Проверить и исправить переполнение страниц
     private async Task CheckAndFixOverflow()
     {
-        ShowNotification("Функция проверки переполнения отключена. Статьи теперь не добавляются, если не помещаются на страницу.");
+        ShowNotification("Overflow check function is disabled. Articles are now not added if they don't fit on the page.");
     }
 
     private void ValidateLayout(PageLayout layout)
@@ -1028,29 +1013,27 @@
         double totalWidth = layout.MarginLeft + layout.TextAreaWidth + layout.MarginRight;
         if (totalWidth > PAGE_WIDTH)
         {
-            layoutErrors.Add($"Суммарная ширина ({totalWidth:F1} см) превышает ширину страницы ({PAGE_WIDTH} см)");
+            layoutErrors.Add($"Total width ({totalWidth:F1} cm) exceeds page width ({PAGE_WIDTH} cm)");
         }
     
         double totalHeight = layout.MarginTop + layout.TextAreaHeight + layout.MarginBottom;
         if (totalHeight > PAGE_HEIGHT)
         {
-            layoutErrors.Add($"Суммарная высота ({totalHeight:F1} см) превышает высоту страницы ({PAGE_HEIGHT} см)");
+            layoutErrors.Add($"Total height ({totalHeight:F1} cm) exceeds page height ({PAGE_HEIGHT} cm)");
         }
     
         double columnWidth = GetColumnWidth(layout);
         if (columnWidth < MIN_COLUMN_WIDTH)
         {
-            layoutErrors.Add($"Ширина колонки ({columnWidth:F1} см) слишком мала (минимум {MIN_COLUMN_WIDTH} см)");
+            layoutErrors.Add($"Column width ({columnWidth:F1} cm) is too small (minimum {MIN_COLUMN_WIDTH} cm)");
         }
     }
 
-    // Методы для уведомлений
     private void ShowNotification(string message)
     {
         notificationMessage = message;
         StateHasChanged();
         
-        // Автоматически скрыть уведомление через 5 секунд
         _ = AutoDismissNotification();
     }
 
@@ -1067,7 +1050,6 @@
         StateHasChanged();
     }
 
-    // Остальные методы
     private async Task SaveLayoutConfig()
     {
         if (currentPageLayout != null)
@@ -1075,7 +1057,7 @@
             currentPageLayout.TemplateId = selectedTemplateId ?? 0;
             await LayoutService.CreateOrUpdatePageLayoutAsync(currentPageLayout);
             await LoadData();
-            ShowNotification("Настройки страницы сохранены.");
+            ShowNotification("Page settings saved.");
         }
     }
 
@@ -1089,7 +1071,7 @@
             ColumnCount = currentPageLayout?.ColumnCount ?? 2,
             LayoutElements = new List<LayoutElement>(),
             LayoutSettings = "{}",
-            TemplateId = 1 // ЯВНО УСТАНАВЛИВАЕМ TemplateId = 1
+            TemplateId = 1 
         };
 
         AdjustColumnsLayout(newPageLayout);
@@ -1097,7 +1079,7 @@
         await LoadData();
         currentPageNumber = newPageNumber;
         await LoadCurrentPageLayout();
-        ShowNotification($"Страница {newPageNumber} добавлена.");
+        ShowNotification($"Page {newPageNumber} added.");
     }
 
     private async Task HandleRemovePage(PageLayout pageLayout)
@@ -1117,7 +1099,7 @@
         }
     
         await LoadCurrentPageLayout();
-        ShowNotification($"Страница {pageLayout.PageNumber} удалена.");
+        ShowNotification($"Page {pageLayout.PageNumber} deleted.");
     }
 
     private async Task HandleClearAllPages()
@@ -1144,12 +1126,12 @@
             currentPageNumber = 1;
         
             StateHasChanged();
-            ShowNotification("Все страницы и их содержимое удалены.");
+            ShowNotification("All pages and their content have been deleted.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при очистке страниц: {ex.Message}");
-            ShowNotification($"Ошибка при очистке страниц: {ex.Message}");
+            Console.WriteLine($"Error clearing pages: {ex.Message}");
+            ShowNotification($"Error clearing pages: {ex.Message}");
         }
     }
 
@@ -1157,7 +1139,7 @@
     {
         await LayoutService.RemoveElementFromLayoutAsync(element.LayoutElementId);
         await LoadData();
-        ShowNotification("Статья удалена со страницы.");
+        ShowNotification("Article removed from page.");
     }
 
     private async Task HandleSaveLayout()
@@ -1165,11 +1147,11 @@
         if (pageLayouts.Any())
         {
             await LayoutService.UpdateIssueStatusAsync(issueId, IssueStatus.ReadyForPublish);
-            ShowNotification("Макет сохранен. Статус выпуска изменен на 'Готов к публикации'.");
+            ShowNotification("Layout saved. Issue status changed to 'Ready for Publication'.");
         }
         else
         {
-            ShowNotification("Нет страниц для сохранения. Добавьте хотя бы одну страницу.");
+            ShowNotification("No pages to save. Add at least one page.");
         }
     }
 
@@ -1233,64 +1215,58 @@
         };
     }
 
-    // Новый метод: Публиковать выпуск на главной странице
     private async Task PublishToHomepage()
     {
         try
         {
-            // Проверяем, готов ли выпуск к публикации
             if (currentIssue?.Status != IssueStatus.ReadyForPublish && currentIssue?.Status != IssueStatus.Published)
             {
-                ShowNotification("Выпуск должен быть готов к публикации (статус 'Готов к публикации')");
+                ShowNotification("Issue must be ready for publication (status 'Ready for Publication')");
                 return;
             }
 
-            // Если выпуск еще не опубликован, меняем статус
             if (currentIssue?.Status != IssueStatus.Published)
             {
                 await LayoutService.UpdateIssueStatusAsync(issueId, IssueStatus.Published);
             }
 
-            // Делаем выпуск избранным (на главной странице)
             var result = await IssueService.SetAsFeaturedIssueAsync(issueId);
             
             if (result)
             {
                 await LoadData();
-                ShowNotification("Выпуск успешно опубликован на главной странице!");
+                ShowNotification("Issue successfully published on the home page!");
             }
             else
             {
-                ShowNotification("Не удалось опубликовать выпуск на главной странице.");
+                ShowNotification("Failed to publish issue on the home page.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при публикации выпуска: {ex.Message}");
-            ShowNotification($"Ошибка при публикации: {ex.Message}");
+            Console.WriteLine($"Error publishing issue: {ex.Message}");
+            ShowNotification($"Error publishing: {ex.Message}");
         }
     }
 
-    // Новый метод: Убрать выпуск с главной страницы
     private async Task RemoveFromHomepage()
     {
         try
         {
             if (currentIssue?.IsFeatured != true)
             {
-                ShowNotification("Этот выпуск и так не находится на главной странице");
+                ShowNotification("This issue is not on the home page anyway");
                 return;
             }
 
-            // Снимаем флаг избранного
             await IssueService.RemoveFromFeaturedAsync(issueId);
             await LoadData();
-            ShowNotification("Выпуск убран с главной страницы.");
+            ShowNotification("Issue removed from the home page.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при удалении с главной: {ex.Message}");
-            ShowNotification($"Ошибка: {ex.Message}");
+            Console.WriteLine($"Error removing from home page: {ex.Message}");
+            ShowNotification($"Error: {ex.Message}");
         }
     }
 }
