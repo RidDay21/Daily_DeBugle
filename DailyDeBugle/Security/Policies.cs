@@ -13,6 +13,7 @@ public static class Roles
 public static class Policies
 {
     public const string ViewContent = nameof(ViewContent);                  // any authenticated user
+    public const string ViewEditorialIssues = nameof(ViewEditorialIssues); // editorial staff (not Reader)
     public const string WriteArticles = nameof(WriteArticles);              // Author + EiC + Admin
     public const string ReviewArticles = nameof(ReviewArticles);            // Editor + EiC + Admin
     public const string LayoutIssue = nameof(LayoutIssue);                  // LayoutDesigner + EiC + Admin

@@ -10,6 +10,11 @@ public static class AuthorizationPolicyConfiguration
             policy.RequireAssertion(ctx =>
                 ctx.User.Identity?.IsAuthenticated == true));
 
+        options.AddPolicy(Policies.ViewEditorialIssues, policy =>
+            policy.RequireAssertion(ctx =>
+                ctx.User.Identity?.IsAuthenticated == true &&
+                !ctx.User.IsInRole(Roles.Reader)));
+
         options.AddPolicy(Policies.WriteArticles, policy =>
             policy.RequireRole(Roles.Author, Roles.EditorInChief, Roles.Admin));
 

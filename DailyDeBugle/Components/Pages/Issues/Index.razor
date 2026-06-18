@@ -1,5 +1,5 @@
 @page "/issues"
-@attribute [Authorize(Policy = Policies.ViewContent)]
+@attribute [Authorize(Policy = Policies.ViewEditorialIssues)]
 @rendermode InteractiveServer
 @inject IIssueService IssueService
 @inject NavigationManager NavigationManager
