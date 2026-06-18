@@ -18,6 +18,8 @@ public class AuthorizationPolicyConfigurationTests
 
     [Theory]
     [InlineData(Roles.Reader, Policies.ViewContent, true)]
+    [InlineData(Roles.Reader, Policies.ViewEditorialIssues, false)]
+    [InlineData(Roles.Author, Policies.ViewEditorialIssues, true)]
     [InlineData(Roles.Reader, Policies.WriteArticles, false)]
     [InlineData(Roles.Author, Policies.WriteArticles, true)]
     [InlineData(Roles.Editor, Policies.ReviewArticles, true)]
