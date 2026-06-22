@@ -43,6 +43,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<ICollaborativeEditingService, CollaborativeEditingService>();
 
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
@@ -108,5 +109,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapHub<CollaborationHub>("/collaborationhub");
+app.MapHub<EditingHub>("/editinghub");
 
 app.Run();
