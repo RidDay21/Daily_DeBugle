@@ -1,0 +1,255 @@
+@page "/issues/delete/{id:int}"
+@attribute [Authorize(Policy = Policies.ManageIssues)]
+@rendermode InteractiveServer
+@inject IIssueService IssueService
+@inject NavigationManager NavigationManager
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+
+<PageTitle>Delete Issue - DailyDeBugle</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Delete Issue - WARNING
+                    </h4>
+                </div>
+                
+                @if (issue == null)
+                {
+                    <div class="card-body">
+                        <p>Loading issue details...</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="card-body">
+                        <!-- Предупреждение -->
+                        <div class="alert alert-danger border-danger">
+                            <h5 class="alert-heading">
+                                <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                                This action cannot be undone!
+                            </h5>
+                            <p class="mb-0">
+                                You are about to permanently delete this issue and all its content.
+                                This action is irreversible.
+                            </p>
+                        </div>
+
+                        <!-- Детали выпуска -->
+                        <div class="mb-4">
+                            <h5>Issue Details</h5>
+                            <div class="border rounded p-3 bg-light">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Publication:</strong><br>
+                                        <span class="fs-5">@issue.Publication?.Name</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Issue Number:</strong><br>
+                                        <span class="fs-5">@issue.IssueNumber</span></p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Date:</strong><br>
+                                        @issue.IssueDate.ToShortDateString()</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Status:</strong><br>
+                                        <span class="badge @GetStatusBadgeClass(issue.Status)">
+                                            @issue.Status
+                                        </span></p>
+                                    </div>
+                                </div>
+                                
+                                @if (!string.IsNullOrEmpty(issue.CoverImagePath))
+                                {
+                                    <div class="mt-3">
+                                        <p><strong>Cover Image:</strong></p>
+                                        <img src="@issue.CoverImagePath" 
+                                             alt="Cover" 
+                                             class="img-thumbnail" 
+                                             style="max-height: 150px;" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Последствия удаления -->
+                        <div class="mb-4">
+                            <h5 class="text-danger">What will be deleted:</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item list-group-item-danger">
+                                    <i class="bi bi-file-text me-2"></i>
+                                    <strong>All articles</strong>
+                                    in this issue (@(issue.Articles?.Count ?? 0) articles)
+                                </li>
+                                <li class="list-group-item list-group-item-danger">
+                                    <i class="bi bi-layout-text-window me-2"></i>
+                                    <strong>All page layouts</strong>
+                                    (@(issue.PageLayouts?.Count ?? 0) layouts)
+                                </li>
+                                @if (!string.IsNullOrEmpty(issue.CoverImagePath))
+                                {
+                                    <li class="list-group-item list-group-item-danger">
+                                        <i class="bi bi-image me-2"></i>
+                                        <strong>Cover image</strong> (@Path.GetFileName(issue.CoverImagePath))
+                                    </li>
+                                }
+                                <li class="list-group-item list-group-item-danger">
+                                    <i class="bi bi-journal me-2"></i>
+                                    <strong>Issue metadata</strong> (number, date, status)
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Подтверждение удаления -->
+                        <div class="mb-4 p-3 border border-danger rounded bg-light">
+                            <h5 class="text-danger">Confirmation Required</h5>
+                            <p class="mb-2">
+                                To confirm deletion, type the issue number below:
+                            </p>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    Issue Number: <span class="text-danger">@issue.IssueNumber</span>
+                                </label>
+                                <InputText @bind-Value="confirmationText" 
+                                          class="@GetConfirmationClass()"
+                                          placeholder="Type the issue number exactly as shown above" />
+                                <div class="form-text text-danger">
+                                    You must type the exact issue number to confirm deletion.
+                                </div>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <InputCheckbox @bind-Value="confirmIrreversible" class="form-check-input" />
+                                <label class="form-check-label text-danger">
+                                    <strong>I understand this action is irreversible and cannot be undone.</strong>
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <InputCheckbox @bind-Value="confirmNotifiedTeam" class="form-check-input" />
+                                <label class="form-check-label">
+                                    I have notified the team about this deletion.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки действий -->
+                        <div class="d-flex gap-2 mt-4">
+                            <button class="btn btn-danger flex-grow-1" 
+                                    @onclick="DeleteIssue"
+                                    disabled="@(!CanDelete)">
+                                @(isDeleting ? "Deleting..." : "DELETE PERMANENTLY")
+                            </button>
+                            <a href="/issues" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger mt-3">
+                                @errorMessage
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Issue? issue;
+    private bool isDeleting = false;
+    private string? errorMessage;
+    
+    // Подтверждение удаления
+    private string confirmationText = "";
+    private bool confirmIrreversible = false;
+    private bool confirmNotifiedTeam = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            issue = await IssueService.GetIssueAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading issue: {ex.Message}";
+        }
+    }
+
+    private bool IsConfirmationValid => 
+        !string.IsNullOrEmpty(confirmationText) &&
+        !string.IsNullOrEmpty(issue?.IssueNumber) &&
+        confirmationText.Equals(issue.IssueNumber, StringComparison.OrdinalIgnoreCase);
+
+    private string GetConfirmationClass()
+    {
+        var baseClass = "form-control";
+        if (string.IsNullOrEmpty(confirmationText))
+            return baseClass;
+        
+        return IsConfirmationValid ? $"{baseClass} is-valid" : $"{baseClass} is-invalid";
+    }
+
+    private bool CanDelete => 
+        IsConfirmationValid && 
+        confirmIrreversible && 
+        confirmNotifiedTeam && 
+        !isDeleting;
+
+    private async Task DeleteIssue()
+    {
+        if (!CanDelete || issue == null)
+            return;
+
+        isDeleting = true;
+        errorMessage = null;
+
+        try
+        {
+            var success = await IssueService.DeleteIssueWithContentAsync(Id);
+            
+            if (success)
+            {
+                // Задержка для визуального подтверждения
+                await Task.Delay(500);
+                NavigationManager.NavigateTo("/issues");
+            }
+            else
+            {
+                errorMessage = "Failed to delete issue. Please try again.";
+                isDeleting = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting issue: {ex.Message}";
+            isDeleting = false;
+        }
+    }
+
+    private string GetStatusBadgeClass(IssueStatus status)
+    {
+        return status switch
+        {
+            IssueStatus.InProgress => "bg-warning",
+            IssueStatus.LayoutInProgress => "bg-info",
+            IssueStatus.ReadyForPublish => "bg-success",
+            IssueStatus.Published => "bg-primary",
+            _ => "bg-secondary"
+        };
+    }
+}

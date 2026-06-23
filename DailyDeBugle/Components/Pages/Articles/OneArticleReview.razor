@@ -1,0 +1,248 @@
+@page "/editor/review/{articleId:int}"
+@attribute [Authorize(Policy = Policies.ReviewArticles)]
+@inject IArticleService ArticleService
+@inject NavigationManager Navigation
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@rendermode InteractiveServer
+
+<PageTitle>DailyDeBugle - Review: @article?.Headline</PageTitle>
+
+@if (article == null)
+{
+    <p>Loading article...</p>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4>@article.Headline</h4>
+                        <div class="small text-muted">
+                            By: @article.Author?.Username |
+                            Created: @article.CreatedDate.ToString("MMM dd, yyyy HH:mm") |
+                            Status: <span class="badge bg-warning">@article.Status</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Article Content</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (article.Images?.Any() == true)
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2">Images</h6>
+                                <div class="row g-2">
+                                    @foreach (var img in article.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.ArticleImageId))
+                                    {
+                                        <div class="col-6">
+                                            <div class="border rounded p-2 bg-light">
+                                                <img src="@img.ImagePath" alt="@img.Caption" style="width: 100%; height: auto; display: block;" />
+                                                @if (!string.IsNullOrWhiteSpace(img.Caption))
+                                                {
+                                                    <div class="small text-muted mt-1">@img.Caption</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">@article.Content</div>
+                        <div class="mt-2 text-muted small">
+                            Characters: @(article.Content?.Length ?? 0)
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Editor Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <button class="btn btn-success w-100" @onclick="ApproveArticle">
+                                Approve Article
+                            </button>
+                            <div class="form-text">The article text does not change upon approval.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <button class="btn btn-warning w-100"
+                                    @onclick="() => showRevisionModal = true">
+                                Send for Revision
+                            </button>
+                        </div>
+
+                        <div class="mb-3">
+                            <button class="btn btn-danger w-100"
+                                    @onclick="() => showRejectModal = true">
+                                Reject
+                            </button>
+                        </div>
+
+                        <div class="mt-4">
+                            <button class="btn btn-outline-secondary w-100" @onclick="NavigateBack">
+                                ← Back to List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6>Comment History</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (article.Comments?.Any() == true)
+                        {
+                            @foreach (var comment in article.Comments.OrderByDescending(c => c.CreatedDate))
+                            {
+                                <div class="border-bottom pb-2 mb-2">
+                                    <div class="small text-muted">
+                                        @comment.CreatedDate.ToString("MMM dd, HH:mm")
+                                        @if (comment.IsEditorComment)
+                                        {
+                                            <span class="badge bg-info">Editor</span>
+                                        }
+                                    </div>
+                                    <div style="white-space: pre-wrap;">@comment.Content</div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted small mb-0">No comments yet.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showRevisionModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Send for Revision</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Comment to the author:</label>
+                        <textarea @bind="revisionComments" class="form-control" rows="4"
+                                  placeholder="What needs to be fixed?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-warning" @onclick="SendForRevision">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showRejectModal)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject Article</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason:</label>
+                        <textarea @bind="rejectionReason" class="form-control" rows="4"
+                                  placeholder="Why is the article being rejected?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="RejectArticle">Reject</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int ArticleId { get; set; }
+
+    private Article? article;
+    private bool showRevisionModal;
+    private bool showRejectModal;
+    private string revisionComments = string.Empty;
+    private string rejectionReason = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadArticle();
+    }
+
+    private async Task ReloadArticle()
+    {
+        article = await ArticleService.GetArticleAsync(ArticleId);
+    }
+
+    private async Task ApproveArticle()
+    {
+        if (article == null) return;
+        var success = await ArticleService.ApproveArticleAsync(article.ArticleId, article.Content ?? string.Empty);
+        if (success)
+            Navigation.NavigateTo("/editor/review");
+    }
+
+    private async Task SendForRevision()
+    {
+        if (article != null && !string.IsNullOrWhiteSpace(revisionComments))
+        {
+            var success = await ArticleService.SendForRevisionAsync(article.ArticleId, revisionComments);
+            if (success)
+            {
+                CloseModals();
+                Navigation.NavigateTo("/editor/review");
+            }
+        }
+    }
+
+    private async Task RejectArticle()
+    {
+        if (article != null && !string.IsNullOrWhiteSpace(rejectionReason))
+        {
+            var success = await ArticleService.RejectArticleAsync(article.ArticleId, rejectionReason);
+            if (success)
+            {
+                CloseModals();
+                Navigation.NavigateTo("/editor/review");
+            }
+        }
+    }
+
+    private void CloseModals()
+    {
+        showRevisionModal = false;
+        showRejectModal = false;
+        revisionComments = string.Empty;
+        rejectionReason = string.Empty;
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/editor/review");
+    }
+}

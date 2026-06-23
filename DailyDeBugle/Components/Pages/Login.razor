@@ -1,0 +1,113 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Security.Claims
+@using DailyDeBugle.Services
+@using DailyDeBugle.Models
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@layout Layout.AuthLayout
+
+<div class="card">
+    <div class="card-header text-center">
+        <h3 class="mb-1">Welcome Back</h3>
+        <p class="text-muted small mb-0">Login to your account</p>
+    </div>
+    <div class="card-body">
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
+            <DataAnnotationsValidator />
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger py-2 small">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-uppercase text-muted">Username</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
+                    <InputText @bind-Value="loginModel.Username" class="form-control border-start-0" placeholder="username" />
+                </div>
+                <ValidationMessage For="@(() => loginModel.Username)" class="text-danger small" />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-uppercase text-muted">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock"></i></span>
+                    <InputText @bind-Value="loginModel.Password" type="password" class="form-control border-start-0" placeholder="••••••••" />
+                </div>
+                <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small" />
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Logging in...</span>
+                    }
+                    else
+                    {
+                        <span>Login</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    </div>
+    <div class="card-footer bg-light border-top-0 text-center py-3">
+        <p class="mb-0 small">
+            No account? <a href="/register" class="fw-bold text-decoration-none">Register</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private LoginModel loginModel = new();
+    private string? errorMessage;
+    private bool isProcessing;
+
+    private async Task HandleLogin()
+    {
+        isProcessing = true;
+        errorMessage = null;
+
+        try
+        {
+            var user = await UserService.AuthenticateAsync(loginModel.Username!, loginModel.Password!);
+            if (user != null)
+            {
+                Navigation.NavigateTo($"/api/auth/signin?username={Uri.EscapeDataString(user.Username)}&returnUrl={Uri.EscapeDataString(ReturnUrl ?? "/")}", true);
+            }
+            else
+            {
+                errorMessage = "Invalid username or password";
+            }
+        }
+        catch (Exception)
+        {
+            errorMessage = "Server error. Please try again later.";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Enter username")]
+        public string? Username { get; set; }
+
+        [Required(ErrorMessage = "Enter password")]
+        public string? Password { get; set; }
+    }
+}

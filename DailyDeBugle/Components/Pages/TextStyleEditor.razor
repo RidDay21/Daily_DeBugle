@@ -1,0 +1,435 @@
+@page "/issues/{issueId:int}/text-style"
+@attribute [Authorize(Policy = Policies.LayoutIssue)]
+@using DailyDeBugle.Services
+@using DailyDeBugle.Models
+@inject IGlobalTextStyleService TextStyleService
+@inject IArticleService ArticleService
+@inject IIssueService IssueService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>Issue Typography: @issue?.IssueNumber</PageTitle>
+
+<div class="container-fluid py-4">
+    <!-- Header and Navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Issue Typography</h2>
+            <p class="text-muted mb-0">
+                Issue: @issue?.IssueNumber | 
+                Date: @issue?.IssueDate.ToString("dd.MM.yyyy") |
+                Articles: @articles?.Count
+            </p>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary me-2" @onclick="NavigateBack">
+                <i class="bi bi-arrow-left me-1"></i> Back to Layout
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading issue typography...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Left Column: Settings -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-fonts me-2"></i>Font Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Primary Font -->
+                        <div class="mb-3">
+                            <label class="form-label">Primary Font</label>
+                            <select value="@styles.PrimaryFont"
+                                    @onchange="@(e => { styles.PrimaryFont = e.Value?.ToString(); UpdatePreview(); })"
+                                    class="form-select">
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Garamond">Garamond</option>
+                            </select>
+                        </div>
+
+                        <!-- Heading Font -->
+                        <div class="mb-3">
+                            <label class="form-label">Heading Font</label>
+                            <select value="@styles.HeadingFont"
+                                    @onchange="@(e => { styles.HeadingFont = e.Value?.ToString(); UpdatePreview(); })"
+                                    class="form-select">
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Garamond">Garamond</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text Sizes -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-textarea-t me-2"></i>Text Sizes (pt)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Heading H1</label>
+                                <input type="number" 
+                                       value="@styles.H1Size"
+                                       @oninput="@(e => { 
+                                           if (int.TryParse(e.Value?.ToString(), out int value)) { 
+                                               styles.H1Size = Math.Clamp(value, 18, 36); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="18" max="36" step="1" />
+                                <div class="form-text">18-36pt</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Heading H2</label>
+                                <input type="number" 
+                                       value="@styles.H2Size"
+                                       @oninput="@(e => { 
+                                           if (int.TryParse(e.Value?.ToString(), out int value)) { 
+                                               styles.H2Size = Math.Clamp(value, 16, 24); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="16" max="24" step="1" />
+                                <div class="form-text">16-24pt</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Body Text</label>
+                                <input type="number" 
+                                       value="@styles.BodySize"
+                                       @oninput="@(e => { 
+                                           if (int.TryParse(e.Value?.ToString(), out int value)) { 
+                                               styles.BodySize = Math.Clamp(value, 12, 16); 
+                                               UpdatePreview(); 
+                                           }
+                                       })"
+                                       class="form-control" min="12" max="16" step="1" />
+                                <div class="form-text">12-16pt</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Line Spacing -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-text-indent-left me-2"></i>Line Spacing</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Body Text</label>
+                                <input type="number" 
+                                       value="@styles.BodyLineSpacing"
+                                       @oninput="@(e => { 
+                                                     if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
+                                                         styles.BodyLineSpacing = Math.Clamp(value, 1.2, 2.0); 
+                                                         UpdatePreview(); 
+                                                     }
+                                                 })"
+                                       class="form-control" min="1.2" max="2.0" step="0.1" />
+                                <div class="form-text">1.2-2.0</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Headings</label>
+                                <input type="number" 
+                                       value="@styles.HeadingLineSpacing"
+                                       @oninput="@(e => { 
+                                                     if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double value)) { 
+                                                         styles.HeadingLineSpacing = Math.Clamp(value, 1.0, 1.8); 
+                                                         UpdatePreview(); 
+                                                     }
+                                                 })"
+                                       class="form-control" min="1.0" max="1.8" step="0.1" />
+                                <div class="form-text">1.0-1.8</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Preview -->
+            <div class="col-md-6">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Current Settings -->
+                        <div class="alert alert-info mb-3">
+                            <h6><i class="bi bi-info-circle me-1"></i>Current Settings:</h6>
+                            <div class="small">
+                                <div>Primary Font: <strong>@styles.PrimaryFont</strong></div>
+                                <div>Heading Font: <strong>@styles.HeadingFont</strong></div>
+                                <div>H1: <strong>@styles.H1Size pt</strong>, H2: <strong>@styles.H2Size pt</strong></div>
+                                <div>Body Text: <strong>@styles.BodySize pt</strong></div>
+                                <div>Spacing: <strong>@styles.BodyLineSpacing</strong> (text), <strong>@styles.HeadingLineSpacing</strong> (headings)</div>
+                            </div>
+                        </div>
+
+                        <!-- Article Preview -->
+                        <div class="preview-container" style="@GetPreviewStyle()">
+                            @if (articles == null || !articles.Any())
+                            {
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    There are no articles in this issue to preview.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="preview-content">
+                                    @* Show only 3 articles for preview *@
+                                    @foreach (var article in articles.Take(3))
+                                    {
+                                        <div class="article-preview mb-4">
+                                            <h1 style="@GetH1Style()">@article.Headline</h1>
+                                            
+                                            <div class="article-meta mb-3" style="@GetMetaStyle()">
+                                                <i class="bi bi-person me-1"></i> @article.Author?.Username |
+                                                <i class="bi bi-calendar ms-2 me-1"></i> @article.CreatedDate.ToString("dd.MM.yyyy") |
+                                                <span class="badge @GetStatusBadgeClass(article.Status) ms-2">
+                                                    @article.Status
+                                                </span>
+                                            </div>
+                                            
+                                            <div style="@GetParagraphStyle()">
+                                                @GetArticlePreview(article.Content)
+                                            </div>
+                                            
+                                            @if (article.Content.Length > 200)
+                                            {
+                                                <h2 style="@GetH2Style()" class="mt-4">Subheading Example</h2>
+                                                <div style="@GetParagraphStyle()">
+                                                    This is an example of how additional text 
+                                                    will look with current typography settings. Notice the 
+                                                    font, text size, and line spacing.
+                                                </div>
+                                            }
+                                            
+                                            <hr class="my-4" />
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-secondary flex-fill" @onclick="ResetToDefault">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                                </button>
+                                <button class="btn btn-primary flex-fill" @onclick="SaveSettings">
+                                    <i class="bi bi-save me-1"></i> Save
+                                </button>
+                                <button class="btn btn-success flex-fill" @onclick="ApplyToAllArticles">
+                                    <i class="bi bi-check-all me-1"></i> Apply to all articles
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int issueId { get; set; }
+
+    private GlobalTextStyle styles = new();
+    private List<Article> articles = new();
+    private Issue issue;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+            
+            // Загружаем выпуск
+            issue = await IssueService.GetIssueAsync(issueId);
+            if (issue == null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Issue with ID {issueId} not found");
+                Navigation.NavigateTo("/issues");
+                return;
+            }
+
+            // Загружаем стили для выпуска
+            styles = await TextStyleService.GetStylesForIssueAsync(issueId);
+
+            // Загружаем статьи этого выпуска
+            articles = await ArticleService.GetArticlesByIssueAsync(issueId);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Loading error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void UpdatePreview()
+    {
+        // Принудительное обновление предпросмотра
+        StateHasChanged();
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            styles = await TextStyleService.SaveStylesAsync(styles);
+            await JSRuntime.InvokeVoidAsync("alert", "Typography settings saved successfully!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Save error: {ex.Message}");
+        }
+    }
+
+    private async Task ApplyToAllArticles()
+    {
+        try
+        {
+            await TextStyleService.ApplyStylesToIssueAsync(issueId);
+            await JSRuntime.InvokeVoidAsync("alert", $"Styles applied to all articles in the issue!");
+            
+            // Перезагружаем статьи, чтобы показать обновленные стили
+            articles = await ArticleService.GetArticlesByIssueAsync(issueId);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error applying styles: {ex.Message}");
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Reset typography settings to default values?"))
+        {
+            styles.PrimaryFont = "Times New Roman";
+            styles.HeadingFont = "Times New Roman";
+            styles.H1Size = 24;
+            styles.H2Size = 20;
+            styles.BodySize = 14;
+            styles.BodyLineSpacing = 1.4;
+            styles.HeadingLineSpacing = 1.2;
+            // ColumnCount и ColumnGap больше не используются
+        
+            UpdatePreview();
+            await JSRuntime.InvokeVoidAsync("alert", "Settings reset to default values");
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/layout");
+    }
+
+    // Методы для стилей
+    private string GetPreviewStyle()
+    {
+        return $"font-family: {styles.PrimaryFont};" +
+               $"font-size: {styles.BodySize}pt;" +
+               $"line-height: {styles.BodyLineSpacing};" +
+               "background: white;" +
+               "padding: 20px;" +
+               "border: 1px solid #dee2e6;" +
+               "border-radius: 8px;" +
+               "min-height: 500px;" +
+               "max-height: 600px;" +
+               "overflow-y: auto;";
+    }
+
+    private string GetH1Style()
+    {
+        return $"font-family: {styles.HeadingFont};" +
+               $"font-size: {styles.H1Size}pt;" +
+               $"line-height: {styles.HeadingLineSpacing};" +
+               "color: #2c3e50;" +
+               "margin: 0 0 15px 0;" +
+               "padding-bottom: 10px;" +
+               "border-bottom: 2px solid #3498db;" +
+               "break-inside: avoid;";
+    }
+
+    private string GetH2Style()
+    {
+        return $"font-family: {styles.HeadingFont};" +
+               $"font-size: {styles.H2Size}pt;" +
+               $"line-height: {styles.HeadingLineSpacing};" +
+               "color: #34495e;" +
+               "margin: 20px 0 10px 0;" +
+               "break-inside: avoid;";
+    }
+
+    private string GetParagraphStyle()
+    {
+        return $"font-family: {styles.PrimaryFont};" +
+               $"font-size: {styles.BodySize}pt;" +
+               $"line-height: {styles.BodyLineSpacing};" +
+               "color: #2c3e50;" +
+               "margin: 0 0 15px 0;" +
+               "text-align: justify;";
+    }
+
+    private string GetMetaStyle()
+    {
+        return $"font-family: {styles.PrimaryFont};" +
+               $"font-size: {styles.BodySize - 2}pt;" +
+               "color: #7f8c8d;" +
+               "margin-bottom: 15px;";
+    }
+
+    private string GetArticlePreview(string content)
+    {
+        if (string.IsNullOrEmpty(content)) 
+            return "";
+        
+        return content.Length > 300 ? 
+            content.Substring(0, 300) + "..." : 
+            content;
+    }
+
+    private string GetStatusBadgeClass(ArticleStatus status)
+    {
+        return status switch
+        {
+            ArticleStatus.Approved => "bg-success",
+            ArticleStatus.UnderReview => "bg-info",
+            ArticleStatus.RequiresRevision => "bg-warning",
+            ArticleStatus.Draft => "bg-secondary",
+            ArticleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

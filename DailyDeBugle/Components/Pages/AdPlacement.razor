@@ -1,0 +1,898 @@
+@page "/issues/{issueId:int}/ads"
+@attribute [Authorize(Policy = Policies.LayoutIssue)]
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@using System.Text.Json
+@inject IIssueService IssueService
+@inject ILayoutService LayoutService
+@inject IAdvertisementService AdService
+@inject IGlobalTextStyleService TextStyleService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Advertisements in Issue: @currentIssue?.IssueNumber</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3>Add Advertisements</h3>
+            <p class="text-muted mb-0">
+                Issue: @currentIssue?.IssueNumber • Page: 
+                <select class="form-select d-inline w-auto mx-2"
+                        value="@selectedPageNumber"
+                        @onchange="@((ChangeEventArgs e) => OnPageChanged(Convert.ToInt32(e.Value)))">
+                    @for (int i = 1; i <= totalPages; i++)
+                    {
+                        <option value="@i">@i</option>
+                    }
+                    @if (pageLayouts.Count == 0)
+                    {
+                        <option value="1">1</option>
+                    }
+                </select>
+                of @totalPages
+            </p>
+            @if (currentPageLayout != null)
+            {
+                <div class="small text-muted">
+                    Columns: @currentPageLayout.ColumnCount | 
+                    Available space: <strong>@GetAvailableHeightOnPage().ToString("F1") cm</strong> |
+                    Column width: <strong>@GetColumnWidth().ToString("F1") cm</strong>
+                </div>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/ads/create" class="btn btn-primary me-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                Create Advertisement
+            </a>
+            <button class="btn btn-outline-info" @onclick="NavigateToPreview">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye me-1" viewBox="0 0 16 16">
+                    <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                    <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+                Preview
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="NavigateBack">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-1" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                </svg>
+                Back to Layout
+            </button>
+            @if (pageLayouts.Count == 0)
+            {
+                <button class="btn btn-success" @onclick="CreateFirstPage">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                    </svg>
+                    Create Page
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <div class="alert @(message.Contains("Error") ? "alert-danger" : "alert-info") alert-dismissible fade show mb-3">
+            @message
+            <button type="button" class="btn-close" @onclick="ClearMessage"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(placementWarning))
+    {
+        <div class="alert alert-warning alert-dismissible fade show mb-3">
+            @placementWarning
+            <button type="button" class="btn-close" @onclick="ClearPlacementWarning"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Левая колонка: Доступная реклама -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Available Advertisements</h5>
+                    <span class="badge bg-primary">@availableAds.Count</span>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    @if (availableAds.Count == 0)
+                    {
+                        <div class="text-center text-muted py-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-megaphone text-muted" viewBox="0 0 16 16">
+                                <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+                            </svg>
+                            <p class="mt-3">No available advertisements</p>
+                            <a href="/ads/create" class="btn btn-primary btn-sm">
+                                Create first advertisement
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var ad in availableAds)
+                            {
+                                var canPlace = currentPageLayout != null && 
+                                             CanPlaceAdOnPage(ad, selectedPageNumber);
+                                var alreadyOnPage = IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber);
+                                
+                                <div class="list-group-item @(canPlace && !alreadyOnPage ? "" : "opacity-75")">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">@ad.Advertiser</h6>
+                                            <div class="small text-muted mb-2">
+                                                @if (ad.Type == AdType.Image)
+                                                {
+                                                    <span class="badge bg-info me-1">Image</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary me-1">Text</span>
+                                                }
+                                                <span>Until @ad.EndDate.ToString("dd.MM.yy")</span>
+                                            </div>
+                                            
+                                            @if (ad.Type == AdType.Text)
+                                            {
+                                                <p class="small mb-2">@GetContentPreview(ad.Content, 100)</p>
+                                            }
+                                            else if (ad.Type == AdType.Image && !string.IsNullOrEmpty(ad.Content))
+                                            {
+                                                <div class="mb-2">
+                                                    <img src="@ad.Content" alt="@ad.Advertiser" 
+                                                         class="img-thumbnail" style="max-height: 100px; max-width: 100%;" />
+                                                    <div class="small text-muted mt-1">
+                                                        Image: @Path.GetFileName(ad.Content)
+                                                    </div>
+                                                </div>
+                                            }
+                                            
+                                            <div class="small text-muted">
+                                                Size: @ad.DefaultWidth × @ad.DefaultHeight cm
+                                            </div>
+                                            
+                                            @if (currentPageLayout != null)
+                                            {
+                                                <div class="small mt-1">
+                                                    @if (alreadyOnPage)
+                                                    {
+                                                        <span class="text-warning">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-exclamation-triangle me-1" viewBox="0 0 16 16">
+                                                                <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z"/>
+                                                                <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z"/>
+                                                            </svg>
+                                                            Already placed on page @selectedPageNumber
+                                                        </span>
+                                                    }
+                                                    else if (canPlace)
+                                                    {
+                                                        <span class="text-success">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16">
+                                                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                                                <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                                            </svg>
+                                                            Will fit on page @selectedPageNumber
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-danger">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-exclamation-circle me-1" viewBox="0 0 16 16">
+                                                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                                                <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                                                            </svg>
+                                                            @GetPlacementStatusMessage(ad)
+                                                        </span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm @(canPlace && !alreadyOnPage ? "btn-outline-primary" : "btn-outline-secondary")"
+                                                    @onclick="() => AddAdToPage(ad, selectedPageNumber)"
+                                                    disabled="@(!canPlace || alreadyOnPage)"
+                                                    title="@GetPlacementTooltip(ad)">
+                                                @if (alreadyOnPage)
+                                                {
+                                                    <span>Already on p. @selectedPageNumber</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Add to p. @selectedPageNumber</span>
+                                                }
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая колонка: Размещенная реклама и информация о странице -->
+        <div class="col-md-6">
+            <!-- Информация о текущей странице -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Page @selectedPageNumber</h5>
+                </div>
+                <div class="card-body">
+                    @if (currentPageLayout == null)
+                    {
+                        <div class="alert alert-info">
+                            <p>For page @selectedPageNumber no layout created yet.</p>
+                            <button class="btn btn-primary btn-sm" @onclick="CreatePageLayout">
+                                Create page layout
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="small text-muted">Columns:</div>
+                                <div class="h5">@currentPageLayout.ColumnCount</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small text-muted">Column width:</div>
+                                <div class="h5">@GetColumnWidth().ToString("F1") cm</div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <div class="small text-muted">Occupied space:</div>
+                                <div class="h5">@GetOccupiedHeightOnPage().ToString("F1") cm</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small text-muted">Available space:</div>
+                                <div class="h5 @(GetAvailableHeightOnPage() < 3 ? "text-danger" : "text-success")">
+                                    @GetAvailableHeightOnPage().ToString("F1") cm
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="progress" style="height: 20px;">
+                                @{
+                                    double occupiedPercentage = (GetOccupiedHeightOnPage() / currentPageLayout.TextAreaHeight) * 100;
+                                }
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: @occupiedPercentage%;"
+                                     aria-valuenow="@occupiedPercentage" aria-valuemin="0" aria-valuemax="100">
+                                    @occupiedPercentage.ToString("F0")%
+                                </div>
+                            </div>
+                            <div class="small text-muted text-center mt-1">
+                                Page filling
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <!-- Размещенная реклама -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Advertisements on page @selectedPageNumber</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ChangePage(-1)"
+                                disabled="@(selectedPageNumber <= 1)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                            </svg>
+                        </button>
+                        <span class="btn btn-sm btn-outline-secondary disabled">
+                            Page @selectedPageNumber
+                        </span>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ChangePage(1)"
+                                disabled="@(selectedPageNumber >= totalPages)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @{
+                        var pageAds = GetAdsForPage(selectedPageNumber);
+                    }
+                    
+                    @if (pageAds.Count == 0)
+                    {
+                        <div class="text-center text-muted py-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-layout-text-window text-muted" viewBox="0 0 16 16">
+                                <path d="M3 6.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm.5 2.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z"/>
+                                <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v1H1V2a1 1 0 0 1 1-1h12zm1 3v10a1 1 0 0 1-1 1h-2V4h3zm-4 0v11H2a1 1 0 0 1-1-1V4h10z"/>
+                            </svg>
+                            <p class="mt-3">No advertisements on this page</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var placement in pageAds)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">@placement.AdvertisementBlock.Advertiser</h6>
+                                            <div class="small text-muted">
+                                                @if (placement.AdvertisementBlock.Type == AdType.Image)
+                                                {
+                                                    <span class="badge bg-info me-1">Image</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary me-1">Text</span>
+                                                }
+                                                <span>Size: @placement.Width × @placement.Height cm</span>
+                                            </div>
+                                            <div class="small text-muted mt-1">
+                                                Position: (@placement.PositionX.ToString("F1"), @placement.PositionY.ToString("F1")) cm
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => RemovePlacement(placement)">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    @if (placement.AdvertisementBlock.Type == AdType.Image && !string.IsNullOrEmpty(placement.AdvertisementBlock.Content))
+                                    {
+                                        <div class="mt-2">
+                                            <img src="@placement.AdvertisementBlock.Content" alt="@placement.AdvertisementBlock.Advertiser" 
+                                                 class="img-thumbnail" style="max-height: 80px;" />
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <div class="small">
+                                <strong>Page statistics:</strong>
+                                <div>Ad blocks: @pageAds.Count</div>
+                                <div>Images: @pageAds.Count(a => a.AdvertisementBlock.Type == AdType.Image)</div>
+                                <div>Text blocks: @pageAds.Count(a => a.AdvertisementBlock.Type == AdType.Text)</div>
+                                <div>Total occupied height: @GetAdsOccupiedHeight(selectedPageNumber).ToString("F1") cm</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int issueId { get; set; }
+
+    private Issue currentIssue;
+    private List<AdvertisementBlock> availableAds = new();
+    private List<AdvertisementPlacementDto> placements = new();
+    private List<PageLayout> pageLayouts = new();
+    private PageLayout currentPageLayout;
+    
+    private string message = "";
+    private string placementWarning = "";
+    private int selectedPageNumber = 1;
+    private int totalPages = 1;
+
+    // Константы для размеров страницы (А4)
+    private const double PAGE_WIDTH = 42.0;    // см, ширина страницы А4
+    private const double PAGE_HEIGHT = 29.7;   // см, высота страницы А4
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        currentIssue = await IssueService.GetIssueAsync(issueId);
+        availableAds = await AdService.GetAvailableAdsAsync();
+        pageLayouts = await LayoutService.GetPageLayoutsForIssueAsync(issueId);
+        totalPages = pageLayouts.Count > 0 ? pageLayouts.Count : 1;
+        
+        await LoadPlacements();
+        
+        // Устанавливаем максимальную страницу
+        if (selectedPageNumber > totalPages)
+        {
+            selectedPageNumber = totalPages;
+        }
+        
+        // Загружаем макет текущей страницы
+        currentPageLayout = pageLayouts.FirstOrDefault(p => p.PageNumber == selectedPageNumber);
+    }
+
+    private async Task LoadPlacements()
+    {
+        placements.Clear();
+        
+        foreach (var layout in pageLayouts)
+        {
+            var adElements = layout.LayoutElements
+                .Where(e => e.AdvertisementBlockId.HasValue)
+                .ToList();
+                
+            foreach (var element in adElements)
+            {
+                var ad = availableAds.FirstOrDefault(a => 
+                    a.AdvertisementBlockId == element.AdvertisementBlockId.Value);
+                    
+                if (ad != null)
+                {
+                    var position = ParsePosition(element.Position);
+                    var size = ParseSize(element.Size);
+                    
+                    placements.Add(new AdvertisementPlacementDto
+                    {
+                        LayoutElementId = element.LayoutElementId,
+                        AdvertisementBlock = ad,
+                        PageNumber = layout.PageNumber,
+                        PositionX = position.X,
+                        PositionY = position.Y,
+                        Width = size.Width,
+                        Height = size.Height,
+                        TextFlow = element.TextFlow ?? "None"
+                    });
+                }
+            }
+        }
+    }
+
+    private List<AdvertisementPlacementDto> GetAdsForPage(int pageNumber)
+    {
+        return placements.Where(p => p.PageNumber == pageNumber).ToList();
+    }
+
+    private double GetAdsOccupiedHeight(int pageNumber)
+    {
+        var pageAds = GetAdsForPage(pageNumber);
+        if (!pageAds.Any()) return 0;
+        
+        // Находим максимальную Y-координату + высота элемента
+        return pageAds.Max(p => p.PositionY + p.Height);
+    }
+
+    // Проверка, размещена ли уже реклама на странице
+    private bool IsAdAlreadyOnPage(int adId, int pageNumber)
+    {
+        return placements.Any(p => p.PageNumber == pageNumber && 
+                                  p.AdvertisementBlock.AdvertisementBlockId == adId);
+    }
+
+    private async Task AddAdToPage(AdvertisementBlock ad, int pageNumber)
+    {
+        try
+        {
+            var pageLayout = pageLayouts.FirstOrDefault(p => p.PageNumber == pageNumber);
+            if (pageLayout == null)
+            {
+                message = $"Create layout for page {pageNumber} first";
+                return;
+            }
+
+            // Проверяем, не размещена ли уже эта реклама на странице
+            if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, pageNumber))
+            {
+                placementWarning = $"Ad '{ad.Advertiser}' already placed on page {pageNumber}";
+                return;
+            }
+
+            // Проверяем, помещается ли реклама
+            if (!CanPlaceAdOnPage(ad, pageNumber))
+            {
+                placementWarning = GetPlacementWarning(ad);
+                return;
+            }
+
+            // Рассчитываем позицию для размещения (внизу текущих элементов)
+            double yPosition = GetOccupiedHeightOnPage();
+            
+            var element = new LayoutElement
+            {
+                PageLayoutId = pageLayout.PageLayoutId,
+                AdvertisementBlockId = ad.AdvertisementBlockId,
+                Type = ElementType.AdBlock,
+                Position = JsonSerializer.Serialize(new { X = 0, Y = yPosition }),
+                Size = JsonSerializer.Serialize(new { Width = ad.DefaultWidth, Height = ad.DefaultHeight }),
+                TextFlow = "None"
+            };
+
+            await LayoutService.UpdateLayoutElementAsync(element);
+            await LoadPlacements();
+            
+            message = $"Ad '{ad.Advertiser}' added to page {pageNumber}";
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+        }
+    }
+
+    private bool CanPlaceAdOnPage(AdvertisementBlock ad, int pageNumber)
+    {
+        if (currentPageLayout == null) return false;
+        
+        // Проверяем, не размещена ли уже эта реклама на странице
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, pageNumber))
+        {
+            return false;
+        }
+        
+        // Проверяем ширину рекламы
+        double columnWidth = GetColumnWidth();
+        if (ad.DefaultWidth > columnWidth)
+        {
+            return false;
+        }
+        
+        // Проверяем высоту рекламы
+        double availableHeight = GetAvailableHeightOnPage();
+        if (ad.DefaultHeight > availableHeight)
+        {
+            return false;
+        }
+        
+        return true;
+    }
+
+    private string GetPlacementWarning(AdvertisementBlock ad)
+    {
+        if (currentPageLayout == null)
+        {
+            return "Page layout not created";
+        }
+        
+        // Проверяем, не размещена ли уже реклама на странице
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
+        {
+            return $"Ad '{ad.Advertiser}' already placed on this page";
+        }
+        
+        double columnWidth = GetColumnWidth();
+        double availableHeight = GetAvailableHeightOnPage();
+        
+        var warnings = new List<string>();
+        
+        if (ad.DefaultWidth > columnWidth)
+        {
+            warnings.Add($"width ({ad.DefaultWidth} cm > {columnWidth:F1} cm)");
+        }
+        
+        if (ad.DefaultHeight > availableHeight)
+        {
+            warnings.Add($"height ({ad.DefaultHeight} cm > {availableHeight:F1} cm)");
+        }
+        
+        return warnings.Any() 
+            ? $"Does not fit: {string.Join(", ", warnings)}" 
+            : "Fits on page";
+    }
+
+    private string GetPlacementStatusMessage(AdvertisementBlock ad)
+    {
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
+        {
+            return $"Already on page {selectedPageNumber}";
+        }
+        
+        if (currentPageLayout == null)
+        {
+            return "Page layout not created";
+        }
+        
+        double columnWidth = GetColumnWidth();
+        double availableHeight = GetAvailableHeightOnPage();
+        
+        if (ad.DefaultWidth > columnWidth)
+        {
+            return $"Too wide ({ad.DefaultWidth} cm > {columnWidth:F1} cm)";
+        }
+        
+        if (ad.DefaultHeight > availableHeight)
+        {
+            return $"Too high ({ad.DefaultHeight} cm > {availableHeight:F1} cm)";
+        }
+        
+        return "Fits on page";
+    }
+
+    private string GetPlacementTooltip(AdvertisementBlock ad)
+    {
+        if (IsAdAlreadyOnPage(ad.AdvertisementBlockId, selectedPageNumber))
+        {
+            return "This ad is already placed on the page. Only one instance of a specific ad can be on one page.";
+        }
+        
+        return GetPlacementWarning(ad);
+    }
+
+    private async Task RemovePlacement(AdvertisementPlacementDto placement)
+    {
+        try
+        {
+            await LayoutService.RemoveElementFromLayoutAsync(placement.LayoutElementId);
+            await LoadPlacements();
+            message = $"Ad '{placement.AdvertisementBlock.Advertiser}' removed from page {placement.PageNumber}";
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+        }
+    }
+
+    private void ChangePage(int delta)
+    {
+        var newPage = selectedPageNumber + delta;
+        if (newPage >= 1 && newPage <= totalPages)
+        {
+            selectedPageNumber = newPage;
+            OnPageChanged(newPage);
+        }
+    }
+
+    private async void OnPageChanged(int newPageNumber)
+    {
+        selectedPageNumber = newPageNumber;
+        currentPageLayout = pageLayouts.FirstOrDefault(p => p.PageNumber == selectedPageNumber);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CreatePageLayout()
+    {
+        try
+        {
+            var newPageLayout = new PageLayout
+            {
+                IssueId = issueId,
+                PageNumber = selectedPageNumber,
+                ColumnCount = 2,
+                TemplateId = 1,
+                LayoutElements = new List<LayoutElement>(),
+                LayoutSettings = "{}"
+            };
+
+            // Настраиваем макет
+            AdjustColumnsLayout(newPageLayout);
+            
+            await LayoutService.CreateOrUpdatePageLayoutAsync(newPageLayout);
+            await LoadData();
+            
+            message = $"Layout for page {selectedPageNumber} created";
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task CreateFirstPage()
+    {
+        selectedPageNumber = 1;
+        await CreatePageLayout();
+    }
+
+    // Методы для работы с макетом страницы (аналогичные статьям)
+    private double GetColumnWidth()
+    {
+        return GetColumnWidth(currentPageLayout);
+    }
+
+    private double GetColumnWidth(PageLayout pageLayout)
+    {
+        if (pageLayout == null || pageLayout.ColumnCount == 0) 
+            return 0;
+    
+        double totalGaps = (pageLayout.ColumnCount - 1) * pageLayout.ColumnGap;
+        double availableWidth = pageLayout.TextAreaWidth - totalGaps;
+        return availableWidth / pageLayout.ColumnCount;
+    }
+
+    private void AdjustColumnsLayout(PageLayout layout)
+    {
+        if (layout == null) return;
+    
+        // Фиксированные отступы
+        layout.MarginTop = 2.0;
+        layout.MarginBottom = 2.0;
+        layout.MarginLeft = 2.0;
+        layout.MarginRight = 2.0;
+    
+        // Текстовая область занимает все пространство между отступами
+        layout.TextAreaWidth = PAGE_WIDTH - layout.MarginLeft - layout.MarginRight;
+        layout.TextAreaHeight = PAGE_HEIGHT - layout.MarginTop - layout.MarginBottom;
+    
+        // Настраиваем промежутки между колонками
+        switch (layout.ColumnCount)
+        {
+            case 1:
+                layout.ColumnGap = 0;
+                break;
+            case 2:
+                layout.ColumnGap = 1.0;
+                break;
+            case 3:
+                layout.ColumnGap = 0.7;
+                break;
+            case 4:
+                layout.ColumnGap = 0.5;
+                break;
+        }
+    
+        // Округляем значения
+        layout.TextAreaWidth = Math.Round(layout.TextAreaWidth, 1);
+        layout.TextAreaHeight = Math.Round(layout.TextAreaHeight, 1);
+        layout.ColumnGap = Math.Round(layout.ColumnGap, 1);
+    }
+
+    // Получить занятую высоту на странице (статьи + реклама)
+    private double GetOccupiedHeightOnPage()
+    {
+        if (currentPageLayout == null) return 0;
+        
+        double maxBottom = 0;
+        
+        // Проверяем все элементы макета (статьи и рекламу)
+        foreach (var element in currentPageLayout.LayoutElements)
+        {
+            var position = GetElementPosition(element);
+            var size = GetElementSize(element);
+            
+            double elementBottom = position.Y + size.Height;
+            if (elementBottom > maxBottom)
+            {
+                maxBottom = elementBottom;
+            }
+        }
+        
+        return maxBottom;
+    }
+
+    // Получить доступную высоту на странице
+    private double GetAvailableHeightOnPage()
+    {
+        if (currentPageLayout == null) return 0;
+        
+        double occupiedHeight = GetOccupiedHeightOnPage();
+        double availableHeight = currentPageLayout.TextAreaHeight - occupiedHeight;
+        
+        return Math.Max(0, Math.Round(availableHeight, 1));
+    }
+
+    private (double X, double Y) GetElementPosition(LayoutElement element)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(element.Position))
+            {
+                var position = JsonSerializer.Deserialize<Dictionary<string, double>>(element.Position);
+                if (position != null)
+                {
+                    double x = position.ContainsKey("X") ? position["X"] : 0;
+                    double y = position.ContainsKey("Y") ? position["Y"] : 0;
+                    return (x, y);
+                }
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки парсинга
+        }
+    
+        return (0, 0);
+    }
+
+    private (double Width, double Height) GetElementSize(LayoutElement element)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(element.Size))
+            {
+                var size = JsonSerializer.Deserialize<Dictionary<string, double>>(element.Size);
+                if (size != null && size.ContainsKey("Width") && size.ContainsKey("Height"))
+                {
+                    return (size["Width"], size["Height"]);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing size: {ex.Message}");
+        }
+    
+        double columnWidth = currentPageLayout?.TextAreaWidth / currentPageLayout?.ColumnCount ?? 5.0;
+        return (columnWidth, 3.0);
+    }
+
+    private (double X, double Y) ParsePosition(string json)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(json))
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, double>>(json);
+                if (dict != null)
+                {
+                    double x = dict.ContainsKey("X") ? dict["X"] : 0;
+                    double y = dict.ContainsKey("Y") ? dict["Y"] : 0;
+                    return (x, y);
+                }
+            }
+        }
+        catch { }
+        return (0, 0);
+    }
+
+    private (double Width, double Height) ParseSize(string json)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(json))
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, double>>(json);
+                if (dict != null)
+                {
+                    double w = dict.ContainsKey("Width") ? dict["Width"] : 5.0;
+                    double h = dict.ContainsKey("Height") ? dict["Height"] : 3.0;
+                    return (w, h);
+                }
+            }
+        }
+        catch { }
+        return (5.0, 3.0);
+    }
+
+    private string GetContentPreview(string content, int length = 50)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        return content.Length > length ? content.Substring(0, length) + "..." : content;
+    }
+
+    private void NavigateToPreview()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/preview");
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}/layout");
+    }
+
+    private void ClearMessage()
+    {
+        message = "";
+    }
+    
+    private void ClearPlacementWarning()
+    {
+        placementWarning = "";
+    }
+    
+    private class AdvertisementPlacementDto
+    {
+        public int LayoutElementId { get; set; }
+        public AdvertisementBlock AdvertisementBlock { get; set; }
+        public int PageNumber { get; set; }
+        public double PositionX { get; set; }
+        public double PositionY { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+        public string TextFlow { get; set; }
+    }
+}

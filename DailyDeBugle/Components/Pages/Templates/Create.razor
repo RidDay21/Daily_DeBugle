@@ -1,0 +1,244 @@
+@page "/templates/create"
+@attribute [Authorize(Policy = Policies.LayoutIssue)]
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject ITemplateService TemplateService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Create Template</PageTitle>
+
+<div class="container mt-4">
+    <h2>Create New Layout Template</h2>
+    <p class="text-muted">Create a template with preset settings for reuse</p>
+
+    <EditForm Model="@newTemplate" OnValidSubmit="@HandleCreateTemplate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row mt-4">
+            <!-- Left column: Main settings -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Main Parameters</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="templateName" class="form-label">Template Name</label>
+                            <InputText id="templateName" @bind-Value="@newTemplate.Name" 
+                                     class="form-control" placeholder="e.g.: Three-column news" />
+                            <ValidationMessage For="@(() => newTemplate.Name)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="templateDescription" class="form-label">Description</label>
+                            <InputTextArea id="templateDescription" @bind-Value="@newTemplate.Description"
+                                         class="form-control" rows="3" 
+                                         placeholder="Description of template purpose..." />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="columnCount" class="form-label">Number of Columns</label>
+                            <InputSelect id="columnCount" @bind-Value="@newTemplate.DefaultColumnCount" 
+                                       class="form-select">
+                                <option value="1">1 column</option>
+                                <option value="2">2 columns</option>
+                                <option value="3">3 columns</option>
+                                <option value="4">4 columns</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column: Detail settings -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Page Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Margins (cm)</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small">Top</label>
+                                <InputNumber @bind-Value="@newTemplate.DefaultMarginTop" 
+                                           class="form-control form-control-sm" 
+                                           min="0.5" max="5" step="0.1" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Bottom</label>
+                                <InputNumber @bind-Value="@newTemplate.DefaultMarginBottom" 
+                                           class="form-control form-control-sm" 
+                                           min="0.5" max="5" step="0.1" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Left</label>
+                                <InputNumber @bind-Value="@newTemplate.DefaultMarginLeft" 
+                                           class="form-control form-control-sm" 
+                                           min="0.5" max="5" step="0.1" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Right</label>
+                                <InputNumber @bind-Value="@newTemplate.DefaultMarginRight" 
+                                           class="form-control form-control-sm" 
+                                           min="0.5" max="5" step="0.1" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="columnGap" class="form-label">Column Gap (cm)</label>
+                            <InputNumber id="columnGap" @bind-Value="@newTemplate.DefaultColumnGap" 
+                                       class="form-control" min="0.1" max="2" step="0.1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Preset Styles</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       @bind="@includeDefaultStyles" />
+                                <label class="form-check-label">Include standard text styles</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <span>Creating...</span>
+                }
+                else
+                {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                    </svg>
+                    <span>Create Template</span>
+                }
+            </button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">
+                Cancel
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private Template newTemplate = new();
+    private bool includeDefaultStyles = true;
+    private bool isSaving = false;
+
+    private async Task HandleCreateTemplate()
+    {
+        isSaving = true;
+        try
+        {
+            // Если включены стандартные стили, добавляем их в LayoutSettings
+            if (includeDefaultStyles)
+            {
+                var defaultStyles = new
+                {
+                    Fonts = new
+                    {
+                        Main = "Times New Roman",
+                        Headings = "Times New Roman"
+                    },
+                    Sizes = new
+                    {
+                        H1 = 24,
+                        H2 = 18,
+                        Body = 12
+                    },
+                    LineSpacing = new
+                    {
+                        Body = 1.2,
+                        Headings = 1.1
+                    }
+                };
+                
+                newTemplate.LayoutSettings = System.Text.Json.JsonSerializer.Serialize(defaultStyles);
+            }
+
+            await TemplateService.CreateTemplateAsync(newTemplate);
+            Navigation.NavigateTo("/templates");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка при создании шаблона: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/templates");
+    }
+
+}
+
+<style>
+.template-preview {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.preview-header {
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.preview-page {
+    background-color: white;
+    position: relative;
+}
+
+.page-margins {
+    height: 100%;
+    background-color: #f8f9fa;
+    display: flex;
+}
+
+.preview-column {
+    background-color: white;
+    border: 1px dashed #adb5bd;
+    border-radius: 2px;
+    padding: 10px;
+}
+
+.column-content {
+    height: 100%;
+}
+
+.text-line {
+    height: 4px;
+    background-color: #e9ecef;
+    margin-bottom: 8px;
+    border-radius: 2px;
+}
+
+.text-line:last-child {
+    margin-bottom: 0;
+}
+
+.preview-footer {
+    background-color: #f8f9fa;
+    padding: 8px 15px;
+    border-top: 1px solid #dee2e6;
+    text-align: center;
+}
+</style>

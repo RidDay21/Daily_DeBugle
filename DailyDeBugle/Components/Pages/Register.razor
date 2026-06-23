@@ -1,0 +1,130 @@
+@page "/register"
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using DailyDeBugle.Services
+@using DailyDeBugle.Models
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@layout Layout.AuthLayout
+
+<div class="card">
+    <div class="card-header text-center">
+        <h3 class="mb-1">Register</h3>
+        <p class="text-muted small mb-0">Join Daily DeBugle</p>
+    </div>
+    <div class="card-body">
+        <EditForm Model="@registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
+            <DataAnnotationsValidator />
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger py-2 small">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-uppercase text-muted">Username</label>
+                <InputText @bind-Value="registerModel.Username" class="form-control" placeholder="username" />
+                <ValidationMessage For="@(() => registerModel.Username)" class="text-danger small" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-uppercase text-muted">Email</label>
+                <InputText @bind-Value="registerModel.Email" type="email" class="form-control" placeholder="email@example.com" />
+                <ValidationMessage For="@(() => registerModel.Email)" class="text-danger small" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-uppercase text-muted">Password</label>
+                <InputText @bind-Value="registerModel.Password" type="password" class="form-control" placeholder="••••••••" />
+                <ValidationMessage For="@(() => registerModel.Password)" class="text-danger small" />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-uppercase text-muted">Confirm Password</label>
+                <InputText @bind-Value="registerModel.ConfirmPassword" type="password" class="form-control" placeholder="••••••••" />
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="text-danger small" />
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Registering...</span>
+                    }
+                    else
+                    {
+                        <span>Create Account</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    </div>
+    <div class="card-footer bg-light border-top-0 text-center py-3">
+        <p class="mb-0 small text-muted mb-2">You will be registered as a reader</p>
+        <p class="mb-0 small">
+            Already have an account? <a href="/login" class="fw-bold text-decoration-none">Log In</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private RegisterModel registerModel = new();
+    private string? errorMessage;
+    private bool isProcessing;
+
+    private async Task HandleRegister()
+    {
+        isProcessing = true;
+        errorMessage = null;
+
+        try
+        {
+            if (await UserService.UserExistsAsync(registerModel.Username!))
+            {
+                errorMessage = "Username is already taken";
+                return;
+            }
+
+            var newUser = new User
+            {
+                Username = registerModel.Username!,
+                Email = registerModel.Email!,
+                Role = UserRole.Reader
+            };
+
+            await UserService.RegisterAsync(newUser, registerModel.Password!);
+            Navigation.NavigateTo("/login?message=RegistrationSuccessful");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    public class RegisterModel
+    {
+        [Required(ErrorMessage = "Enter username")]
+        [StringLength(20, MinimumLength = 3, ErrorMessage = "Username: 3 to 20 characters")]
+        public string? Username { get; set; }
+
+        [Required(ErrorMessage = "Enter Email")]
+        [EmailAddress(ErrorMessage = "Invalid Email")]
+        public string? Email { get; set; }
+
+        [Required(ErrorMessage = "Enter password")]
+        [MinLength(6, ErrorMessage = "Password: minimum 6 characters")]
+        public string? Password { get; set; }
+
+        [Required(ErrorMessage = "Confirm password")]
+        [Compare("Password", ErrorMessage = "Passwords do not match")]
+        public string? ConfirmPassword { get; set; }
+    }
+}

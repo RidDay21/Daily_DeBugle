@@ -1,0 +1,227 @@
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@using DailyDeBugle.Security
+@using Microsoft.AspNetCore.Components.Authorization
+
+@page "/editor/review"
+@attribute [Authorize(Policy = Policies.ReviewArticles)]
+@inject IArticleService ArticleService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<PageTitle>DailyDeBugle - Review Articles</PageTitle>
+
+<h3>Article Review Dashboard</h3>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "underReview" ? "active" : "")" 
+                @onclick="@(() => SwitchTab("underReview"))">
+            Under Review
+            @if (underReviewCount > 0)
+            {
+                <span class="badge bg-danger ms-1">@underReviewCount</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "drafts" ? "active" : "")" 
+                @onclick="@(() => SwitchTab("drafts"))">
+            Drafts
+            @if (draftsCount > 0)
+            {
+                <span class="badge bg-warning ms-1">@draftsCount</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "all" ? "active" : "")" 
+                @onclick="@(() => SwitchTab("all"))">
+            All Articles
+            <span class="badge bg-secondary ms-1">@allCount</span>
+        </button>
+    </li>
+</ul>
+
+@if (articles == null)
+{
+    <p>Loading articles...</p>
+}
+else if (!articles.Any())
+{
+    <div class="alert alert-info">
+        <h5>No articles found</h5>
+        <p>There are currently no articles with status "@GetTabStatus()".</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Headline</th>
+                    <th>Author</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Issue</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var article in articles)
+                {
+                    <tr>
+                        <td>
+                            <strong>@article.Headline</strong>
+                            <div class="text-muted small">
+                                @GetPreview(article.Content)
+                            </div>
+                        </td>
+                        <td>@(article.Author?.Username ?? "Unknown")</td>
+                        <td>
+                            <span class="badge @GetStatusBadgeClass(article.Status)">
+                                @article.Status
+                            </span>
+                        </td>
+                        <td>@article.CreatedDate.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            @if (article.Issue != null)
+                            {
+                                <small>Issue #@article.Issue.IssueNumber</small>
+                            }
+                            else
+                            {
+                                <span class="text-muted">No issue</span>
+                            }
+                        </td>
+                        <td>
+                            @if (article.Status == ArticleStatus.UnderReview || article.Status == ArticleStatus.RequiresRevision)
+                            {
+                                <a class="btn btn-primary btn-sm" href="/editor/review/@article.ArticleId">
+                                    Review
+                                </a>
+                            }
+                            @if (article.Status == ArticleStatus.Draft)
+                            {
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        @onclick="@(() => SendToReview(article))">
+                                    Send to Review
+                                </button>
+                            }
+                            @if (CanEditArticle(article))
+                            {
+                                <a class="btn btn-outline-info btn-sm" href="/articles/edit/@article.ArticleId">
+                                    Edit
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-info mt-3">@message</div>
+}
+
+@code {
+    private List<Article> articles = new();
+    private List<Article> allArticles = new();
+    private string activeTab = "underReview";
+    private string message = string.Empty;
+    private System.Security.Claims.ClaimsPrincipal? currentUser;
+    
+    private int underReviewCount = 0;
+    private int draftsCount = 0;
+    private int allCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUser = auth.User;
+        await LoadAllArticles();
+        SwitchTab("underReview");
+    }
+
+    private bool CanEditArticle(Article article) =>
+        currentUser != null && ArticleAccessRules.CanEditArticleContent(currentUser, article);
+
+    private async Task LoadAllArticles()
+    {
+        allArticles = await ArticleService.GetAllArticlesAsync();
+        underReviewCount = allArticles.Count(a => a.Status == ArticleStatus.UnderReview);
+        draftsCount = allArticles.Count(a => a.Status == ArticleStatus.Draft);
+        allCount = allArticles.Count;
+    }
+
+    private void SwitchTab(string tab)
+    {
+        activeTab = tab;
+        
+        if (allArticles == null) return;
+
+        articles = activeTab switch
+        {
+            "underReview" => allArticles.Where(a => a.Status == ArticleStatus.UnderReview).ToList(),
+            "drafts" => allArticles.Where(a => a.Status == ArticleStatus.Draft).ToList(),
+            "all" => allArticles.ToList(),
+            _ => allArticles.Where(a => a.Status == ArticleStatus.UnderReview).ToList()
+        };
+        
+        StateHasChanged();
+    }
+
+    private async Task SendToReview(Article article)
+    {
+        try
+        {
+            article.Status = ArticleStatus.UnderReview;
+            article.ModifiedDate = DateTime.UtcNow;
+            
+            await ArticleService.UpdateArticleAsync(article);
+            await LoadAllArticles();
+            SwitchTab(activeTab);
+            
+            message = $"Article '{article.Headline}' sent to review successfully!";
+        }
+        catch (Exception ex)
+        {
+            message = $"Error sending article to review: {ex.Message}";
+        }
+    }
+
+    private string GetTabStatus()
+    {
+        return activeTab switch
+        {
+            "underReview" => "Under Review",
+            "drafts" => "Draft", 
+            "all" => "All Articles",
+            _ => "Under Review"
+        };
+    }
+
+    private string GetPreview(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return "No content";
+        return content.Length > 100 ? content.Substring(0, 100) + "..." : content;
+    }
+
+    private string GetStatusBadgeClass(ArticleStatus status)
+    {
+        return status switch
+        {
+            ArticleStatus.Approved => "bg-success",
+            ArticleStatus.UnderReview => "bg-info",
+            ArticleStatus.RequiresRevision => "bg-warning",
+            ArticleStatus.Draft => "bg-secondary",
+            ArticleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

@@ -1,0 +1,122 @@
+@page "/create-publication"
+@attribute [Authorize(Policy = Policies.ManagePublications)]
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject IPublicationService PublicationService
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    <!-- Full page header -->
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">Create Publication</h1>
+        </div>
+    </div>
+
+    <EditForm Model="@newPublication" OnValidSubmit="HandleValidSubmit" class="card p-4">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <!-- Name -->
+        <div class="mb-3">
+            <label for="publicationName" class="form-label">Name:</label>
+            <InputText id="publicationName" @bind-Value="newPublication.Name" 
+                      class="form-control" placeholder="enter name" 
+                      maxlength="50" />
+            <ValidationMessage For="@(() => newPublication.Name)" />
+            <div class="form-text">Characters remaining: @(50 - (newPublication.Name?.Length ?? 0))</div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+            <label for="publicationDescription" class="form-label">Description:</label>
+            <InputTextArea id="publicationDescription" @bind-Value="newPublication.Description" 
+                          class="form-control" rows="5" 
+                          placeholder="Enter publication description..." />
+            <ValidationMessage For="@(() => newPublication.Description)" />
+        </div>
+
+        <!-- Frequency -->
+        <div class="mb-4">
+            <label for="publicationFrequency" class="form-label">Frequency:</label>
+            <InputSelect id="publicationFrequency" @bind-Value="newPublication.Frequency" 
+                         class="form-select">
+                <option value="Daily">Daily</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Monthly">Monthly</option>
+            </InputSelect>
+        </div>
+
+        <!-- Buttons -->
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                Save
+            </button>
+        </div>
+
+        <!-- Error/Success messages -->
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3">
+                @message
+            </div>
+        }
+    </EditForm>
+</div>
+
+@code {
+    private Publication newPublication = new Publication();
+    private string message = string.Empty;
+    private bool isError = false;
+    private bool isLoading = false;
+
+    private async Task HandleValidSubmit()
+    {
+        isLoading = true;
+        message = string.Empty;
+        isError = false;
+        
+        try
+        {
+            // Call the service to create the publication
+            await PublicationService.CreatePublicationAsync(newPublication);
+            
+            // Success - show message and clear form
+            message = "Publication successfully created!";
+            isError = false;
+            newPublication = new Publication(); // Reset form
+            
+            // Wait 2 seconds and return to home
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Validation error (non-unique name)
+            message = ex.Message;
+            isError = true;
+        }
+        catch (Exception ex)
+        {
+            // Other errors
+            message = $"Error creating publication: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

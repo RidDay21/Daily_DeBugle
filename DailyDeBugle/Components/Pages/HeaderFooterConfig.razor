@@ -1,0 +1,315 @@
+@page "/issues/{issueId}/header-footer"
+@attribute [Authorize(Policy = Policies.LayoutIssue)]
+@rendermode InteractiveServer
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject IHeaderFooterService HeaderFooterService
+@inject IIssueService IssueService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Headers & Footers - Issue @issueId</PageTitle>
+
+<div class="header-footer-container">
+    <!-- Панель настроек -->
+    <div class="settings-panel">
+        <h3 class="panel-title">Configure Issue Headers & Footers</h3>
+        
+        <!-- Информация о выпуске -->
+        <div class="issue-info mb-3 p-2 bg-light rounded">
+            <small>
+                <strong>Issue:</strong> @(issue?.IssueNumber ?? "Loading...")<br>
+                <strong>Issue Date:</strong> @(issue?.IssueDate.ToString("dd.MM.yyyy") ?? "Not specified")
+            </small>
+        </div>
+
+        <EditForm Model="@settings" OnValidSubmit="@SaveSettings" FormName="header_footer_form">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Header</h4>
+                    
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" @bind-Value="@settings.HeaderEnabled" />
+                        <label class="form-check-label">Enabled</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Left</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderLeft" placeholder="Example: {PublicationName}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Center</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderCenter" placeholder="Example: Issue #{IssueNumber}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Right</label>
+                        <InputText class="form-control" @bind-Value="@settings.HeaderRight" placeholder="Example: {IssueDate}" />
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <h4>Footer</h4>
+                    
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" @bind-Value="@settings.FooterEnabled" />
+                        <label class="form-check-label">Enabled</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Left</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterLeft" placeholder="Example: Contact: {ContactEmail}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Center</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterCenter" placeholder="Example: Page {PageNumber}" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Right</label>
+                        <InputText class="form-control" @bind-Value="@settings.FooterRight" placeholder="Example: {CurrentDate}" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>Available Variables</h5>
+                    <div class="variables-info bg-light p-3 rounded">
+                        <small>
+                            <strong>Available Placeholders:</strong><br>
+                            <code>{PublicationName}</code> - Publication Name<br>
+                            <code>{IssueNumber}</code> - Issue Number<br>
+                            <code>{IssueDate}</code> - Issue Date<br>
+                            <code>{PageNumber}</code> - Page Number<br>
+                            <code>{CurrentDate}</code> - Current Date<br>
+                            <code>{ContactEmail}</code> - Contact Email<br>
+                            <code>{TotalPages}</code> - Total Pages
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>Formatting</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Font</label>
+                            <InputSelect class="form-select" @bind-Value="@settings.FontFamily">
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Font size (pt)</label>
+                            <InputNumber class="form-control" @bind-Value="@settings.FontSize" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Alignment</label>
+                            <InputSelect class="form-select" @bind-Value="@settings.Alignment">
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                                <option value="right">Right</option>
+                                <option value="justify">Justify</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <button type="button" class="btn btn-secondary" @onclick="@ResetToDefault">Reset to Defaults</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="@NavigateBack">Back to Issue</button>
+            </div>
+        </EditForm>
+    </div>
+
+    <!-- Панель предпросмотра -->
+    <div class="preview-panel">
+        <h4>Issue Page Preview</h4>
+        
+        <div class="preview-controls mb-3">
+            <label>Page for preview:</label>
+            <div class="btn-group">
+                @foreach (var pageNum in new[] { 1, 2, 3, 4 })
+                {
+                    <button class="btn btn-sm @(currentPreviewPage == pageNum ? "btn-primary" : "btn-outline-primary")"
+                            @onclick="() => ChangePreviewPage(pageNum)">
+                        Page @pageNum
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="preview-container border">
+            <!-- Верхний колонтитул -->
+            @if (settings.HeaderEnabled && !string.IsNullOrEmpty(previewHeader))
+            {
+                <div class="preview-header border-bottom p-2" style="@GetHeaderFooterStyle()">
+                    @((MarkupString)previewHeader)
+                </div>
+            }
+            
+            <!-- Основное содержание -->
+            <div class="preview-content p-4" style="min-height: 400px;">
+                <h4>Page content @currentPreviewPage</h4>
+                <p>This is an example of page content. It can include article text, images, and other layout elements.</p>
+                <p>Headers and footers help identify the issue and provide page navigation.</p>
+                
+                @if (currentPreviewPage > 1)
+                {
+                    <div>
+                        <h5>Article continuation</h5>
+                        <p>Article text continues on this page. Headers and footers help the reader navigate the material.</p>
+                    </div>
+                }
+            </div>
+
+            <!-- Нижний колонтитул -->
+            @if (settings.FooterEnabled && !string.IsNullOrEmpty(previewFooter))
+            {
+                <div class="preview-footer border-top p-2" style="@GetHeaderFooterStyle()">
+                    @((MarkupString)previewFooter)
+                </div>
+            }
+        </div>
+
+        <div class="preview-info mt-3">
+            <small class="text-muted">
+                <strong>Current Settings:</strong><br>
+                Font: @settings.FontFamily, Size: @settings.FontSize pt, Alignment: @GetAlignmentText(settings.Alignment)<br>
+                Header: @(settings.HeaderEnabled ? "Enabled" : "Disabled") | 
+                Footer: @(settings.FooterEnabled ? "Enabled" : "Disabled")
+            </small>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string issueId { get; set; }
+
+    private HeaderFooterSettings settings = new();
+    private Issue issue;
+    private string previewHeader;
+    private string previewFooter;
+    private int currentPreviewPage = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (int.TryParse(issueId, out int id))
+        {
+            // Загружаем настройки колонтитулов для выпуска
+            settings = await HeaderFooterService.GetSettingsForIssueAsync(id);
+            
+            // Загружаем информацию о выпуске
+            issue = await IssueService.GetIssueAsync(id);
+            
+            await UpdatePreview();
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            // Убедимся, что настройки привязаны к текущему выпуску
+            if (int.TryParse(issueId, out int id))
+            {
+                settings.IssueId = id;
+            }
+            
+            settings = await HeaderFooterService.SaveSettingsAsync(settings);
+            await UpdatePreview();
+            
+            await JSRuntime.InvokeVoidAsync("alert", "Header and footer settings saved successfully for the issue!");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving: {ex.Message}");
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        settings = new HeaderFooterSettings
+        {
+            IssueId = int.Parse(issueId),
+            HeaderEnabled = true,
+            HeaderLeft = "{PublicationName}",
+            HeaderCenter = "Issue #{IssueNumber}",
+            HeaderRight = "{IssueDate}",
+            FooterEnabled = true,
+            FooterLeft = "Contact: info@dailydebugle.com",
+            FooterCenter = "Page {PageNumber} of {TotalPages}",
+            FooterRight = "{CurrentDate}",
+            FontFamily = "Times New Roman",
+            FontSize = 10,
+            Alignment = "center"
+        };
+        
+        await UpdatePreview();
+        StateHasChanged();
+        
+        await JSRuntime.InvokeVoidAsync("alert", "Settings reset to default values!");
+    }
+
+    private async Task UpdatePreview()
+    {
+        if (int.TryParse(issueId, out int id))
+        {
+            previewHeader = await HeaderFooterService.RenderHeaderAsync(id, currentPreviewPage);
+            previewFooter = await HeaderFooterService.RenderFooterAsync(id, currentPreviewPage);
+        }
+    }
+
+    private async Task ChangePreviewPage(int pageNumber)
+    {
+        currentPreviewPage = pageNumber;
+        await UpdatePreview();
+        StateHasChanged();
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/issues/{issueId}");
+    }
+
+    private string GetHeaderFooterStyle()
+    {
+        var textAlign = settings.Alignment switch
+        {
+            "left" => "left",
+            "center" => "center",
+            "right" => "right",
+            "justify" => "justify",
+            _ => "center"
+        };
+
+        return $@"
+            font-family: {settings.FontFamily};
+            font-size: {settings.FontSize}pt;
+            text-align: {textAlign};
+            background-color: #f8f9fa;
+        ";
+    }
+
+    private string GetAlignmentText(string alignment)
+    {
+        return alignment switch
+        {
+            "left" => "Left",
+            "center" => "Center",
+            "right" => "Right",
+            "justify" => "Justify",
+            _ => "Center"
+        };
+    }
+}

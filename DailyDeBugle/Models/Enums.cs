@@ -2,10 +2,12 @@ namespace DailyDeBugle.Models
 {
     public enum UserRole
     {
+        Reader,
         Author,
         Editor,
         LayoutDesigner,
-        EditorInChief
+        EditorInChief,
+        Admin
     }
 
     public enum ArticleStatus

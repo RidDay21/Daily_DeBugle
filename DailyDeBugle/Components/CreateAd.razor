@@ -1,0 +1,188 @@
+@page "/ads/create"
+@attribute [Authorize(Policy = Policies.LayoutIssue)]
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@inject IAdvertisementService AdService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Create Advertisement</PageTitle>
+
+<div class="container mt-4">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-3">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>New Advertisement Block</h3>
+                </div>
+                
+                <div class="card-body">
+                    <EditForm Model="@newAd" OnValidSubmit="@HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <!-- Advertiser -->
+                        <div class="mb-3">
+                            <label class="form-label">Advertiser *</label>
+                            <InputText @bind-Value="@newAd.Advertiser" class="form-control" />
+                            <ValidationMessage For="@(() => newAd.Advertiser)" />
+                        </div>
+                        
+                        <!-- Advertisement Type -->
+                        <div class="mb-3">
+                            <label class="form-label">Advertisement Type</label>
+                            <select class="form-select" @bind="@newAd.Type">
+                                <option value="@AdType.Text">Text</option>
+                                <option value="@AdType.Image">Image</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="mb-3">
+                            <label class="form-label">Content *</label>
+                            
+                            @if (newAd.Type == AdType.Text)
+                            {
+                                <InputTextArea @bind-Value="@newAd.Content" class="form-control" rows="4" />
+                                <div class="form-text">Advertisement text</div>
+                            }
+                            else
+                            {
+                                <div class="mb-2">
+                                    <InputFile OnChange="@HandleFileSelected" 
+                                               accept=".jpg,.jpeg,.png,.gif" 
+                                               class="form-control" />
+                                </div>
+                                
+                                @if (selectedFile != null)
+                                {
+                                    <div class="alert alert-info p-2 mt-2">
+                                        <small>
+                                            <i class="bi bi-file-earmark-image"></i>
+                                            Selected file: @selectedFile.Name 
+                                            (@((selectedFile.Size / 1024f).ToString("0")) KB)
+                                        </small>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <!-- Active Dates -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Start Date</label>
+                                <InputDate @bind-Value="@newAd.StartDate" class="form-control" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">End Date</label>
+                                <InputDate @bind-Value="@newAd.EndDate" class="form-control" />
+                            </div>
+                        </div>
+                        
+                        <!-- Dimensions -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Width (cm)</label>
+                                <InputNumber @bind-Value="@newAd.DefaultWidth" class="form-control" 
+                                           min="1" max="20" step="0.5" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Height (cm)</label>
+                                <InputNumber @bind-Value="@newAd.DefaultHeight" class="form-control" 
+                                           min="1" max="20" step="0.5" />
+                            </div>
+                        </div>
+                        
+                        <!-- Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                Create Advertisement
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" 
+                                    @onclick="NavigateToAdsList">
+                                Cancel
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private AdvertisementBlock newAd = new()
+    {
+        StartDate = DateTime.Today,
+        EndDate = DateTime.Today.AddDays(30),
+        Type = AdType.Text,
+        DefaultWidth = 5.0,
+        DefaultHeight = 3.0
+    };
+    
+    private IBrowserFile selectedFile;
+    private string errorMessage = "";
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        var uploadsDir = Path.Combine("wwwroot", "uploads", "ads");
+        Directory.CreateDirectory(uploadsDir);
+
+        var filePath = Path.Combine(uploadsDir, file.Name);
+        await using var fs = new FileStream(filePath, FileMode.Create);
+        await file.OpenReadStream().CopyToAsync(fs);
+
+        newAd.Content = $"/uploads/ads/{file.Name}";
+        selectedFile = file;
+        errorMessage = "";
+        Console.WriteLine($"File saved: {newAd.Content}");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        errorMessage = "";
+        
+        try
+        {
+            Console.WriteLine("=== Creating Advertisement ===");
+            Console.WriteLine($"Advertiser: {newAd.Advertiser}");
+            Console.WriteLine($"Type: {newAd.Type}");
+            Console.WriteLine($"Content: {newAd.Content}");
+            
+            // If it's an image and not uploaded
+            if (newAd.Type == AdType.Image && string.IsNullOrEmpty(newAd.Content))
+            {
+                errorMessage = "A file must be selected for an image advertisement block";
+                return;
+            }
+            
+            await AdService.CreateAdAsync(newAd);
+            
+            Console.WriteLine("Advertisement successfully created!");
+            Navigation.NavigateTo("/issues");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private void NavigateToAdsList()
+    {
+        Navigation.NavigateTo("/issues");
+    }
+    
+    private void ClearError()
+    {
+        errorMessage = "";
+    }
+}

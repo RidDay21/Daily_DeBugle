@@ -1,4 +1,4 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand full-width" href="">
             <img src="/logo.png" alt="DaDaBaApp" />
@@ -10,42 +10,91 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-
-        <!-- 📘 UC-02: Publications -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="publications">
-                <span class="bi bi-journal-nav-menu" aria-hidden="true"></span> Publications
-            </NavLink>
-        </div>
-
-        <!-- 📰 UC-01: Issues -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="issues">
-                <span class="bi bi-newspaper-nav-menu" aria-hidden="true"></span> Issues
-            </NavLink>
-        </div>
+        <AuthorizeView Policy="@Policies.ViewContent">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                </NavLink>
+            </div>
+        </AuthorizeView>
         
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="articles">
-                <span class="bi bi-journal-text" aria-hidden="true"></span> Articles
-            </NavLink>
-        </div>
+        <AuthorizeView Policy="@Policies.AccessAdminPanel">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/users">
+                    <span class="bi bi-person-badge-fill" aria-hidden="true"></span> Admin Panel
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="@Policies.ViewEditorialIssues">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="issues">
+                    <span class="bi bi-newspaper-nav-menu" aria-hidden="true"></span> Issues
+                </NavLink>
+            </div>
+        </AuthorizeView>
+        
+        <AuthorizeView Policy="@Policies.ManagePublications">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="publications">
+                    <span class="bi bi-journal-nav-menu" aria-hidden="true"></span> Publications
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="@Policies.LayoutIssue">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="templates">
+                    <span class="bi bi-layout-text-sidebar-reverse" aria-hidden="true"></span> Templates
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="@Policies.ReviewArticles">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="editor/review">
+                    <span class="bi bi-pencil-square" aria-hidden="true"></span> Review Articles
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="@Policies.WriteArticles">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="articles">
+                    <span class="bi bi-journal-text" aria-hidden="true"></span> Articles
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <hr class="text-white mx-3"/>
+
+        <AuthorizeView Context="authContext">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <span class="nav-link text-light border-0">
+                        <span class="bi bi-person-fill" aria-hidden="true"></span> @authContext.User.Identity?.Name (@authContext.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
+                    </span>
+                </div>
+                <div class="nav-item px-3">
+                    <form action="api/auth/signout" method="get">
+                        <button type="submit" class="nav-link btn btn-link text-start w-100 border-0">
+                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="register">
+                        <span class="bi bi-person-plus-fill" aria-hidden="true"></span> Register
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>

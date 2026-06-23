@@ -1,0 +1,148 @@
+@page "/articles/edit/{ArticleId:int}"
+@attribute [Authorize(Policy = Policies.WriteArticles)]
+@rendermode InteractiveServer
+@inject IArticleService ArticleService
+@inject IIssueService IssueService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@using DailyDeBugle.Security
+@using DailyDeBugle.Helpers
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Edit Article</PageTitle>
+
+@if (article == null)
+{
+    <p>Loading...</p>
+}
+else if (!canEdit)
+{
+    <div class="alert alert-danger">
+        <h4>Access Denied</h4>
+        <p>Only the author (or administrator) can edit the article.</p>
+        <a class="btn btn-outline-secondary" href="/articles">Back to Articles</a>
+    </div>
+}
+else if (issues == null)
+{
+    <p>Loading issues...</p>
+}
+else
+{
+    <h3>Edit Article</h3>
+
+    <EditForm Model="@article" OnValidSubmit="HandleValidSubmit" FormName="EditArticleForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Headline</label>
+            <InputText @bind-Value="article.Headline" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Content</label>
+            <InputTextArea @bind-Value="article.Content" class="form-control" rows="12" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Issue</label>
+            <InputSelect @bind-Value="article.IssueId" class="form-select">
+                @foreach (var i in issues)
+                {
+                    <option value="@i.IssueId">@i.IssueNumber</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Add Images</label>
+            <InputFile OnChange="OnImagesSelected" multiple accept="image/*" class="form-control" />
+            @if (!string.IsNullOrEmpty(imagesError))
+            {
+                <div class="text-danger small mt-1">@imagesError</div>
+            }
+        </div>
+
+        @if (article.Images?.Any() == true)
+        {
+            <div class="mb-3">
+                <label class="form-label">Attached Images</label>
+                <div class="row g-2">
+                    @foreach (var img in article.Images.OrderBy(x => x.SortOrder).ThenBy(x => x.ArticleImageId))
+                    {
+                        <div class="col-md-4">
+                            <div class="border rounded p-2">
+                                <img src="@img.ImagePath" alt="" style="width:100%;height:auto;" />
+                                <button type="button" class="btn btn-sm btn-outline-danger mt-1 w-100"
+                                        @onclick="() => RemoveImage(img.ArticleImageId)">Delete</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-outline-secondary ms-2" href="/articles">Cancel</a>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int ArticleId { get; set; }
+
+    private Article? article;
+    private List<Issue>? issues;
+    private bool canEdit;
+    private readonly List<IBrowserFile> selectedImages = new();
+    private string? imagesError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        article = await ArticleService.GetArticleAsync(ArticleId);
+        if (article == null) return;
+
+        canEdit = ArticleAccessRules.CanEditArticleContent(auth.User, article);
+        if (!canEdit) return;
+
+        issues = await IssueService.GetAllAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (article == null) return;
+        await ArticleService.UpdateArticleAsync(article);
+
+        foreach (var file in selectedImages)
+        {
+            var path = await FileUploadHelper.UploadFileAsync(file, $"articles/{article.ArticleId}", maxFileSize: 10 * 1024 * 1024);
+            await ArticleService.AddImageAsync(article.ArticleId, path);
+        }
+
+        selectedImages.Clear();
+        Nav.NavigateTo("/articles");
+    }
+
+    private async Task RemoveImage(int imageId)
+    {
+        await ArticleService.DeleteImageAsync(imageId);
+        article = await ArticleService.GetArticleAsync(ArticleId);
+    }
+
+    private void OnImagesSelected(InputFileChangeEventArgs e)
+    {
+        imagesError = null;
+        selectedImages.Clear();
+        try
+        {
+            selectedImages.AddRange(e.GetMultipleFiles(10));
+        }
+        catch (Exception ex)
+        {
+            imagesError = ex.Message;
+        }
+    }
+}
