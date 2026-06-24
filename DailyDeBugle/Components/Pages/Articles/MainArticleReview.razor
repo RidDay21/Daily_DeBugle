@@ -1,36 +1,26 @@
 @page "/editor/review"
+@attribute [Authorize(Policy = Policies.ReviewArticles)]
 @rendermode InteractiveServer
+
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
-<<<<<<< HEAD
 @using DailyDeBugle.Security
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
 
-@page "/editor/review"
-@attribute [Authorize(Policy = Policies.ReviewArticles)]
 @inject IArticleService ArticleService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@rendermode InteractiveServer
-=======
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.SignalR.Client
-@using System.Security.Claims
-@implements IAsyncDisposable
-@inject IArticleService ArticleService
-@inject IArticleLockService LockService
-@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
->>>>>>> laptev/collaboration
+
+@implements IAsyncDisposable
 
 <PageTitle>DailyDeBugle - Review Articles</PageTitle>
 
 <h3 class="mb-4">Article Review Dashboard</h3>
 
-<<<<<<< HEAD
-<!-- Tabs -->
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
-        <button class="nav-link @(activeTab == "underReview" ? "active" : "")" 
+        <button class="nav-link @(activeTab == "underReview" ? "active" : "")"
                 @onclick="@(() => SwitchTab("underReview"))">
             Under Review
             @if (underReviewCount > 0)
@@ -39,8 +29,9 @@
             }
         </button>
     </li>
+
     <li class="nav-item">
-        <button class="nav-link @(activeTab == "drafts" ? "active" : "")" 
+        <button class="nav-link @(activeTab == "drafts" ? "active" : "")"
                 @onclick="@(() => SwitchTab("drafts"))">
             Drafts
             @if (draftsCount > 0)
@@ -49,102 +40,15 @@
             }
         </button>
     </li>
+
     <li class="nav-item">
-        <button class="nav-link @(activeTab == "all" ? "active" : "")" 
+        <button class="nav-link @(activeTab == "all" ? "active" : "")"
                 @onclick="@(() => SwitchTab("all"))">
             All Articles
             <span class="badge bg-secondary ms-1">@allCount</span>
         </button>
     </li>
 </ul>
-
-@if (articles == null)
-=======
-@if (currentUserId == 0)
->>>>>>> laptev/collaboration
-{
-    <div class="alert alert-warning">Загрузка данных пользователя...</div>
-}
-else
-{
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == "underReview" ? "active" : "")"
-                    @onclick="@(() => SwitchTab("underReview"))">
-                Under Review
-                @if (underReviewCount > 0)
-                {
-<<<<<<< HEAD
-                    <tr>
-                        <td>
-                            <strong>@article.Headline</strong>
-                            <div class="text-muted small">
-                                @GetPreview(article.Content)
-                            </div>
-                        </td>
-                        <td>@(article.Author?.Username ?? "Unknown")</td>
-                        <td>
-                            <span class="badge @GetStatusBadgeClass(article.Status)">
-                                @article.Status
-                            </span>
-                        </td>
-                        <td>@article.CreatedDate.ToString("MMM dd, yyyy")</td>
-                        <td>
-                            @if (article.Issue != null)
-                            {
-                                <small>Issue #@article.Issue.IssueNumber</small>
-                            }
-                            else
-                            {
-                                <span class="text-muted">No issue</span>
-                            }
-                        </td>
-                        <td>
-                            @if (article.Status == ArticleStatus.UnderReview || article.Status == ArticleStatus.RequiresRevision)
-                            {
-                                <a class="btn btn-primary btn-sm" href="/editor/review/@article.ArticleId">
-                                    Review
-                                </a>
-                            }
-                            @if (article.Status == ArticleStatus.Draft)
-                            {
-                                <button class="btn btn-outline-primary btn-sm" 
-                                        @onclick="@(() => SendToReview(article))">
-                                    Send to Review
-                                </button>
-                            }
-                            @if (CanEditArticle(article))
-                            {
-                                <a class="btn btn-outline-info btn-sm" href="/articles/edit/@article.ArticleId">
-                                    Edit
-                                </a>
-                            }
-                        </td>
-                    </tr>
-=======
-                    <span class="badge bg-danger ms-1">@underReviewCount</span>
->>>>>>> laptev/collaboration
-                }
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == "drafts" ? "active" : "")"
-                    @onclick="@(() => SwitchTab("drafts"))">
-                Drafts
-                @if (draftsCount > 0)
-                {
-                    <span class="badge bg-warning ms-1">@draftsCount</span>
-                }
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == "all" ? "active" : "")"
-                    @onclick="@(() => SwitchTab("all"))">
-                All Articles
-                <span class="badge bg-secondary ms-1">@allCount</span>
-            </button>
-        </li>
-    </ul>
 
     @if (articles == null)
     {
@@ -208,7 +112,7 @@ else
                                           title="@string.Join(", ", editors)">
                                         <i class="bi bi-people-fill"></i>
                                         @editors.Count
-                                        @(editors.Count == 1 ? "редактор" : "редактора(-ов)")
+                                        @(editors.Count == 1 ? "editor" : "editor(s)")
                                     </span>
                                     <div class="text-muted" style="font-size:0.72rem; max-width:130px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
                                          title="@string.Join(", ", editors)">
@@ -234,7 +138,7 @@ else
                                         Send to Review
                                     </button>
                                 }
-                                <a class="btn btn-outline-info btn-sm" href="/articles/edit/@article.ArticleId">
+                                <a class="btn btn-outline-info btn-sm" href="/articles/read/@article.ArticleId">
                                     View
                                 </a>
                             </td>
@@ -244,7 +148,6 @@ else
             </table>
         </div>
     }
-}
 
 @if (!string.IsNullOrEmpty(message))
 {
@@ -255,15 +158,15 @@ else
     private List<Article> articles = new();
     private List<Article> allArticles = new();
 
-    // real-time словарь: articleId -> список имён редакторов
+    // articleId -> список активных редакторов
     private Dictionary<int, List<string>> activeEditorsByArticle = new();
 
     private HubConnection? _hub;
     private string activeTab = "underReview";
     private string message = string.Empty;
-<<<<<<< HEAD
+
     private System.Security.Claims.ClaimsPrincipal? currentUser;
-    
+
     private int underReviewCount = 0;
     private int draftsCount = 0;
     private int allCount = 0;
@@ -272,74 +175,41 @@ else
     {
         var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         currentUser = auth.User;
-=======
-    private int currentUserId;
-    private int underReviewCount;
-    private int draftsCount;
-    private int allCount;
 
-    // ═════════════════════════════════════════════════════════════════════════
-    // Инициализация
-    // ═════════════════════════════════════════════════════════════════════════
-
-    protected override async Task OnInitializedAsync()
-    {
-        currentUserId = await GetCurrentUserIdAsync();
-        if (currentUserId == 0)
-        {
-            Navigation.NavigateTo("/login");
-            return;
-        }
-
->>>>>>> laptev/collaboration
         await LoadAllArticles();
         SwitchTab("underReview");
         await InitSignalR();
     }
 
     private async Task InitSignalR()
+{
+    _hub = new HubConnectionBuilder()
+        .WithUrl(Navigation.ToAbsoluteUri("/editinghub"))
+        .WithAutomaticReconnect()
+        .Build();
+
+    _hub.On<int, IEnumerable<string>>("ActiveEditorsUpdate", (articleId, names) =>
     {
-        _hub = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/editinghub"))
-            .WithAutomaticReconnect()
-            .Build();
+        activeEditorsByArticle[articleId] = names.ToList();
+        InvokeAsync(StateHasChanged);
+    });
 
-        // ── Обновление редакторов для конкретной статьи ──
-        _hub.On<int, IEnumerable<string>>("ActiveEditorsUpdate", (articleId, names) =>
-        {
-            activeEditorsByArticle[articleId] = names.ToList();
-            InvokeAsync(StateHasChanged);
-        });
+    _hub.On<int>("ArticleFinalized", async articleId =>
+    {
+        await LoadAllArticles();
+        SwitchTab(activeTab);
+        await InvokeAsync(StateHasChanged);
+    });
 
-        // ── Статья финализирована — перезагружаем список ──
-        _hub.On<int>("ArticleFinalized", async (articleId) =>
-        {
-            await LoadAllArticles();
-            SwitchTab(activeTab);
-            await InvokeAsync(StateHasChanged);
-        });
+    _hub.Reconnected += async _ =>
+    {
+        if (_hub.State == HubConnectionState.Connected)
+            await _hub.InvokeAsync("JoinDashboard");
+    };
 
-        // ── Изменение блокировки (совместимость с CollaborationHub) ──
-        _hub.On<int, bool, string>("ArticleLockChanged", async (articleId, isLocked, userName) =>
-        {
-            await LoadAllArticles();
-            SwitchTab(activeTab);
-            await InvokeAsync(StateHasChanged);
-        });
-
-        _hub.Reconnected += async _ =>
-        {
-            // При переподключении заново подписываемся на dashboard-группу
-            if (_hub.State == HubConnectionState.Connected)
-                await _hub.InvokeAsync("JoinDashboard");
-        };
-
-        await _hub.StartAsync();
-
-        // Подписываемся на review-dashboard группу (EditingHub рассылает туда ActiveEditorsUpdate)
-        await _hub.InvokeAsync("JoinDashboard");
-    }
-
+    await _hub.StartAsync();
+    await _hub.InvokeAsync("JoinDashboard");
+}
     // ═════════════════════════════════════════════════════════════════════════
     // Вспомогательные методы
     // ═════════════════════════════════════════════════════════════════════════
@@ -347,13 +217,6 @@ else
     private List<string> GetEditors(int articleId)
     {
         return activeEditorsByArticle.TryGetValue(articleId, out var list) ? list : new List<string>();
-    }
-
-    private async Task<int> GetCurrentUserIdAsync()
-    {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var userIdClaim = authState.User.FindFirst("UserId")?.Value;
-        return int.TryParse(userIdClaim, out var id) ? id : 0;
     }
 
     private bool CanEditArticle(Article article) =>

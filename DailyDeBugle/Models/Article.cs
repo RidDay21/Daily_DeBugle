@@ -60,19 +60,7 @@ namespace DailyDeBugle.Models
         public List<Comment> Comments { get; set; } = new();
         public List<LayoutElement> LayoutElements { get; set; } = new();
         public List<ArticlePart> ArticleParts { get; set; } = new();
-<<<<<<< HEAD
         public List<ArticleImage> Images { get; set; } = new();
-=======
-        
-        
-        //Добавлено для блокировки статьи.
-        public int? LockedByUserId { get; set; }
-        public User? LockedByUser { get; set; }
-        public DateTime? LockedAt { get; set; }
-
-        [NotMapped]
-        public bool IsLocked => LockedByUserId.HasValue && LockedAt.HasValue;
->>>>>>> laptev/collaboration
     }
 
     // Класс для части статьи (если разбита на несколько страниц)
