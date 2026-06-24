@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using DailyDeBugle.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +29,8 @@ builder.Services.AddServerSideBlazor()
 
 // Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")),
+    ServiceLifetime.Transient); 
 
 // Authentication & Authorization
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -40,7 +42,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization(DailyDeBugle.Security.AuthorizationPolicyConfiguration.Configure);
 builder.Services.AddCascadingAuthenticationState();
-
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ICollaborativeEditingService, CollaborativeEditingService>();
 
 // Services
 builder.Services.AddScoped<IPublicationService, PublicationService>();
@@ -52,7 +55,11 @@ builder.Services.AddScoped<IArticleService, ArticleService>();
 builder.Services.AddScoped<IUserService, UserService>(); 
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IAdvertisementService, AdvertisementService>();
+<<<<<<< HEAD
 builder.Services.AddScoped<IIssueCommentService, IssueCommentService>();
+=======
+builder.Services.AddScoped<IArticleLockService, ArticleLockService>();
+>>>>>>> laptev/collaboration
 
 builder.Services.AddLogging();
 
@@ -145,5 +152,8 @@ app.MapGet("/api/auth/signout", async (HttpContext httpContext) =>
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapHub<CollaborationHub>("/collaborationhub");
+app.MapHub<EditingHub>("/editinghub");
 
 app.Run();

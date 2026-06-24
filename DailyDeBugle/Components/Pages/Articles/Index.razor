@@ -1,10 +1,20 @@
 @page "/articles"
 @attribute [Authorize(Policy = Policies.WriteArticles)]
 @rendermode InteractiveServer
+<<<<<<< HEAD
 @inject DailyDeBugle.Services.IArticleService ArticleService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using DailyDeBugle.Models
 @using DailyDeBugle.Security
+=======
+@using DailyDeBugle.Models
+@using DailyDeBugle.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IArticleService ArticleService
+@inject IArticleLockService LockService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+>>>>>>> laptev/collaboration
 
 <h3>Articles</h3>
 
@@ -22,16 +32,18 @@ else
 {
     <table class="table table-striped">
         <thead>
-        <tr>
-            <th>Headline</th>
-            <th>Author</th>
-            <th>Issue</th>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Actions</th> 
-        </tr>
+            <tr>
+                <th>Headline</th>
+                <th>Author</th>
+                <th>Issue</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Editing</th>
+                <th>Actions</th>
+            </tr>
         </thead>
         <tbody>
+<<<<<<< HEAD
         @foreach (var article in articles)
         {
             <tr>
@@ -65,6 +77,65 @@ else
                 </td>
             </tr>
         }
+=======
+            @foreach (var article in articles)
+            {
+                <tr>
+                    <td>@article.Headline</td>
+                    <td>@article.Author?.Username</td>
+                    <td>
+                        @if (article.Issue != null)
+                        {
+                            <span>Issue @article.Issue.IssueNumber</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">No issue</span>
+                        }
+                    </td>
+                    <td>@article.CreatedDate.ToShortDateString()</td>
+                    <td>
+                        <span class="badge @GetStatusBadgeClass(article.Status)">
+                            @article.Status
+                        </span>
+                    </td>
+                    <td>
+                        @if (article.IsLocked)
+                        {
+                            <span class="badge bg-warning text-dark" title="Редактирует @(article.LockedByUser?.Username ?? "неизвестный")">
+                                <i class="bi bi-lock-fill"></i> Занято
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Свободно</span>
+                        }
+                    </td>
+                    <td>
+                        @if (!article.IsLocked || article.LockedByUserId == currentUserId)
+                        {
+                            @if (article.Status != ArticleStatus.Approved)
+                            {
+                                <a class="btn btn-outline-primary btn-sm me-1" href="/articles/review/@article.ArticleId">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                            }
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-secondary btn-sm me-1" disabled 
+                                    title="Статья редактируется другим пользователем">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                        }
+                        <button class="btn btn-danger btn-sm"
+                                @onclick="() => ConfirmDelete(article.ArticleId, article.Headline)">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            }
+>>>>>>> laptev/collaboration
         </tbody>
     </table>
 }
@@ -89,13 +160,18 @@ else
 
 @code {
     private List<Article>? articles;
+<<<<<<< HEAD
     private System.Security.Claims.ClaimsPrincipal? currentUser;
     
+=======
+>>>>>>> laptev/collaboration
     private int? articleIdToDelete;
     private string? articleHeadlineToDelete;
+    private int currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
+<<<<<<< HEAD
         var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         currentUser = auth.User;
         await LoadArticles();
@@ -103,6 +179,19 @@ else
 
     private bool CanEditArticle(Article article) =>
         currentUser != null && ArticleAccessRules.CanEditArticleContent(currentUser, article);
+=======
+        currentUserId = await GetCurrentUserIdAsync();
+        await LoadArticles();
+    }
+
+    private async Task<int> GetCurrentUserIdAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst("UserId")?.Value;
+        return int.TryParse(userIdClaim, out var id) ? id : 0;
+    }
+>>>>>>> laptev/collaboration
 
     private async Task LoadArticles()
     {
@@ -126,9 +215,7 @@ else
         if (articleIdToDelete.HasValue)
         {
             await ArticleService.DeleteArticleAsync(articleIdToDelete.Value);
-            
-            await LoadArticles(); 
-            
+            await LoadArticles();
             articleIdToDelete = null;
             articleHeadlineToDelete = null;
         }

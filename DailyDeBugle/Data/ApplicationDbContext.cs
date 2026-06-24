@@ -178,6 +178,11 @@ namespace DailyDeBugle.Data
                 entity.HasOne(a => a.Issue)
                     .WithMany(i => i.Articles)
                     .HasForeignKey(a => a.IssueId);
+                
+                entity.HasOne(a => a.LockedByUser)
+                    .WithMany()
+                    .HasForeignKey(a => a.LockedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.Property(a => a.EstimatedHeightCm)
                     .HasDefaultValue(0);

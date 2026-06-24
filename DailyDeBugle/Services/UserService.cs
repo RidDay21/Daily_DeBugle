@@ -9,6 +9,7 @@ namespace DailyDeBugle.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly PasswordHasher<User> _passwordHasher;
+        private User AuthenticationStateProvider;
 
         public UserService(ApplicationDbContext context)
         {
@@ -39,6 +40,7 @@ namespace DailyDeBugle.Services
 
         public async Task<User> RegisterAsync(User user, string password)
         {
+            AuthenticationStateProvider = user;
             user.PasswordHash = _passwordHasher.HashPassword(user, password);
             _context.Users.Add(user);
             await _context.SaveChangesAsync();

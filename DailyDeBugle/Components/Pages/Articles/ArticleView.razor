@@ -1,0 +1,95 @@
+@page "/articles/edit/{ArticleId:int}"
+@rendermode InteractiveServer
+@using DailyDeBugle.Models
+@inject DailyDeBugle.Services.IArticleService ArticleService
+@inject NavigationManager Navigation
+
+<PageTitle>DailyDeBugle - @(article?.Headline ?? "Article")</PageTitle>
+
+@if (article == null)
+{
+    <p>Loading article...</p>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h2>@article.Headline</h2>
+                        <div class="text-muted">
+                            By: <strong>@(article.Author?.Username ?? "Unknown")</strong> |
+                            Status: <span class="badge @GetStatusBadgeClass(article.Status)">@article.Status</span> |
+                            Created: @article.CreatedDate.ToString("MMM dd, yyyy HH:mm") |
+                            Issue: @(article.Issue != null ? $"№{article.Issue.IssueNumber}" : "No issue")
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="white-space: pre-wrap; font-size: 1.1rem; line-height: 1.8;">
+                            @article.Content
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary" @onclick="GoBack">← Back to list</button>
+                    </div>
+                </div>
+
+                @* Если есть комментарии, покажем их *@
+                @if (article.Comments?.Any() == true)
+                {
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5>Comments (@article.Comments.Count)</h5>
+                        </div>
+                        <div class="card-body">
+                            @foreach (var comment in article.Comments.OrderByDescending(c => c.CreatedDate))
+                            {
+                                <div class="border-bottom pb-2 mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>@(comment.CommentId.ToString() ?? "Unknown")</strong>
+                                        <small class="text-muted">@comment.CreatedDate.ToString("MMM dd, HH:mm")</small>
+                                    </div>
+                                    <div>@comment.Content</div>
+                                    @if (comment.IsEditorComment)
+                                    {
+                                        <span class="badge bg-info">Editor</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int ArticleId { get; set; }
+
+    private Article? article;
+
+    protected override async Task OnInitializedAsync()
+    {
+        article = await ArticleService.GetArticleAsync(ArticleId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/editor/review"); // или "/articles", смотря откуда пришли
+    }
+
+    private string GetStatusBadgeClass(ArticleStatus status)
+    {
+        return status switch
+        {
+            ArticleStatus.Draft => "bg-secondary",
+            ArticleStatus.UnderReview => "bg-info",
+            ArticleStatus.RequiresRevision => "bg-warning",
+            ArticleStatus.Approved => "bg-primary",
+            ArticleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

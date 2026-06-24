@@ -1,22 +1,37 @@
 @page "/editor/review/{articleId:int}"
+<<<<<<< HEAD
 @attribute [Authorize(Policy = Policies.ReviewArticles)]
 @inject IArticleService ArticleService
 @inject NavigationManager Navigation
+=======
+@rendermode InteractiveServer
+>>>>>>> laptev/collaboration
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
-@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IArticleService ArticleService
+@inject IArticleLockService LockService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <PageTitle>DailyDeBugle - Review: @article?.Headline</PageTitle>
 
 @if (article == null)
 {
-    <p>Loading article...</p>
+    <p class="p-4 text-muted">Loading article...</p>
 }
 else
 {
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid py-3">
+        <div class="row g-3">
+
+            <!-- ── Левая колонка: редактор ── -->
             <div class="col-md-8">
+<<<<<<< HEAD
                 <div class="card mb-4">
                     <div class="card-header">
                         <h4>@article.Headline</h4>
@@ -58,12 +73,57 @@ else
                         <div class="mt-2 text-muted small">
                             Characters: @(article.Content?.Length ?? 0)
                         </div>
+=======
+
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-2">
+                        <h5 class="mb-0 me-auto">@article.Headline</h5>
+                        <span class="text-muted small">
+                            By: <strong>@article.Author?.Username</strong> &nbsp;|&nbsp;
+                            @article.CreatedDate.ToString("MMM dd, yyyy HH:mm")
+                        </span>
+                        <span class="badge @GetStatusBadge(article.Status)">@article.Status</span>
+                    </div>
+                </div>
+
+                @if (activeEditors.Any())
+                {
+                    <div class="alert alert-secondary py-2 px-3 mb-2 small d-flex align-items-center gap-2">
+                        <i class="bi bi-broadcast text-success"></i>
+                        <span>Редактируют: <strong>@string.Join(", ", activeEditors)</strong></span>
+                    </div>
+                }
+
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <span class="fw-semibold">Article Content</span>
+                        <span class="text-muted small">
+                            @localContent.Length симв. | rev.&nbsp;@documentRevision
+                            @if (isSyncPending)
+                            {
+                                <span class="ms-2 text-warning">
+                                    <i class="bi bi-arrow-repeat spin"></i> синхр.
+                                </span>
+                            }
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <textarea @ref="textareaRef"
+                                  class="form-control border-0 rounded-0"
+                                  style="min-height:360px; resize:vertical; font-family:'Courier New',monospace; font-size:.92rem;"
+                                  value="@localContent"
+                                  @oninput="OnTextInput"
+                                  disabled="@isReadOnly"
+                                  spellcheck="false"></textarea>
+>>>>>>> laptev/collaboration
                     </div>
                 </div>
 
             </div>
 
+            <!-- ── Правая колонка: действия ── -->
             <div class="col-md-4">
+<<<<<<< HEAD
                 <div class="card">
                     <div class="card-header">
                         <h5>Editor Actions</h5>
@@ -125,18 +185,83 @@ else
                         }
                     </div>
                 </div>
+=======
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger py-2 small mb-3">@errorMessage</div>
+                }
+
+                @if (isFinalized)
+                {
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill"></i> Действие выполнено.
+                    </div>
+                }
+                else
+                {
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header py-2 fw-semibold">Editor Actions</div>
+                        <div class="card-body d-grid gap-2">
+                            <button class="btn btn-success" @onclick="ApproveArticle"
+                                    disabled="@(isProcessing || isReadOnly)">
+                                <i class="bi bi-check-circle"></i> Approve Article
+                            </button>
+                            <button class="btn btn-warning" @onclick="OpenRevisionModal"
+                                    disabled="@(isProcessing || isReadOnly)">
+                                <i class="bi bi-pencil-square"></i> Send for Revision
+                            </button>
+                            <button class="btn btn-danger" @onclick="OpenRejectModal"
+                                    disabled="@(isProcessing || isReadOnly)">
+                                <i class="bi bi-x-circle"></i> Reject Article
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                @if (activeEditors.Any())
+                {
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header py-2 fw-semibold">
+                            <i class="bi bi-people"></i> Active Editors
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            @foreach (var name in activeEditors)
+                            {
+                                <li class="list-group-item py-1 small d-flex align-items-center gap-2">
+                                    <span class="rounded-circle bg-success d-inline-block"
+                                          style="width:8px;height:8px;flex-shrink:0"></span>
+                                    @name @(name == currentUserName ? "(вы)" : "")
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <!-- Кнопка "Назад" — только уходит, НЕ сохраняет -->
+                <button class="btn btn-outline-secondary w-100" @onclick="NavigateBack"
+                        disabled="@isProcessing">
+                    <i class="bi bi-arrow-left"></i> Back to Review List
+                </button>
+>>>>>>> laptev/collaboration
             </div>
         </div>
     </div>
 }
 
+<<<<<<< HEAD
+=======
+<!-- ══════════ Модалки действий (Revision / Reject) ══════════ -->
+
+>>>>>>> laptev/collaboration
 @if (showRevisionModal)
 {
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Send for Revision</h5>
+<<<<<<< HEAD
                     <button type="button" class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
@@ -149,6 +274,19 @@ else
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
                     <button type="button" class="btn btn-warning" @onclick="SendForRevision">Send</button>
+=======
+                    <button class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Comments for Author:</label>
+                    <textarea @bind="revisionComments" class="form-control" rows="4"
+                              placeholder="What needs to be improved?"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="btn btn-warning" @onclick="SendForRevision"
+                            disabled="@isProcessing">Send for Revision</button>
+>>>>>>> laptev/collaboration
                 </div>
             </div>
         </div>
@@ -157,14 +295,15 @@ else
 
 @if (showRejectModal)
 {
-    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Reject Article</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                    <button class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
+<<<<<<< HEAD
                     <div class="mb-3">
                         <label class="form-label">Reason:</label>
                         <textarea @bind="rejectionReason" class="form-control" rows="4"
@@ -174,20 +313,157 @@ else
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
                     <button type="button" class="btn btn-danger" @onclick="RejectArticle">Reject</button>
+=======
+                    <label class="form-label">Reason for Rejection:</label>
+                    <textarea @bind="rejectionReason" class="form-control" rows="4"
+                              placeholder="Why is this article being rejected?"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="btn btn-danger" @onclick="RejectArticle"
+                            disabled="@isProcessing">Reject Article</button>
+>>>>>>> laptev/collaboration
                 </div>
             </div>
         </div>
     </div>
 }
 
+<!-- ══════════ Модалка подтверждения (для НЕ-инициатора) ══════════ -->
+
+@if (showConfirmationModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.6)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-warning">
+                <div class="modal-header bg-warning bg-opacity-10">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                        Запрос от редактора
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        <strong>@confirmationInitiatorName</strong> хочет выполнить действие:
+                        <strong>«@GetActionLabel(confirmationActionType)»</strong>.
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Если вы нажмёте «Нет», действие будет отменено для всех.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" @onclick="() => RespondToConfirmation(false)">
+                        <i class="bi bi-x-circle"></i> Нет, отменить
+                    </button>
+                    <button class="btn btn-success" @onclick="() => RespondToConfirmation(true)">
+                        <i class="bi bi-check-circle"></i> Да, согласен
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ══════════ Модалка ожидания ответов других редакторов ══════════ -->
+
+@if (showWaitingModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <p class="mb-1 fw-semibold">Ожидаем подтверждения</p>
+                    <p class="text-muted small">
+                        Другие редакторы должны согласиться с действием.
+                        <br>Таймаут: 30 секунд.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .spin { animation: spin 1s linear infinite; display: inline-block; }
+    @@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+
 @code {
     [Parameter] public int ArticleId { get; set; }
 
+<<<<<<< HEAD
     private Article? article;
     private bool showRevisionModal;
     private bool showRejectModal;
+=======
+    // ── Данные ──────────────────────────────────────────────────────────────
+    private Article? article;
+
+    // ── OT-состояние ────────────────────────────────────────────────────────
+    /// <summary>
+    /// Текущее содержимое textarea. При получении чужой операции мы обновляем
+    /// это поле напрямую — Blazor перерисует textarea через StateHasChanged.
+    /// </summary>
+    private string localContent = string.Empty;
+
+    /// <summary>
+    /// «Эталонная» копия: то, что мы видели в previousContent в момент последнего
+    /// OnTextInput. Используется только для вычисления diff.
+    /// ВАЖНО: обновляется синхронно при каждом вводе И при получении чужих операций.
+    /// </summary>
+    private string serverContent = string.Empty;
+
+    private int documentRevision = 0;
+    private bool isSyncPending = false;
+
+    // ── UI ───────────────────────────────────────────────────────────────────
+    private ElementReference textareaRef;
+    private bool isReadOnly = false;
+    private bool isProcessing = false;
+    private bool isFinalized = false;
+    private string errorMessage = string.Empty;
+
+    // ── Модалки действий ────────────────────────────────────────────────────
+    private bool showRevisionModal = false;
+    private bool showRejectModal = false;
+>>>>>>> laptev/collaboration
     private string revisionComments = string.Empty;
     private string rejectionReason = string.Empty;
+
+    // ── Pending-действие (хранится пока идёт голосование) ───────────────────
+    private string? pendingActionType;     // "approve" | "revision" | "reject"
+    private Func<Task<bool>>? pendingAction;
+
+    // ── Модалка подтверждения (для НЕ-инициатора) ───────────────────────────
+    private bool showConfirmationModal = false;
+    private bool showWaitingModal = false;
+    private string confirmationInitiatorName = string.Empty;
+    private string confirmationActionType = string.Empty;
+
+    // ── Пользователь ────────────────────────────────────────────────────────
+    private int currentUserId;
+    private string currentUserName = string.Empty;
+
+    // ── SignalR ──────────────────────────────────────────────────────────────
+    private HubConnection? _hub;
+    private List<string> activeEditors = new();
+
+    // ── Таймер продления блокировки ──────────────────────────────────────────
+    private System.Threading.Timer? _lockTimer;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Инициализация
+    // ═════════════════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserId = int.TryParse(auth.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+        currentUserName = auth.User.FindFirst(ClaimTypes.Name)?.Value
+                       ?? auth.User.FindFirst("Username")?.Value
+                       ?? $"User {currentUserId}";
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -197,39 +473,421 @@ else
     private async Task ReloadArticle()
     {
         article = await ArticleService.GetArticleAsync(ArticleId);
+<<<<<<< HEAD
+=======
+        if (article == null) return;
+
+        await LockService.TryLockArticleAsync(ArticleId, currentUserId);
+
+        localContent = article.Content;
+        serverContent = article.Content;
+
+        await InitHub();
+
+        _lockTimer = new System.Threading.Timer(async _ =>
+        {
+            try { await LockService.RefreshLockAsync(ArticleId, currentUserId); } catch { }
+        }, null, TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(2));
     }
+
+    private async Task InitHub()
+    {
+        if (_hub != null)
+        {
+            await _hub.DisposeAsync();
+            _hub = null;
+        }
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/editinghub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        // ── Получили актуальный документ с сервера ──
+        _hub.On<string, int>("DocumentLoaded", (content, revision) =>
+        {
+            localContent = content;
+            serverContent = content;
+            documentRevision = revision;
+            InvokeAsync(StateHasChanged);
+        });
+
+        // ── Операция применена сервером (возвращается всем, включая отправителя) ──
+        _hub.On<TextOperation, int, string>("OperationApplied", (op, newRevision, senderCid) =>
+        {
+            if (senderCid == _hub?.ConnectionId)
+            {
+                // Наша операция подтверждена — обновляем ревизию.
+                // localContent мы уже обновили оптимистично в OnTextInput.
+                documentRevision = newRevision;
+                isSyncPending = false;
+            }
+            else
+            {
+                // Чужая операция — применяем к обоим буферам
+                ApplyOperationLocally(op, ref localContent);
+                ApplyOperationLocally(op, ref serverContent);
+                documentRevision = newRevision;
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        // ── Список редакторов обновился ──
+        _hub.On<int, IEnumerable<string>>("ActiveEditorsUpdate", (articleId, names) =>
+        {
+            if (articleId == ArticleId)
+            {
+                activeEditors = names.ToList();
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        // ── Статья финализирована другим редактором ──
+        _hub.On<int>("ArticleFinalized", (articleId) =>
+        {
+            if (articleId == ArticleId)
+            {
+                isReadOnly = true;
+                isFinalized = true;
+                showConfirmationModal = false;
+                showWaitingModal = false;
+                errorMessage = "Статья финализирована другим редактором.";
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        // ── Кто-то запрашивает подтверждение нашего согласия ──
+        _hub.On<int, string, string>("ActionConfirmationRequested",
+            (articleId, actionType, initiatorName) =>
+        {
+            if (articleId != ArticleId) return;
+            confirmationActionType = actionType;
+            confirmationInitiatorName = initiatorName;
+            showConfirmationModal = true;
+            InvokeAsync(StateHasChanged);
+        });
+
+        // ── Голосование отменено (кто-то нажал «нет» или таймаут) ──
+        _hub.On<int>("ActionConfirmationCancelled", (articleId) =>
+        {
+            if (articleId != ArticleId) return;
+            showConfirmationModal = false;
+            showWaitingModal = false;
+            isProcessing = false;
+            isReadOnly = false;
+            pendingAction = null;
+            pendingActionType = null;
+            InvokeAsync(StateHasChanged);
+        });
+
+        // ── Результат голосования пришёл инициатору ──
+        _hub.On<int, bool, string>("ActionConfirmationResult",
+            async (articleId, approved, reason) =>
+        {
+            if (articleId != ArticleId) return;
+            showWaitingModal = false;
+
+            if (!approved)
+            {
+                isProcessing = false;
+                isReadOnly = false;
+                errorMessage = string.IsNullOrEmpty(reason)
+                    ? "Действие отклонено одним из редакторов."
+                    : reason;
+                pendingAction = null;
+                pendingActionType = null;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            // Все одобрили — выполняем действие
+            if (pendingAction != null)
+            {
+                var action = pendingAction;
+                pendingAction = null;
+                pendingActionType = null;
+                await InvokeAsync(() => ExecuteApprovedAction(action));
+            }
+        });
+
+        _hub.Reconnected += async _ =>
+        {
+            if (_hub.State == HubConnectionState.Connected)
+                await _hub.InvokeAsync("JoinDocument", ArticleId, currentUserName);
+        };
+
+        await _hub.StartAsync();
+        await _hub.InvokeAsync("InitDocument", ArticleId, article!.Content);
+        await _hub.InvokeAsync("JoinDocument", ArticleId, currentUserName);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Ввод текста
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private async Task OnTextInput(ChangeEventArgs e)
+    {
+        if (isReadOnly || _hub == null || _hub.State != HubConnectionState.Connected)
+            return;
+
+        var newValue = e.Value?.ToString() ?? string.Empty;
+        if (newValue == serverContent) return;
+
+        // Вычисляем операции относительно serverContent (не localContent).
+        // serverContent — это последнее состояние, которое совпадает с тем,
+        // что знает сервер (с учётом всех пришедших OperationApplied).
+        var ops = ComputeOperations(serverContent, newValue);
+
+        // Оптимистично обновляем локальное состояние
+        localContent = newValue;
+        serverContent = newValue;
+
+        foreach (var op in ops)
+        {
+            op.UserId = currentUserId;
+            op.Revision = documentRevision;
+            isSyncPending = true;
+            await _hub.InvokeAsync("SendOperation", ArticleId, op);
+        }
+>>>>>>> laptev/collaboration
+    }
+
+    /// <summary>
+    /// Применяет операцию к переданной строке (по ref).
+    /// Используется для обновления localContent и serverContent.
+    /// </summary>
+    private static void ApplyOperationLocally(TextOperation op, ref string text)
+    {
+        try
+        {
+            if (op.Type == "insert" && !string.IsNullOrEmpty(op.Text))
+            {
+                if (op.Position >= 0 && op.Position <= text.Length)
+                    text = text.Insert(op.Position, op.Text);
+            }
+            else if (op.Type == "delete" && op.Length > 0)
+            {
+                if (op.Position >= 0 && op.Position + op.Length <= text.Length)
+                    text = text.Remove(op.Position, op.Length);
+            }
+            // noop — ничего
+        }
+        catch
+        {
+            // Игнорируем — при следующем DocumentLoaded синхронизируемся
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Вычисление diff: prefix/suffix алгоритм
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Вычисляет минимальный набор операций (delete + insert) для преобразования
+    /// oldText → newText. Алгоритм: найти общий префикс и суффикс, остаток — это
+    /// удалённый/вставленный фрагмент. Работает корректно при любом количестве
+    /// изменений в одном месте (вставка, удаление, замена, Ctrl+A Delete).
+    /// </summary>
+    private static List<TextOperation> ComputeOperations(string oldText, string newText)
+    {
+        var ops = new List<TextOperation>(2);
+
+        // Общий префикс
+        int prefix = 0;
+        int minLen = Math.Min(oldText.Length, newText.Length);
+        while (prefix < minLen && oldText[prefix] == newText[prefix])
+            prefix++;
+
+        // Общий суффикс (не заходя за префикс с обеих сторон)
+        int oldEnd = oldText.Length;
+        int newEnd = newText.Length;
+        while (oldEnd > prefix && newEnd > prefix
+               && oldText[oldEnd - 1] == newText[newEnd - 1])
+        {
+            oldEnd--;
+            newEnd--;
+        }
+
+        int deleteLen = oldEnd - prefix;   // сколько символов удаляется
+        int insertLen = newEnd - prefix;   // сколько символов вставляется
+
+        // Сначала удаление, потом вставка — в ту же позицию.
+        // Порядок важен: если применять в обратном порядке, позиция съедется.
+        if (deleteLen > 0)
+            ops.Add(new TextOperation { Type = "delete", Position = prefix, Length = deleteLen });
+
+        if (insertLen > 0)
+            ops.Add(new TextOperation
+            {
+                Type = "insert",
+                Position = prefix,
+                Text = newText.Substring(prefix, insertLen)
+            });
+
+        return ops;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Финальные действия (Approve / Revision / Reject)
+    // ═════════════════════════════════════════════════════════════════════════
 
     private async Task ApproveArticle()
     {
+<<<<<<< HEAD
         if (article == null) return;
         var success = await ArticleService.ApproveArticleAsync(article.ArticleId, article.Content ?? string.Empty);
         if (success)
             Navigation.NavigateTo("/editor/review");
+=======
+        if (article == null || isProcessing) return;
+        await InitiateAction("approve",
+            async () => await ArticleService.ApproveArticleAsync(article.ArticleId, localContent));
+    }
+
+    private void OpenRevisionModal()
+    {
+        if (isProcessing || isReadOnly) return;
+        showRevisionModal = true;
+>>>>>>> laptev/collaboration
     }
 
     private async Task SendForRevision()
     {
-        if (article != null && !string.IsNullOrWhiteSpace(revisionComments))
-        {
-            var success = await ArticleService.SendForRevisionAsync(article.ArticleId, revisionComments);
-            if (success)
-            {
-                CloseModals();
-                Navigation.NavigateTo("/editor/review");
-            }
-        }
+        if (article == null || string.IsNullOrWhiteSpace(revisionComments) || isProcessing) return;
+        CloseModals();
+        var comments = revisionComments;
+        await InitiateAction("revision",
+            async () => await ArticleService.SendForRevisionAsync(article.ArticleId, comments));
+    }
+
+    private void OpenRejectModal()
+    {
+        if (isProcessing || isReadOnly) return;
+        showRejectModal = true;
     }
 
     private async Task RejectArticle()
     {
-        if (article != null && !string.IsNullOrWhiteSpace(rejectionReason))
+        if (article == null || string.IsNullOrWhiteSpace(rejectionReason) || isProcessing) return;
+        CloseModals();
+        var reason = rejectionReason;
+        await InitiateAction("reject",
+            async () => await ArticleService.RejectArticleAsync(article.ArticleId, reason));
+    }
+
+    /// <summary>
+    /// Запускает процесс финального действия:
+    /// 1. Если других редакторов нет — выполняет сразу.
+    /// 2. Если есть — сохраняет pending-действие и запрашивает голосование.
+    /// </summary>
+    private async Task InitiateAction(string actionType, Func<Task<bool>> action)
+    {
+        isProcessing = true;
+        isReadOnly = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        if (_hub?.State == HubConnectionState.Connected)
         {
-            var success = await ArticleService.RejectArticleAsync(article.ArticleId, rejectionReason);
+            pendingAction = action;
+            pendingActionType = actionType;
+            showWaitingModal = true;
+            StateHasChanged();
+
+            // Запрашиваем подтверждение — результат придёт через "ActionConfirmationResult"
+            await _hub.InvokeAsync("RequestActionConfirmation", ArticleId, actionType, currentUserName);
+            // Дальше управление у обработчика ActionConfirmationResult
+        }
+        else
+        {
+            // Нет соединения — выполняем без голосования
+            await ExecuteApprovedAction(action);
+        }
+    }
+
+    /// <summary>
+    /// Выполняет уже одобренное всеми действие.
+    /// </summary>
+    private async Task ExecuteApprovedAction(Func<Task<bool>> action)
+    {
+        showWaitingModal = false;
+        isProcessing = true;
+        isReadOnly = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await action();
             if (success)
             {
-                CloseModals();
+                isFinalized = true;
+                if (_hub?.State == HubConnectionState.Connected)
+                    await _hub.InvokeAsync("ArticleFinalized", ArticleId);
+
+                await CleanupAndLeave();
                 Navigation.NavigateTo("/editor/review");
             }
+            else
+            {
+                errorMessage = "Действие не выполнено. Статья могла быть изменена параллельно.";
+                isReadOnly = false;
+                isProcessing = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка: {ex.Message}";
+            isReadOnly = false;
+            isProcessing = false;
+        }
+
+        StateHasChanged();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Ответ на запрос подтверждения (для НЕ-инициатора)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private async Task RespondToConfirmation(bool approved)
+    {
+        showConfirmationModal = false;
+        StateHasChanged();
+
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.InvokeAsync("RespondToActionConfirmation", ArticleId, approved);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Уход со страницы БЕЗ сохранения
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Кнопка "Back to Review List" — просто уходим, НЕ вызываем ни Approve, ни Revision.
+    /// </summary>
+    private async Task NavigateBack()
+    {
+        await CleanupAndLeave();
+        Navigation.NavigateTo("/editor/review");
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Вспомогательные методы
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Освобождает блокировку и уходит из документа.
+    /// НЕ вызывает никакой записи в БД — только cleanup.
+    /// </summary>
+    private async Task CleanupAndLeave()
+    {
+        _lockTimer?.Dispose();
+        _lockTimer = null;
+
+        try { await LockService.UnlockArticleAsync(ArticleId, currentUserId); } catch { }
+
+        if (_hub?.State == HubConnectionState.Connected)
+        {
+            try { await _hub.InvokeAsync("LeaveDocument", ArticleId); } catch { }
         }
     }
 
@@ -241,8 +899,38 @@ else
         rejectionReason = string.Empty;
     }
 
-    private void NavigateBack()
+    private static string GetStatusBadge(ArticleStatus status) => status switch
     {
-        Navigation.NavigateTo("/editor/review");
+        ArticleStatus.Draft => "bg-secondary",
+        ArticleStatus.UnderReview => "bg-info text-dark",
+        ArticleStatus.RequiresRevision => "bg-warning text-dark",
+        ArticleStatus.Approved => "bg-success",
+        ArticleStatus.Rejected => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private static string GetActionLabel(string actionType) => actionType switch
+    {
+        "approve" => "Утвердить статью",
+        "revision" => "Отправить на доработку",
+        "reject" => "Отклонить статью",
+        _ => actionType
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // IAsyncDisposable — вызывается при уходе со страницы навигацией/закрытием
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public async ValueTask DisposeAsync()
+    {
+        // CleanupAndLeave уже мог быть вызван из NavigateBack или FinalizeArticle —
+        // повторный вызов безопасен (LockService проверяет владельца, _hub?.State проверяем).
+        await CleanupAndLeave();
+
+        if (_hub != null)
+        {
+            await _hub.DisposeAsync();
+            _hub = null;
+        }
     }
 }

@@ -19,7 +19,11 @@ namespace DailyDeBugle.Services
             return await _context.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
+<<<<<<< HEAD
                 .Include(a => a.Images)
+=======
+                .Include(a => a.LockedByUser)
+>>>>>>> laptev/collaboration
                 .OrderByDescending(a => a.CreatedDate)
                 .ToListAsync();
         }
@@ -29,7 +33,11 @@ namespace DailyDeBugle.Services
             return await _context.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
+<<<<<<< HEAD
                 .Include(a => a.Images)
+=======
+                .Include(a => a.LockedByUser)
+>>>>>>> laptev/collaboration
                 .OrderByDescending(a => a.CreatedDate)
                 .ToListAsync();
         }
@@ -49,7 +57,11 @@ namespace DailyDeBugle.Services
             return await _context.Articles
                 .Include(a => a.Author)
                 .Include(a => a.Issue)
+<<<<<<< HEAD
                 .Include(a => a.Images)
+=======
+                .Include(a => a.LockedByUser)   // если нужно показывать блокировку, но здесь не обязательно
+>>>>>>> laptev/collaboration
                 .Include(a => a.Comments)
                 .FirstOrDefaultAsync(a => a.ArticleId == id);
         }
@@ -210,9 +222,22 @@ namespace DailyDeBugle.Services
             article.Content = editedContent;
             article.Status = ArticleStatus.Approved;
             article.ModifiedDate = DateTime.UtcNow;
-            
-            await _context.SaveChangesAsync();
-            return true;
+    
+            // Снимаем блокировку при утверждении
+            article.LockedByUserId = null;
+            article.LockedAt = null;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                // Логирование ошибки
+                Console.WriteLine($"Error approving article: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<bool> SendForRevisionAsync(int articleId, string comments)
@@ -222,6 +247,7 @@ namespace DailyDeBugle.Services
 
             article.Status = ArticleStatus.RequiresRevision;
             article.ModifiedDate = DateTime.UtcNow;
+<<<<<<< HEAD
 
             if (!string.IsNullOrWhiteSpace(comments))
             {
@@ -234,6 +260,26 @@ namespace DailyDeBugle.Services
                 });
             }
 
+=======
+    
+            // Снимаем блокировку
+            article.LockedByUserId = null;
+            article.LockedAt = null;
+    
+            // Если нужно сохранить комментарий (опционально)
+            if (!string.IsNullOrWhiteSpace(comments))
+            {
+                var comment = new Comment
+                {
+                    ArticleId = articleId,
+                    Content = comments,
+                    CreatedDate = DateTime.UtcNow,
+                    IsEditorComment = true
+                };
+                _context.Comments.Add(comment);
+            }
+    
+>>>>>>> laptev/collaboration
             await _context.SaveChangesAsync();
             return true;
         }
@@ -245,6 +291,7 @@ namespace DailyDeBugle.Services
 
             article.Status = ArticleStatus.Rejected;
             article.ModifiedDate = DateTime.UtcNow;
+<<<<<<< HEAD
 
             if (!string.IsNullOrWhiteSpace(reason))
             {
@@ -257,6 +304,26 @@ namespace DailyDeBugle.Services
                 });
             }
 
+=======
+    
+            // Снимаем блокировку
+            article.LockedByUserId = null;
+            article.LockedAt = null;
+    
+            // Если нужно сохранить причину отклонения (опционально)
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                var comment = new Comment
+                {
+                    ArticleId = articleId,
+                    Content = $"Rejected: {reason}",
+                    CreatedDate = DateTime.UtcNow,
+                    IsEditorComment = true
+                };
+                _context.Comments.Add(comment);
+            }
+    
+>>>>>>> laptev/collaboration
             await _context.SaveChangesAsync();
             return true;
         }
