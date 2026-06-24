@@ -1,130 +1,179 @@
 @page "/editor/review/{articleId:int}"
+@rendermode InteractiveServer
 @attribute [Authorize(Policy = Policies.ReviewArticles)]
-@inject IArticleService ArticleService
-@inject NavigationManager Navigation
 @using DailyDeBugle.Models
 @using DailyDeBugle.Services
-@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.SignalR.Client
+@using DailyDeBugle.Helpers
+@using Microsoft.AspNetCore.Components.Forms
+@inject IArticleService ArticleService
+@inject IIssueService IssueService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <PageTitle>DailyDeBugle - Review: @article?.Headline</PageTitle>
 
 @if (article == null)
 {
-    <p>Loading article...</p>
+    <p class="p-4 text-muted">Loading article...</p>
 }
 else
 {
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid py-3">
+        <div class="row g-3">
+
             <div class="col-md-8">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4>@article.Headline</h4>
-                        <div class="small text-muted">
-                            By: @article.Author?.Username |
-                            Created: @article.CreatedDate.ToString("MMM dd, yyyy HH:mm") |
-                            Status: <span class="badge bg-warning">@article.Status</span>
-                        </div>
+
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center gap-2">
+                        <h5 class="mb-0 me-auto">@article.Headline</h5>
+                        <span class="text-muted small">
+                            By: <strong>@article.Author?.Username</strong> &nbsp;|&nbsp;
+                            @article.CreatedDate.ToString("MMM dd, yyyy HH:mm")
+                        </span>
+                        <span class="badge @GetStatusBadge(article.Status)">@article.Status</span>
                     </div>
                 </div>
 
-                <div class="card mb-4">
+                @if (activeEditors.Any())
+                {
+                    <div class="alert alert-secondary py-2 px-3 mb-2 small d-flex align-items-center gap-2">
+                        <i class="bi bi-broadcast text-success"></i>
+                        <span>Редактируют: <strong>@string.Join(", ", activeEditors)</strong></span>
+                    </div>
+                }
+
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <span class="fw-semibold">Article Content</span>
+                        <span class="text-muted small">
+                            @localContent.Length симв. | rev.&nbsp;@documentRevision
+                            @if (isSyncPending)
+                            {
+                                <span class="ms-2 text-warning">
+                                    <i class="bi bi-arrow-repeat spin"></i> синхр.
+                                </span>
+                            }
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <textarea @ref="textareaRef"
+                                  class="form-control border-0 rounded-0"
+                                  style="min-height:360px; resize:vertical; font-family:'Courier New',monospace; font-size:.92rem;"
+                                  value="@localContent"
+                                  @oninput="OnTextInput"
+                                  disabled="@isReadOnly"
+                                  spellcheck="false"></textarea>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-3">
                     <div class="card-header">
-                        <h5 class="mb-0">Article Content</h5>
+                        <strong>Attached Images</strong>
                     </div>
                     <div class="card-body">
-                        @if (article.Images?.Any() == true)
-                        {
-                            <div class="mb-3">
-                                <h6 class="mb-2">Images</h6>
-                                <div class="row g-2">
-                                    @foreach (var img in article.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.ArticleImageId))
-                                    {
-                                        <div class="col-6">
-                                            <div class="border rounded p-2 bg-light">
-                                                <img src="@img.ImagePath" alt="@img.Caption" style="width: 100%; height: auto; display: block;" />
-                                                @if (!string.IsNullOrWhiteSpace(img.Caption))
-                                                {
-                                                    <div class="small text-muted mt-1">@img.Caption</div>
-                                                }
-                                            </div>
-                                        </div>
-                                    }
+                        <div class="mb-3">
+                            <InputFile OnChange="OnImagesSelected"
+                                       multiple
+                                       accept="image/*"
+                                       class="form-control" />
+
+                            @if (!string.IsNullOrEmpty(imagesError))
+                            {
+                                <div class="text-danger small mt-2">
+                                    @imagesError
                                 </div>
+                            }
+                        </div>
+
+                        @if (article?.Images?.Any() == true)
+                        {
+                            <div class="row g-3">
+                                @foreach (var img in article.Images
+                                   .OrderBy(i => i.SortOrder)
+                                   .ThenBy(i => i.ArticleImageId))
+                                {
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-2">
+                                            <img src="@img.ImagePath" class="img-fluid rounded" />
+                                            <button class="btn btn-outline-danger btn-sm mt-2 w-100"
+                                                    @onclick="() => RemoveImage(img.ArticleImageId)"
+                                                    disabled="@isReadOnly">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         }
-
-                        <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">@article.Content</div>
-                        <div class="mt-2 text-muted small">
-                            Characters: @(article.Content?.Length ?? 0)
-                        </div>
                     </div>
                 </div>
 
             </div>
 
             <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Editor Actions</h5>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger py-2 small mb-3">@errorMessage</div>
+                }
+
+                @if (isFinalized)
+                {
+                    <div class="alert alert-success mb-3">
+                        <i class="bi bi-check-circle-fill"></i> Действие выполнено.
                     </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <button class="btn btn-success w-100" @onclick="ApproveArticle">
-                                Approve Article
+                }
+                else
+                {
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header py-2 fw-semibold">Editor Actions</div>
+                        <div class="card-body d-grid gap-2">
+                            <button class="btn btn-success" @onclick="ApproveArticle"
+                                    disabled="@(isProcessing || isReadOnly)">
+                                <i class="bi bi-check-circle"></i> Approve Article
                             </button>
-                            <div class="form-text">The article text does not change upon approval.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <button class="btn btn-warning w-100"
-                                    @onclick="() => showRevisionModal = true">
-                                Send for Revision
+                            <button class="btn btn-warning" @onclick="OpenRevisionModal"
+                                    disabled="@(isProcessing || isReadOnly)">
+                                <i class="bi bi-pencil-square"></i> Send for Revision
                             </button>
-                        </div>
-
-                        <div class="mb-3">
-                            <button class="btn btn-danger w-100"
-                                    @onclick="() => showRejectModal = true">
-                                Reject
-                            </button>
-                        </div>
-
-                        <div class="mt-4">
-                            <button class="btn btn-outline-secondary w-100" @onclick="NavigateBack">
-                                ← Back to List
+                            <button class="btn btn-danger" @onclick="OpenRejectModal"
+                                    disabled="@(isProcessing || isReadOnly)">
+                                <i class="bi bi-x-circle"></i> Reject Article
                             </button>
                         </div>
                     </div>
-                </div>
+                }
 
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h6>Comment History</h6>
-                    </div>
-                    <div class="card-body">
-                        @if (article.Comments?.Any() == true)
-                        {
-                            @foreach (var comment in article.Comments.OrderByDescending(c => c.CreatedDate))
+                @if (activeEditors.Any())
+                {
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header py-2 fw-semibold">
+                            <i class="bi bi-people"></i> Active Editors
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            @foreach (var name in activeEditors)
                             {
-                                <div class="border-bottom pb-2 mb-2">
-                                    <div class="small text-muted">
-                                        @comment.CreatedDate.ToString("MMM dd, HH:mm")
-                                        @if (comment.IsEditorComment)
-                                        {
-                                            <span class="badge bg-info">Editor</span>
-                                        }
-                                    </div>
-                                    <div style="white-space: pre-wrap;">@comment.Content</div>
-                                </div>
+                                <li class="list-group-item py-1 small d-flex align-items-center gap-2">
+                                    <span class="rounded-circle bg-success d-inline-block"
+                                          style="width:8px;height:8px;flex-shrink:0"></span>
+                                    @name @(name == currentUserName ? "(вы)" : "")
+                                </li>
                             }
-                        }
-                        else
-                        {
-                            <p class="text-muted small mb-0">No comments yet.</p>
-                        }
+                        </ul>
                     </div>
-                </div>
+                }
+
+                <button class="btn btn-outline-secondary w-100" @onclick="NavigateBack"
+                        disabled="@isProcessing">
+                    <i class="bi bi-arrow-left"></i> Back to Review List
+                </button>
+
             </div>
         </div>
     </div>
@@ -132,23 +181,22 @@ else
 
 @if (showRevisionModal)
 {
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Send for Revision</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                    <button class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Comment to the author:</label>
-                        <textarea @bind="revisionComments" class="form-control" rows="4"
-                                  placeholder="What needs to be fixed?"></textarea>
-                    </div>
+                    <label class="form-label">Comments for Author:</label>
+                    <textarea @bind="revisionComments" class="form-control" rows="4"
+                              placeholder="What needs to be improved?"></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
-                    <button type="button" class="btn btn-warning" @onclick="SendForRevision">Send</button>
+                    <button class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="btn btn-warning" @onclick="SendForRevision"
+                            disabled="@isProcessing">Send for Revision</button>
                 </div>
             </div>
         </div>
@@ -157,92 +205,519 @@ else
 
 @if (showRejectModal)
 {
-    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Reject Article</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                    <button class="btn-close" @onclick="CloseModals"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Reason:</label>
-                        <textarea @bind="rejectionReason" class="form-control" rows="4"
-                                  placeholder="Why is the article being rejected?"></textarea>
-                    </div>
+                    <label class="form-label">Reason for Rejection:</label>
+                    <textarea @bind="rejectionReason" class="form-control" rows="4"
+                              placeholder="Why is this article being rejected?"></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
-                    <button type="button" class="btn btn-danger" @onclick="RejectArticle">Reject</button>
+                    <button class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="btn btn-danger" @onclick="RejectArticle"
+                            disabled="@isProcessing">Reject Article</button>
                 </div>
             </div>
         </div>
     </div>
 }
 
+@if (showConfirmationModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.6)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-warning">
+                <div class="modal-header bg-warning bg-opacity-10">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                        Запрос от редактора
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        <strong>@confirmationInitiatorName</strong> хочет выполнить действие:
+                        <strong>«@GetActionLabel(confirmationActionType)»</strong>.
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Если вы нажмёте «Нет», действие будет отменено для всех.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" @onclick="() => RespondToConfirmation(false)">
+                        <i class="bi bi-x-circle"></i> Нет, отменить
+                    </button>
+                    <button class="btn btn-success" @onclick="() => RespondToConfirmation(true)">
+                        <i class="bi bi-check-circle"></i> Да, согласен
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showWaitingModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <p class="mb-1 fw-semibold">Ожидаем подтверждения</p>
+                    <p class="text-muted small">
+                        Другие редакторы должны согласиться с действием.
+                        <br>Таймаут: 30 секунд.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* <style>
+    .spin { animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style> *@
+
 @code {
+    // Весь ваш блок @code остался без изменений...
     [Parameter] public int ArticleId { get; set; }
 
     private Article? article;
-    private bool showRevisionModal;
-    private bool showRejectModal;
-    private string revisionComments = string.Empty;
-    private string rejectionReason = string.Empty;
+    private readonly List<IBrowserFile> selectedImages = new();
+    private string? imagesError;
+
+    private string localContent  = string.Empty;
+    private string serverContent = string.Empty;
+    private int    documentRevision = 0;
+    private bool   isSyncPending   = false;
+
+    private ElementReference textareaRef;
+    private bool   isReadOnly  = false;
+    private bool   isProcessing = false;
+    private bool   isFinalized  = false;
+    private string errorMessage = string.Empty;
+
+    private bool   showRevisionModal = false;
+    private bool   showRejectModal   = false;
+    private string revisionComments  = string.Empty;
+    private string rejectionReason   = string.Empty;
+
+    private string?        pendingActionType;
+    private Func<Task<bool>>? pendingAction;
+
+    private bool   showConfirmationModal     = false;
+    private bool   showWaitingModal          = false;
+    private string confirmationInitiatorName = string.Empty;
+    private string confirmationActionType    = string.Empty;
+
+    private int    currentUserId   = 0;
+    private string currentUserName = string.Empty;
+
+    private HubConnection?  _hub;
+    private List<string>    activeEditors = new();
+
+    private System.Threading.Timer? _lockTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserId   = int.TryParse(auth.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+        currentUserName = auth.User.FindFirst(ClaimTypes.Name)?.Value
+                       ?? auth.User.FindFirst("Username")?.Value
+                       ?? $"User {currentUserId}";
+    }
 
     protected override async Task OnParametersSetAsync()
     {
         await ReloadArticle();
     }
 
+    private void OnImagesSelected(InputFileChangeEventArgs e)
+    {
+        imagesError = null;
+        selectedImages.Clear();
+        try
+        {
+            selectedImages.AddRange(e.GetMultipleFiles(10));
+        }
+        catch (Exception ex)
+        {
+            imagesError = ex.Message;
+        }
+    }
+
     private async Task ReloadArticle()
     {
         article = await ArticleService.GetArticleAsync(ArticleId);
+        if (article == null) return;
+
+        localContent  = article.Content;
+        serverContent = article.Content;
+
+        await InitHub();
+
+        _lockTimer = new System.Threading.Timer(async _ =>
+        {
+        }, null, TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(2));
+    }
+
+    private async Task RemoveImage(int imageId)
+    {
+        await ArticleService.DeleteImageAsync(imageId);
+        article = await ArticleService.GetArticleAsync(ArticleId);
+    }
+
+    private async Task InitHub()
+    {
+        if (_hub != null)
+        {
+            await _hub.DisposeAsync();
+            _hub = null;
+        }
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/editinghub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On<string, int>("DocumentLoaded", (content, revision) =>
+        {
+            localContent      = content;
+            serverContent     = content;
+            documentRevision  = revision;
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<TextOperation, int, string>("OperationApplied", (op, newRevision, senderCid) =>
+        {
+            if (senderCid == _hub?.ConnectionId)
+            {
+                documentRevision = newRevision;
+                isSyncPending    = false;
+            }
+            else
+            {
+                ApplyOperationLocally(op, ref localContent);
+                ApplyOperationLocally(op, ref serverContent);
+                documentRevision = newRevision;
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<int, IEnumerable<string>>("ActiveEditorsUpdate", (articleId, names) =>
+        {
+            if (articleId == ArticleId)
+            {
+                activeEditors = names.ToList();
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        _hub.On<int>("ArticleFinalized", (articleId) =>
+        {
+            if (articleId != ArticleId) return;
+            isReadOnly            = true;
+            isFinalized           = true;
+            showConfirmationModal = false;
+            showWaitingModal      = false;
+            errorMessage          = "Статья финализирована другим редактором.";
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<int, string, string>("ActionConfirmationRequested",
+            (articleId, actionType, initiatorName) =>
+        {
+            if (articleId != ArticleId) return;
+            confirmationActionType    = actionType;
+            confirmationInitiatorName = initiatorName;
+            showConfirmationModal     = true;
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<int>("ActionConfirmationCancelled", (articleId) =>
+        {
+            if (articleId != ArticleId) return;
+            showConfirmationModal = false;
+            showWaitingModal      = false;
+            isProcessing          = false;
+            isReadOnly            = false;
+            pendingAction         = null;
+            pendingActionType     = null;
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<int, bool, string>("ActionConfirmationResult",
+            async (articleId, approved, reason) =>
+        {
+            if (articleId != ArticleId) return;
+            showWaitingModal = false;
+
+            if (!approved)
+            {
+                isProcessing      = false;
+                isReadOnly        = false;
+                errorMessage      = string.IsNullOrEmpty(reason)
+                    ? "Действие отклонено одним из редакторов."
+                    : reason;
+                pendingAction     = null;
+                pendingActionType = null;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            if (pendingAction != null)
+            {
+                var action    = pendingAction;
+                pendingAction = null;
+                pendingActionType = null;
+                await InvokeAsync(() => ExecuteApprovedAction(action));
+            }
+        });
+
+        _hub.Reconnected += async _ =>
+        {
+            if (_hub.State == HubConnectionState.Connected)
+                await _hub.InvokeAsync("JoinDocument", ArticleId, currentUserName);
+        };
+
+        await _hub.StartAsync();
+        await _hub.InvokeAsync("InitDocument", ArticleId, article!.Content);
+        await _hub.InvokeAsync("JoinDocument", ArticleId, currentUserName);
+    }
+
+    private async Task OnTextInput(ChangeEventArgs e)
+    {
+        if (isReadOnly || _hub == null || _hub.State != HubConnectionState.Connected)
+            return;
+
+        var newValue = e.Value?.ToString() ?? string.Empty;
+        if (newValue == serverContent) return;
+
+        var ops = ComputeOperations(serverContent, newValue);
+
+        localContent  = newValue;
+        serverContent = newValue;
+
+        foreach (var op in ops)
+        {
+            op.UserId   = currentUserId;
+            op.Revision = documentRevision;
+            isSyncPending = true;
+            await _hub.InvokeAsync("SendOperation", ArticleId, op);
+        }
+    }
+
+    private static void ApplyOperationLocally(TextOperation op, ref string text)
+    {
+        try
+        {
+            if (op.Type == "insert" && !string.IsNullOrEmpty(op.Text))
+            {
+                if (op.Position >= 0 && op.Position <= text.Length)
+                    text = text.Insert(op.Position, op.Text);
+            }
+            else if (op.Type == "delete" && op.Length > 0)
+            {
+                if (op.Position >= 0 && op.Position + op.Length <= text.Length)
+                    text = text.Remove(op.Position, op.Length);
+            }
+        }
+        catch { }
+    }
+
+    private static List<TextOperation> ComputeOperations(string oldText, string newText)
+    {
+        var ops = new List<TextOperation>(2);
+
+        int prefix = 0;
+        int minLen = Math.Min(oldText.Length, newText.Length);
+        while (prefix < minLen && oldText[prefix] == newText[prefix])
+            prefix++;
+
+        int oldEnd = oldText.Length;
+        int newEnd = newText.Length;
+        while (oldEnd > prefix && newEnd > prefix
+               && oldText[oldEnd - 1] == newText[newEnd - 1])
+        {
+            oldEnd--;
+            newEnd--;
+        }
+
+        int deleteLen = oldEnd - prefix;
+        int insertLen = newEnd - prefix;
+
+        if (deleteLen > 0)
+            ops.Add(new TextOperation { Type = "delete", Position = prefix, Length = deleteLen });
+
+        if (insertLen > 0)
+            ops.Add(new TextOperation
+            {
+                Type     = "insert",
+                Position = prefix,
+                Text     = newText.Substring(prefix, insertLen)
+            });
+
+        return ops;
     }
 
     private async Task ApproveArticle()
     {
-        if (article == null) return;
-        var success = await ArticleService.ApproveArticleAsync(article.ArticleId, article.Content ?? string.Empty);
-        if (success)
-            Navigation.NavigateTo("/editor/review");
+        if (article == null || isProcessing) return;
+        await InitiateAction("approve",
+            async () => await ArticleService.ApproveArticleAsync(article.ArticleId, localContent));
+    }
+
+    private void OpenRevisionModal()
+    {
+        if (isProcessing || isReadOnly) return;
+        showRevisionModal = true;
     }
 
     private async Task SendForRevision()
     {
-        if (article != null && !string.IsNullOrWhiteSpace(revisionComments))
-        {
-            var success = await ArticleService.SendForRevisionAsync(article.ArticleId, revisionComments);
-            if (success)
-            {
-                CloseModals();
-                Navigation.NavigateTo("/editor/review");
-            }
-        }
+        if (article == null || string.IsNullOrWhiteSpace(revisionComments) || isProcessing) return;
+        CloseModals();
+        var comments = revisionComments;
+        await InitiateAction("revision",
+            async () => await ArticleService.SendForRevisionAsync(article.ArticleId, comments));
+    }
+
+    private void OpenRejectModal()
+    {
+        if (isProcessing || isReadOnly) return;
+        showRejectModal = true;
     }
 
     private async Task RejectArticle()
     {
-        if (article != null && !string.IsNullOrWhiteSpace(rejectionReason))
+        if (article == null || string.IsNullOrWhiteSpace(rejectionReason) || isProcessing) return;
+        CloseModals();
+        var reason = rejectionReason;
+        await InitiateAction("reject",
+            async () => await ArticleService.RejectArticleAsync(article.ArticleId, reason));
+    }
+
+    private async Task InitiateAction(string actionType, Func<Task<bool>> action)
+    {
+        isProcessing = true;
+        isReadOnly   = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        if (_hub?.State == HubConnectionState.Connected)
         {
-            var success = await ArticleService.RejectArticleAsync(article.ArticleId, rejectionReason);
+            pendingAction     = action;
+            pendingActionType = actionType;
+            showWaitingModal  = true;
+            StateHasChanged();
+            await _hub.InvokeAsync("RequestActionConfirmation", ArticleId, actionType, currentUserName);
+        }
+        else
+        {
+            await ExecuteApprovedAction(action);
+        }
+    }
+
+    private async Task ExecuteApprovedAction(Func<Task<bool>> action)
+    {
+        showWaitingModal = false;
+        isProcessing     = true;
+        isReadOnly       = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await action();
             if (success)
             {
-                CloseModals();
+                isFinalized = true;
+                if (_hub?.State == HubConnectionState.Connected)
+                    await _hub.InvokeAsync("ArticleFinalized", ArticleId);
+
+                await CleanupAndLeave();
                 Navigation.NavigateTo("/editor/review");
             }
+            else
+            {
+                errorMessage = "Действие не выполнено. Статья могла быть изменена параллельно.";
+                isReadOnly   = false;
+                isProcessing = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка: {ex.Message}";
+            isReadOnly   = false;
+            isProcessing = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task RespondToConfirmation(bool approved)
+    {
+        showConfirmationModal = false;
+        StateHasChanged();
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.InvokeAsync("RespondToActionConfirmation", ArticleId, approved);
+    }
+
+    private async Task NavigateBack()
+    {
+        await CleanupAndLeave();
+        Navigation.NavigateTo("/editor/review");
+    }
+
+    private async Task CleanupAndLeave()
+    {
+        _lockTimer?.Dispose();
+        _lockTimer = null;
+
+        if (_hub?.State == HubConnectionState.Connected)
+        {
+            try { await _hub.InvokeAsync("LeaveDocument", ArticleId); } catch { }
         }
     }
 
     private void CloseModals()
     {
         showRevisionModal = false;
-        showRejectModal = false;
-        revisionComments = string.Empty;
-        rejectionReason = string.Empty;
+        showRejectModal   = false;
+        revisionComments  = string.Empty;
+        rejectionReason   = string.Empty;
     }
 
-    private void NavigateBack()
+    private static string GetStatusBadge(ArticleStatus status) => status switch
     {
-        Navigation.NavigateTo("/editor/review");
+        ArticleStatus.Draft            => "bg-secondary",
+        ArticleStatus.UnderReview      => "bg-info text-dark",
+        ArticleStatus.RequiresRevision => "bg-warning text-dark",
+        ArticleStatus.Approved         => "bg-success",
+        ArticleStatus.Rejected         => "bg-danger",
+        _                              => "bg-secondary"
+    };
+
+    private static string GetActionLabel(string actionType) => actionType switch
+    {
+        "approve"  => "Утвердить статью",
+        "revision" => "Отправить на доработку",
+        "reject"   => "Отклонить статью",
+        _          => actionType
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        await CleanupAndLeave();
+
+        if (_hub != null)
+        {
+            await _hub.DisposeAsync();
+            _hub = null;
+        }
     }
 }

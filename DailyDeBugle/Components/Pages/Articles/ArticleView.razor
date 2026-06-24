@@ -1,0 +1,163 @@
+@page "/articles/read/{ArticleId:int}"
+@rendermode InteractiveServer
+@using DailyDeBugle.Models
+@inject DailyDeBugle.Services.IArticleService ArticleService
+@inject NavigationManager Navigation
+
+<PageTitle>DailyDeBugle - @(article?.Headline ?? "Article")</PageTitle>
+
+@if (article == null)
+{
+    <div class="container text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Loading article...</p>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <!-- Кнопка назад и мета-информация сверху -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-1" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                </svg>
+                Back to list
+            </button>
+            <div class="text-muted small">
+                Status: <span class="badge @GetStatusBadgeClass(article.Status)">@article.Status</span> |
+                Issue: <strong>@(article.Issue != null ? $"№{article.Issue.IssueNumber}" : "No issue")</strong>
+            </div>
+        </div>
+
+        <!-- Центральный контейнер газетного листа -->
+        <div class="d-flex justify-content-center">
+            <div class="flow-container bg-white p-5 rounded shadow-sm"
+                 style="
+                    width: 100%;
+                    max-width: 29.7cm; /* Комфортная ширина для чтения */
+                    min-height: 21cm;
+                    border: 1px solid #dee2e6;
+                 ">
+                
+                <!-- Статья -->
+                <div class="article-flow">
+                    <!-- Заголовок в стиле газетной верстки -->
+                    <h1 style="font-family: Georgia, serif; font-size: 28pt; font-weight: bold; line-height: 1.2; margin-bottom: 0.4cm; color: #222;">
+                        @article.Headline
+                    </h1>
+
+                    <!-- Мета статьи (Автор, Дата) -->
+                    <div style="font-family: 'Times New Roman', serif; font-style: italic; color: #666; margin-bottom: 0.6cm; font-size: 12pt; border-bottom: 1px solid #eee; padding-bottom: 0.3cm;">
+                        By: <strong>@(article.Author?.Username ?? "Unknown")</strong> &nbsp;•&nbsp; @article.CreatedDate.ToString("dd MMMM yyyy HH:mm")
+                    </div>
+
+                    <!-- Основной многоколоночный текст статьи -->
+                    <div class="multi-column-content"
+                         style="
+                             column-count: 2; /* Разбиваем текст на 2 аккуратные колонки */
+                             column-gap: 0.8cm;
+                             column-fill: auto;
+                             font-family: 'Times New Roman', serif;
+                             font-size: 14pt;
+                             line-height: 1.5;
+                             text-align: justify;
+                             white-space: pre-wrap; /* Сохраняем переносы строк автора */
+                             word-wrap: break-word !important;
+                             overflow-wrap: break-word !important;
+                             word-break: break-word !important;
+                             hyphens: auto;
+                             ">
+                        @article.Content
+                    </div>
+
+                    <!-- Блок картинок (если они прикреплены к статье) -->
+                    @if (article.Images?.Any() == true)
+                    {
+                        <div class="article-images mt-4 pt-3 border-top" style="break-inside: avoid;">
+                            <h5 class="text-muted mb-3" style="font-family: Georgia, serif; font-style: italic;">Attached Images</h5>
+                            <div class="row g-3">
+                                @foreach (var img in article.Images.OrderBy(i => i.SortOrder).ThenBy(i => i.ArticleImageId))
+                                {
+                                    <div class="col-md-6" style="break-inside: avoid;">
+                                        <figure class="border rounded p-2 bg-light mb-0" style="break-inside: avoid;">
+                                            <img src="@img.ImagePath" alt="@img.Caption" class="img-fluid rounded d-block mx-auto" style="max-height: 350px; object-fit: contain;" />
+                                            @if (!string.IsNullOrWhiteSpace(img.Caption))
+                                            {
+                                                <figcaption class="text-muted text-center small mt-2" style="font-size: 11px; line-height: 1.3;">
+                                                    @img.Caption
+                                                </figcaption>
+                                            }
+                                        </figure>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Комментарии под статьей -->
+        @if (article.Comments?.Any() == true)
+        {
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-transparent border-bottom py-3">
+                            <h5 class="mb-0">Comments (@article.Comments.Count)</h5>
+                        </div>
+                        <div class="card-body">
+                            @foreach (var comment in article.Comments.OrderByDescending(c => c.CreatedDate))
+                            {
+                                <div class="border-bottom pb-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div>
+                                            <strong class="text-primary">User #@comment.CommentId</strong>
+                                            @if (comment.IsEditorComment)
+                                            {
+                                                <span class="badge bg-info ms-2">Editor</span>
+                                            }
+                                        </div>
+                                        <small class="text-muted">@comment.CreatedDate.ToString("dd MMM yyyy, HH:mm")</small>
+                                    </div>
+                                    <div class="text-dark" style="font-size: 1rem;">@comment.Content</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int ArticleId { get; set; }
+
+    private Article? article;
+
+    protected override async Task OnInitializedAsync()
+    {
+        article = await ArticleService.GetArticleAsync(ArticleId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/editor/review"); 
+    }
+
+    private string GetStatusBadgeClass(ArticleStatus status)
+    {
+        return status switch
+        {
+            ArticleStatus.Draft => "bg-secondary",
+            ArticleStatus.UnderReview => "bg-info text-dark",
+            ArticleStatus.RequiresRevision => "bg-warning text-dark",
+            ArticleStatus.Approved => "bg-success",
+            ArticleStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

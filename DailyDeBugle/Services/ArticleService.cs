@@ -210,9 +210,18 @@ namespace DailyDeBugle.Services
             article.Content = editedContent;
             article.Status = ArticleStatus.Approved;
             article.ModifiedDate = DateTime.UtcNow;
-            
-            await _context.SaveChangesAsync();
-            return true;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                // Логирование ошибки
+                Console.WriteLine($"Error approving article: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<bool> SendForRevisionAsync(int articleId, string comments)
@@ -222,7 +231,6 @@ namespace DailyDeBugle.Services
 
             article.Status = ArticleStatus.RequiresRevision;
             article.ModifiedDate = DateTime.UtcNow;
-
             if (!string.IsNullOrWhiteSpace(comments))
             {
                 _context.Comments.Add(new Comment
@@ -232,6 +240,19 @@ namespace DailyDeBugle.Services
                     CreatedDate = DateTime.UtcNow,
                     IsEditorComment = true
                 });
+            }
+    
+            // Если нужно сохранить комментарий (опционально)
+            if (!string.IsNullOrWhiteSpace(comments))
+            {
+                var comment = new Comment
+                {
+                    ArticleId = articleId,
+                    Content = comments,
+                    CreatedDate = DateTime.UtcNow,
+                    IsEditorComment = true
+                };
+                _context.Comments.Add(comment);
             }
 
             await _context.SaveChangesAsync();
@@ -256,7 +277,20 @@ namespace DailyDeBugle.Services
                     IsEditorComment = true
                 });
             }
-
+    
+            // Если нужно сохранить причину отклонения (опционально)
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                var comment = new Comment
+                {
+                    ArticleId = articleId,
+                    Content = $"Rejected: {reason}",
+                    CreatedDate = DateTime.UtcNow,
+                    IsEditorComment = true
+                };
+                _context.Comments.Add(comment);
+            }
+    
             await _context.SaveChangesAsync();
             return true;
         }

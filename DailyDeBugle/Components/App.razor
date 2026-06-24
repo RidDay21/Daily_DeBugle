@@ -18,6 +18,21 @@
 <Routes/>
 <ReconnectModal/>
 <script src="@Assets["_framework/blazor.web.js"]"></script>
+<script>
+    window.lockActivity = {
+        lastActivityTime: Date.now(),
+        init: function (dotNetHelper) {
+            this.dotNetHelper = dotNetHelper;
+            document.addEventListener('mousemove', () => this.lastActivityTime = Date.now());
+            document.addEventListener('keydown', () => this.lastActivityTime = Date.now());
+            document.addEventListener('click', () => this.lastActivityTime = Date.now());
+            document.addEventListener('scroll', () => this.lastActivityTime = Date.now());
+        },
+        hasRecentActivity: function (seconds) {
+            return (Date.now() - this.lastActivityTime) < (seconds * 1000);
+        }
+    };
+</script>
 </body>
 
 </html>
